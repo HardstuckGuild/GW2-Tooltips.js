@@ -26,10 +26,12 @@ class tUtilsv2 {
     return str !== undefined && /^\d+$/.test(str)
   }
 
-  static newImg(src: string, className = '') {
+  static newImg(src: string, className = '', alt = '') {
     if (!src) return ''
-
-    return `<img width='32' height='32' src='${src}' alt='' class='${className}'/>`
+    if (className === 'iconlarge') {
+      return `<img width='64' height='64' src='${src}' alt='${alt} icon' class='${className}'/>`
+    }
+    return `<img width='32' height='32' src='${src}' alt='${alt} icon' class='${className}'/>`
   }
 
   static capitalizeFirstLetter(str: string) {

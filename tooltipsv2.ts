@@ -16,6 +16,11 @@ class GW2Tooltipsv2 {
     healing: 0,
     critDamage: 0,
   }
+  cycling = false
+  cyclePos!: number
+  baseTooltip!: number
+  lastMouseX!: number
+  lastMouseY!: number
   constructor() {
     this.tooltip = tUtilsv2.newElement('div', 'tooltipWrapper')
 
@@ -30,6 +35,53 @@ class GW2Tooltipsv2 {
     } catch (error) {
       console.error(error)
     }
+  }
+  displayTooltip = (tooltips: HTMLElement[], tooltipIndex: number) => {
+    tooltips.forEach((tooltip, index) => {
+      if (index === tooltipIndex) {
+        tooltip.style.display = 'block'
+      } else {
+        tooltip.style.display = 'none'
+      }
+    })
+  }
+  cycleTooltips() {
+    if (!this.cycling) return
+    this.cycling = true
+    const tooltips: HTMLElement[] = Array.from(
+      this.tooltip.getElementsByClassName('tooltip')
+    ) as HTMLElement[]
+    this.cyclePos = tooltips.length - this.baseTooltip
+    const totalTooltips = tooltips.length - this.baseTooltip
+    this.cyclePos = (this.cyclePos - 1 + totalTooltips) % totalTooltips
+    tooltips.forEach((tooltip, index) => {
+      tooltip.style.display = index === this.cyclePos ? '' : 'none'
+    })
+
+    this.positionTooltip()
+  }
+
+  positionTooltip() {
+    const tooltip = this.tooltip
+    const wpadminbar = document.getElementById('wpadminbar')
+    const additionaloffset = wpadminbar ? wpadminbar.offsetHeight : 0
+
+    let tooltipXpos = this.lastMouseX + 16
+    if (this.lastMouseX + tooltip.offsetWidth + 22 > window.innerWidth) {
+      tooltipXpos = window.innerWidth - 22 - tooltip.offsetWidth
+    }
+    let tooltipYpos = this.lastMouseY - 6 - tooltip.offsetHeight
+    if (
+      this.lastMouseY -
+        tooltip.offsetHeight -
+        13 -
+        document.documentElement.scrollTop <
+      0
+    ) {
+      tooltipYpos = additionaloffset + 6 + document.documentElement.scrollTop
+    }
+
+    tooltip.style.transform = `translate(${tooltipXpos}px, ${tooltipYpos}px)`
   }
 
   hookDocument = (doc: Document, dom: boolean): void => {
@@ -54,6 +106,8 @@ class GW2Tooltipsv2 {
       }
     }
 
+    let elementsNeedingWikiLinks = new Map<string, Element>()
+
     for (const gw2Object of Array.from(gw2Objects)) {
       const type = gw2Object.getAttribute('type')?.replace('/', '_') + 's' //may change when we get more data
       const objId = gw2Object.getAttribute('objId') || ''
@@ -62,20 +116,43 @@ class GW2Tooltipsv2 {
         const key = type as keyof IObjectsToGet
         objectsToGet[key].push(id)
       }
+      elementsNeedingWikiLinks.set(objId, gw2Object)
+
       gw2Object.addEventListener('mouseenter', () => {
         this.tooltip.innerHTML = ''
         if (this.fetchedSkills.length) {
           for (const fetchedObject of this.fetchedSkills) {
             if (parseInt(objId) === fetchedObject.id) {
-              this.generateToolTip(fetchedObject)
+              this.generateToolTip(fetchedObject, gw2Object as HTMLElement)
             }
           }
         }
       })
+      gw2Object.addEventListener('mouseleave', () => {
+        this.tooltip.innerHTML = ''
+      })
     }
+
     Object.entries(objectsToGet).forEach(async ([key, values]) => {
       if (values.length) {
         await this.fetchAPIObjects(key, values)
+        this.fetchedSkills.forEach((obj) => {
+          const gw2Object = elementsNeedingWikiLinks.get(obj.id.toString())
+          if (gw2Object) {
+            let wikiLink = document.createElement('a')
+            wikiLink.setAttribute(
+              'href',
+              'https://wiki-en.guildwars2.com/wiki/Special:Search/' + obj.name
+            )
+            wikiLink.setAttribute('target', '_blank')
+            wikiLink.innerHTML = tUtilsv2.newImg(
+              `https://assets.gw2dat.com//${obj.icon}`,
+              'iconlarge',
+              obj.name
+            )
+            gw2Object.append(wikiLink)
+          }
+        })
       }
     })
   }
@@ -92,9 +169,9 @@ class GW2Tooltipsv2 {
                   [
                     'Greatsword',
                     'Hammer',
-                    'Longbow',
+                    'BowLong',
                     'Rifle',
-                    'Shortbow',
+                    'BowShort',
                     'Staff',
                   ].includes(palette.weapon_type) &&
                   ['Offhand1', 'Offhand2'].includes(slot.slot)
@@ -137,7 +214,7 @@ class GW2Tooltipsv2 {
   processToolTipInfo(
     apiObject: any,
     stats: any,
-    gameMode?: string | null | undefined,
+    gameMode?: 'Pve' | 'Pvp' | 'Wvw',
     traits?: number[]
   ) {
     if (!gameMode) {
@@ -203,10 +280,11 @@ class GW2Tooltipsv2 {
     )
     factsElements?.forEach((factElement) => tooltip.append(factElement))
     this.tooltip.append(tooltip)
+
     document.body.appendChild(this.tooltip)
   }
 
-  generateToolTip = (initialSkill: Skill): Skill[] => {
+  generateToolTip = (initialSkill: Skill, gw2Object: HTMLElement): Skill[] => {
     const skillChain: Skill[] = []
     const validTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard']
 
@@ -248,11 +326,45 @@ class GW2Tooltipsv2 {
     skillChain.forEach((skill) => {
       this.processToolTipInfo(skill, this.stats, this.gameMode, this.traits)
     })
+    const tooltipContainer = document.querySelector(
+      '.tooltipWrapper'
+    ) as HTMLElement
+    const tooltips = this.tooltip.querySelectorAll('.tooltip')
 
+    if (
+      tooltipContainer &&
+      tooltipContainer.offsetHeight > window.innerHeight / 2 &&
+      tooltips.length > 1
+    ) {
+      gw2Object.classList.add('cycler')
+      gw2Object.setAttribute('title', 'Right-click to cycle through tooltips')
+      let currentTooltipIndex = 0
+      this.displayTooltip(
+        Array.from(tooltips) as HTMLElement[],
+        currentTooltipIndex
+      )
+      gw2Object.addEventListener('contextmenu', function (event) {
+        event?.preventDefault()
+        gw2tooltips.cycleTooltips()
+        currentTooltipIndex++
+        if (currentTooltipIndex >= tooltips.length) {
+          currentTooltipIndex = 0
+        }
+        gw2tooltips.displayTooltip(
+          Array.from(tooltips) as HTMLElement[],
+          currentTooltipIndex
+        )
+      })
+    }
+    gw2Object.addEventListener('mousemove', function (event) {
+      gw2tooltips.lastMouseX = event.pageX
+      gw2tooltips.lastMouseY = event.pageY
+      gw2tooltips.positionTooltip()
+    })
     return skillChain
   }
 }
 
-const tooltips = new GW2Tooltipsv2()
+const gw2tooltips = new GW2Tooltipsv2()
 
-tooltips.hookDocument(document, true)
+gw2tooltips.hookDocument(document, true)

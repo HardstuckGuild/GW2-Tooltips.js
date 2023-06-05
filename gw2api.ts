@@ -1,5 +1,5 @@
 class NewGW2API {
-  constructor() {}
+  fetchedIds = new Set<number>()
 
   processFactsAndOverrides(skill: Skill, idSet: Set<number>) {
     if (skill.facts.length) {
@@ -34,7 +34,7 @@ class NewGW2API {
         if (
           slot.profession !== 'None' &&
           slot.next_chain &&
-          !idSet.has(slot.next_chain)
+          !this.fetchedIds.has(slot.next_chain)
         ) {
           idSet.add(slot.next_chain)
         }
@@ -42,64 +42,57 @@ class NewGW2API {
     })
   }
 
-  processSubSkills(skill: Skill, idSet: Set<number>, allObjects: Skill[]) {
-    const validTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard']
-
+  processSubSkills(skill: Skill, idSet: Set<number>) {
     if (skill.sub_skills) {
       skill.sub_skills.forEach((subSkillId) => {
-        const subSkill = allObjects.find((obj) => obj.id === subSkillId)
-        if (
-          subSkill &&
-          subSkill.palettes.some((palette) =>
-            validTypes.includes(palette.type)
-          ) &&
-          !idSet.has(subSkillId)
-        ) {
+        if (!this.fetchedIds.has(subSkillId)) {
           idSet.add(subSkillId)
         }
       })
     }
   }
 
-  async simulateAPIResponse(type: string, ids: number[]): Promise<Skill[]> {
-    try {
-      const response = await fetch('../output.json')
-      const allObjects: Skill[] = await response.json()
+  async simulateApiResponse(ids: number[], type: string): Promise<Skill[]> {
+    let response = await fetch('../output.json')
+    let allSkills: Skill[] = await response.json()
+    let skills = allSkills.filter((skill) => ids.includes(skill.id))
 
-      let idSet = new Set(ids)
-      let result: Skill[] = []
+    ids.forEach((id) => this.fetchedIds.add(id))
 
-      let skillMap = new Map<number, Skill>()
-      allObjects.forEach((skill) => skillMap.set(skill.id, skill))
-      while (true) {
-        let newIdAdded = false
+    return skills
+  }
 
-        idSet.forEach((id) => {
-          const skill = skillMap.get(id)
-          if (skill && !result.includes(skill)) {
-            result.push(skill)
-            this.processPalettes(skill, idSet)
-            this.processSubSkills(skill, idSet, allObjects)
-            this.processFactsAndOverrides(skill, idSet)
-            newIdAdded = true
-          }
-        })
+  async processApiResponse(
+    type: string,
+    initialIds: number[]
+  ): Promise<Skill[]> {
+    let idSet = new Set(initialIds)
+    let result: Skill[] = []
+    let skillMap = new Map<number, Skill>()
 
-        if (!newIdAdded) {
-          break
+    while (idSet.size > 0) {
+      let newIds = Array.from(idSet).filter((id) => !this.fetchedIds.has(id))
+      idSet.clear()
+      const skills = await this.simulateApiResponse(newIds, type)
+
+      skills.forEach((skill) => {
+        if (!skillMap.has(skill.id)) {
+          skillMap.set(skill.id, skill)
+          result.push(skill)
+          this.processPalettes(skill, idSet)
+          this.processSubSkills(skill, idSet)
+          this.processFactsAndOverrides(skill, idSet)
         }
-      }
-      return result
-    } catch (error) {
-      throw error
+      })
     }
+    return result
   }
 
   async getAPIObjects(type: string, ids: number[]): Promise<any> {
     if (ids && ids.length > 0) {
       let gatheredObjects: any[] = []
 
-      const response = await this.simulateAPIResponse(type, ids)
+      const response = await this.processApiResponse(type, ids)
       gatheredObjects = response
 
       return gatheredObjects

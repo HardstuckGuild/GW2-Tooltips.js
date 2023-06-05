@@ -1,5 +1,4 @@
 class processSkills {
-  constructor() {}
   calculateModifier = (
     formula: number,
     level: number,
@@ -93,7 +92,7 @@ class processSkills {
 
   processFact(
     skill: Skill,
-    gameMode = 'Pve',
+    gameMode: 'Pve' | 'Pvp' | 'Wvw' = 'Pve',
     fetchedSkills: Skill[],
     traits?: number[],
     stats?: any
@@ -125,18 +124,16 @@ class processSkills {
       if (fact.defiance_break) {
         totalDefianceBreak += fact.defiance_break
       }
-      switch (fact.type) {
-        case 'Time':
-          htmlContent = `<tem> ${fact.text}: ${fact.duration?.secs}s </tem>`
-          break
-        case 'Distance':
-          htmlContent = `<tem> ${fact.text}: ${fact.distance} </tem>`
-          break
-        case 'Buff':
-          iconUrl = buff ? `https://assets.gw2dat.com//${buff.icon}` : ''
+      const handlers = {
+        Time: ({ fact }: HandlerParams) =>
+          `<tem> ${fact.text}: ${fact.duration?.secs}s </tem>`,
+        Distance: ({ fact }: HandlerParams) =>
+          `<tem> ${fact.text}: ${fact.distance} </tem>`,
+        Buff: ({ fact, buff, gameMode, traits, stats }: HandlerParams) => {
           let modifiers = ''
+          iconUrl = `https://assets.gw2dat.com//${buff?.icon}`
           if (buff?.modifiers) {
-            buff.modifiers.forEach((modifier) => {
+            buff.modifiers.forEach((modifier: Modifier) => {
               if (
                 (modifier.trait_req &&
                   (!traits || !traits.includes(modifier.trait_req))) ||
@@ -181,7 +178,7 @@ class processSkills {
               }
             })
           }
-          htmlContent = `<tem> ${buff?.name} (${fact.duration?.secs}s) ${
+          const htmlContent = `<tem> ${buff?.name} (${fact.duration?.secs}s) ${
             buff?.description
               ?.replace(/<c=@.*?>(.*?)<\/c>/g, '$1')
               .replace(/%%/g, '%') || ''
@@ -192,20 +189,21 @@ class processSkills {
               'buffcount',
               fact.apply_count.toString()
             )
-            htmlContent += buffCount.outerHTML
+            return htmlContent + buffCount.outerHTML
           }
-          break
-
-        case 'BuffBrief':
-          iconUrl = buff ? `https://assets.gw2dat.com//${buff.icon}` : ''
+          return htmlContent
+        },
+        BuffBrief: ({ fact, buff }: HandlerParams) => {
+          iconUrl = `https://assets.gw2dat.com//${buff?.icon}`
           htmlContent =
             fact?.text
               ?.replace(/<c=@.*?>(.*?)<\/c>/g, '<tem>$1</tem>')
               .replace(/%%/g, '%') || ''
-          break
-        case 'Damage':
-          let weaponStrenth = 0
-          if (skill.palettes) {
+          return htmlContent
+        },
+        Damage: ({ fact, skill, stats }: HandlerParams) => {
+          let weaponStrength = 0
+          if (skill.palettes.length) {
             const relevantPalette = skill.palettes.find(
               (palette) =>
                 palette.slots &&
@@ -213,56 +211,58 @@ class processSkills {
             )
 
             if (relevantPalette) {
-              weaponStrenth = this.getWeaponStrength(relevantPalette)
+              weaponStrength = this.getWeaponStrength(relevantPalette)
             }
           }
 
           if (fact.hit_count && fact.hit_count > 1) {
-            htmlContent = `<tem> ${fact.text}: (${
-              fact.hit_count
-            }x) ${Math.round(
-              (Math.round(weaponStrenth) *
+            return `<tem> ${fact.text}: (${fact.hit_count}x) ${Math.round(
+              (Math.round(weaponStrength) *
                 stats.power *
                 (fact.hit_count! * fact.dmg_multiplier!)) /
                 2597
             )} </tem>`
           } else {
-            htmlContent = `<tem> ${fact.text}: ${Math.round(
+            return `<tem> ${fact.text}: ${Math.round(
               (fact.hit_count! *
-                Math.round(weaponStrenth) *
+                Math.round(weaponStrength) *
                 stats.power *
                 (fact.hit_count! * fact.dmg_multiplier!)) /
                 2597
             )} </tem>`
           }
-          break
-
-        case 'Number':
-          htmlContent = `<tem> ${fact.text}: ${fact.value} </tem>`
-          break
-        case 'Percent':
-          htmlContent = `<tem>${
+        },
+        Number: ({ fact }: HandlerParams) =>
+          `<tem> ${fact.text}: ${fact.value} </tem>`,
+        Percent: ({ fact }: HandlerParams) =>
+          `<tem>${
             fact?.text ? fact.text.replace(/<c=@.*?>(.*?)<\/c>/g, '$1') : ''
-          }: ${fact?.percent}%</tem>`.replace(/%%/g, '%')
-
-          break
-
-        case 'AttributeAdjust':
-          htmlContent = `<tem> ${fact.text} : ${Math.round(
+          }: ${fact?.percent}%</tem>`.replace(/%%/g, '%'),
+        AttributeAdjust: ({ fact, stats }: HandlerParams) =>
+          `<tem> ${fact.text} : ${Math.round(
             (fact.value! +
               stats[fact.target!.toLowerCase()] * fact.attribute_multiplier! +
               stats.level ** fact.level_exponent! * fact.level_multiplier!) *
               fact.hit_count!
-          )} </tem>`
-          break
-        case 'ComboField':
-          htmlContent = `<tem> ${fact.text}: ${fact.field_type} </tem>`
-          break
-        case 'ComboFinisher':
-          htmlContent = `<tem> ${fact.text}: ${fact.finisher_type} </tem>`
-          break
-        case 'NoData':
-          htmlContent = `<tem> ${fact.text}`
+          )} </tem>`,
+        ComboField: ({ fact }: HandlerParams) =>
+          `<tem> ${fact.text}: ${fact.field_type} </tem>`,
+        ComboFinisher: ({ fact }: HandlerParams) =>
+          `<tem> ${fact.text}: ${fact.finisher_type} </tem>`,
+        NoData: ({ fact }: HandlerParams) => `<tem> ${fact.text}`,
+      }
+
+      if (fact.type in handlers) {
+        const handler = handlers[fact.type as keyof typeof handlers]
+        const params: HandlerParams = {
+          fact,
+          buff,
+          gameMode,
+          traits,
+          stats,
+          skill,
+        }
+        htmlContent = handler(params)
       }
 
       if (fact.text === 'pull') {

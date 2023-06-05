@@ -91,3 +91,12 @@ interface Skill {
   sub_skills: number[]
   modifiers: Modifier[]
 }
+
+interface HandlerParams  {
+  fact: Fact
+  buff: Skill | null
+  gameMode: 'Pve' | 'Pvp' | 'Wvw'
+  traits: number[] | undefined
+  stats: any
+  skill: Skill
+}
