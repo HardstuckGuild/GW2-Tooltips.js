@@ -38,7 +38,7 @@ class HSAPI {
     }
     static async simulateApiResponse(ids, type) {
         let allSkills = window.DUMP_output;
-        let skills = allSkills.filter((skill) => ids.includes(skill.id));
+        let skills = allSkills.filter(skill => ids.includes(skill.id));
         ids.forEach((id) => this.fetchedIds.add(id));
         return skills;
     }
@@ -47,7 +47,7 @@ class HSAPI {
         let result = [];
         let duplicateTest = new Map();
         while (idSet.size > 0) {
-            let newIds = Array.from(idSet).filter((id) => !this.fetchedIds.has(id));
+            let newIds = Array.from(idSet).filter(id => !this.fetchedIds.has(id));
             idSet.clear();
             for (const skill of await this.simulateApiResponse(newIds, type)) {
                 if (duplicateTest.has(skill.id))

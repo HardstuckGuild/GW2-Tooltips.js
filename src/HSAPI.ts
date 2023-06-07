@@ -1,7 +1,7 @@
 class HSAPI {
   static fetchedIds = new Set<number>()
 
-  static processFactsAndOverrides (skill: Skill, idSet: Set<number>) {
+  static processFactsAndOverrides (skill : API.Skill, idSet : Set<number>) {
     for(const fact of skill.facts) {
       if(fact.type.includes('Buff') && fact.buff !== undefined) {
         idSet.add(fact.buff)
@@ -19,7 +19,7 @@ class HSAPI {
     }
   }
 
-  static processPalettes(skill: Skill, idSet: Set<number>) {
+  static processPalettes(skill : API.Skill, idSet : Set<number>) {
     for(const palette of skill.palettes) {
       for(const slot of palette.slots) {
         if(
@@ -33,7 +33,7 @@ class HSAPI {
     }
   }
 
-  static processSubSkills(skill: Skill, idSet: Set<number>) {
+  static processSubSkills(skill : API.Skill, idSet : Set<number>) {
     if(!skill.sub_skills) return;
     for(const subSkillId of skill.sub_skills) {
       if(!this.fetchedIds.has(subSkillId)) {
@@ -42,24 +42,24 @@ class HSAPI {
     }
   }
 
-  static async simulateApiResponse(ids: number[], type: string): Promise<Skill[]> {
+  static async simulateApiResponse(ids : number[], type : string) : Promise<API.Skill[]> { //todo(Rennorb): this shouldn't be here. Also we have interfaces, why don't we use those ? 
     //let response = await fetch('./output.json')
     //let allSkills: Skill[] = await response.json()
-    let allSkills: Skill[] = (window as any).DUMP_output
-    let skills = allSkills.filter((skill) => ids.includes(skill.id))
+    let allSkills = (window as any).DUMP_output as API.Skill[]
+    let skills = allSkills.filter(skill => ids.includes(skill.id))
 
     ids.forEach((id) => this.fetchedIds.add(id))
 
     return skills
   }
 
-  static async processApiResponse(type: string, initialIds: number[]): Promise<Skill[]> {
+  static async processApiResponse(type : string, initialIds : number[]) : Promise<API.Skill[]> {
     let idSet = new Set(initialIds)
-    let result: Skill[] = []
-    let duplicateTest = new Map<number, Skill>()
+    let result : API.Skill[] = []
+    let duplicateTest = new Map<number, API.Skill>()
 
     while(idSet.size > 0) {
-      let newIds = Array.from(idSet).filter((id) => !this.fetchedIds.has(id))
+      let newIds = Array.from(idSet).filter(id => !this.fetchedIds.has(id))
       idSet.clear()
 
       for(const skill of await this.simulateApiResponse(newIds, type)) {
@@ -78,8 +78,8 @@ class HSAPI {
     return result
   }
 
-  static async getAPIObjects(type: string, ids: number[]): Promise<any> {
-    let gatheredObjects: any[] = []
+  static async getAPIObjects(type : string, ids : number[]) : Promise<any> {
+    let gatheredObjects : any[] = []
     if(ids.length) {
       gatheredObjects = await this.processApiResponse(type, ids)
     }

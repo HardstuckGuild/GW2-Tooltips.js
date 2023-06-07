@@ -8,11 +8,7 @@
 //TODO(Rennorb): This should also compile to a single file for ease of use, either we want to actually put everything back in one file or get tsc to merge the files in a simple way. Another option would be to bundle everything with something like rollup. That way we can also easily produce minified versions, although we will have to introduce node-modules for that which i strongly dislike.
 
 
-type PartialContext = Omit<Partial<Context>, 'stats'>  & { stats?: Partial<Stats> }
 
-declare interface Window {
-  GW2TooltipsContext : PartialContext[] | PartialContext | undefined;
-}
 type TypeBridge<T, K extends keyof T> = [K, T[K]]
 declare interface ObjectConstructor {
   entries<T>(obj : T) : TypeBridge<T, keyof T>[]
@@ -22,13 +18,13 @@ declare interface ObjectConstructor {
 // Instances aren't needed for anything here.
 class GW2TooltipsV2 {
   tooltip       : HTMLElement
-  objectData    : ObjectDataStorage<Map<number, Skill>> = { //TODO(Rennorb) @hammer: don't use skill for each type
-    skills         : new Map<number, Skill>(),
-    items          : new Map<number, Skill>(),
-    traits         : new Map<number, Skill>(),
-    pets           : new Map<number, Skill>(),
-    "pvp/amulets"  : new Map<number, Skill>(),
-    specializations: new Map<number, Skill>(),
+  objectData    : ObjectDataStorage<Map<number, API.Skill>> = { //TODO(Rennorb) @hammer: don't use skill for each type
+    skills         : new Map<number, API.Skill>(),
+    items          : new Map<number, API.Skill>(),
+    traits         : new Map<number, API.Skill>(),
+    pets           : new Map<number, API.Skill>(),
+    "pvp/amulets"  : new Map<number, API.Skill>(),
+    specializations: new Map<number, API.Skill>(),
   }
   
   cycling = false
@@ -171,7 +167,7 @@ class GW2TooltipsV2 {
 
       const storage = this.objectData[key];
 
-      for(const skill of await this.fetchAPIObjects<Skill>(key, values))
+      for(const skill of await this.fetchAPIObjects<API.Skill>(key, values))
         storage.set(skill.id, skill)
 
       for(const obj of storage.values()) {
@@ -187,7 +183,7 @@ class GW2TooltipsV2 {
     })
   }
 
-  processSkillSlot(skill: Skill): string | undefined {
+  processSkillSlot(skill: API.Skill) : string | undefined {
     let skillSlot
     skill.palettes.forEach((palette) => {
       for(const slot of palette.slots) {
@@ -239,7 +235,7 @@ class GW2TooltipsV2 {
   }
 
   processToolTipInfo(
-    apiObject : Skill, // TODO(Rennorb): expand type
+    apiObject : API.Skill, // TODO(Rennorb): expand type
     context   : Context,
   ) {
     const basic = document.createElement('tet')
@@ -248,7 +244,7 @@ class GW2TooltipsV2 {
 
     let recharge
     if(context.gameMode !== 'Pve' && apiObject.recharge_override.length) {
-      apiObject.recharge_override.forEach((recharge_mode: RechargeOverride) => {
+      apiObject.recharge_override.forEach(recharge_mode => {
         if(recharge_mode.mode === context.gameMode) {
           recharge = `${
             recharge_mode.recharge.secs
@@ -289,32 +285,30 @@ class GW2TooltipsV2 {
     document.body.appendChild(this.tooltip)
   }
 
-  generateToolTip(initialSkill: Skill, gw2Object: HTMLElement): Skill[] {
-    const skillChain: Skill[] = []
+  generateToolTip(initialSkill: API.Skill, gw2Object: HTMLElement) : API.Skill[] {
+    const skillChain: API.Skill[] = []
     const validTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard']
 
-    const addSkillToChain = (currentSkill: Skill) => {
+    const addSkillToChain = (currentSkill: API.Skill) => {
       skillChain.push(currentSkill)
 
-      currentSkill.palettes.forEach((palette) => {
-        palette.slots.forEach((slot) => {
+      for(const palette of currentSkill.palettes) {
+        for(const slot of palette.slots) {
           if(slot.next_chain && slot.profession !== 'None') {
             const nextSkillInChain = this.objectData['skills'].get(slot.next_chain);
             if(nextSkillInChain) {
               addSkillToChain(nextSkillInChain)
             }
           }
-        })
-      })
-
-      if(currentSkill.sub_skills) {
-        currentSkill.sub_skills.forEach((subSkillId) => {
-          const subSkillInChain = this.objectData['skills'].get(subSkillId);
-          if(subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
-            addSkillToChain(subSkillInChain)
-          }
-        })
+        }
       }
+
+      currentSkill.sub_skills?.forEach((subSkillId) => {
+        const subSkillInChain = this.objectData['skills'].get(subSkillId);
+        if(subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
+          addSkillToChain(subSkillInChain)
+        }
+      })
     }
 
     addSkillToChain(initialSkill)

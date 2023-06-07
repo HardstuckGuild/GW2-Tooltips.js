@@ -177,7 +177,7 @@ class GW2TooltipsV2 {
         const slot = `<tes>( ${this.processSkillSlot(apiObject)} )</tes><div class="flexbox-fill"></div>`;
         let recharge;
         if (context.gameMode !== 'Pve' && apiObject.recharge_override.length) {
-            apiObject.recharge_override.forEach((recharge_mode) => {
+            apiObject.recharge_override.forEach(recharge_mode => {
                 if (recharge_mode.mode === context.gameMode) {
                     recharge = `${recharge_mode.recharge.secs
                         ? `<ter>
@@ -216,25 +216,24 @@ class GW2TooltipsV2 {
         const skillChain = [];
         const validTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard'];
         const addSkillToChain = (currentSkill) => {
+            var _a;
             skillChain.push(currentSkill);
-            currentSkill.palettes.forEach((palette) => {
-                palette.slots.forEach((slot) => {
+            for (const palette of currentSkill.palettes) {
+                for (const slot of palette.slots) {
                     if (slot.next_chain && slot.profession !== 'None') {
                         const nextSkillInChain = this.objectData['skills'].get(slot.next_chain);
                         if (nextSkillInChain) {
                             addSkillToChain(nextSkillInChain);
                         }
                     }
-                });
-            });
-            if (currentSkill.sub_skills) {
-                currentSkill.sub_skills.forEach((subSkillId) => {
-                    const subSkillInChain = this.objectData['skills'].get(subSkillId);
-                    if (subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
-                        addSkillToChain(subSkillInChain);
-                    }
-                });
+                }
             }
+            (_a = currentSkill.sub_skills) === null || _a === void 0 ? void 0 : _a.forEach((subSkillId) => {
+                const subSkillInChain = this.objectData['skills'].get(subSkillId);
+                if (subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
+                    addSkillToChain(subSkillInChain);
+                }
+            });
         };
         addSkillToChain(initialSkill);
         const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];

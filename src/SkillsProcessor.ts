@@ -1,5 +1,5 @@
 class SkillsProcessor {
-  static MissingBuff : Skill = {
+  static MissingBuff : API.Skill = {
     id: 0,
     name: "Missing Buff",
     description: "This Buff failed to load",
@@ -16,7 +16,7 @@ class SkillsProcessor {
   }
 
   static calculateModifier(
-    { formula, base_amount, formula_param1 : level_scaling, formula_param2 } : Modifier,
+    { formula, base_amount, formula_param1 : level_scaling, formula_param2 } : API.Modifier,
     { level, power, conditionDamage : condition_damage, healing : healing_power } : Stats,
   ) {
     //TODO(Rennorb): this is **screaming** tabledrive me 
@@ -48,7 +48,7 @@ class SkillsProcessor {
     return base_amount; //TODO(Rennorb) @correctness
   }
 
-  static getWeaponStrength({ weapon_type, type : palette_type}: Palette): number {
+  static getWeaponStrength({ weapon_type, type : palette_type} : API.Palette) : number {
     let weaponStrength = {
       None      : 0,
       Focus     : 900,
@@ -81,13 +81,13 @@ class SkillsProcessor {
     return weaponStrength
   }
 
-  static processFact(skill: Skill, skillDataCache: Map<number, Skill>, context : Context) {
+  static processFact(skill : API.Skill, skillDataCache : Map<number, API.Skill>, context : Context) {
     if(!skill.facts.length && !skill.facts_override) return null
 
     const factWraps: HTMLElement[] = []
     let totalDefianceBreak = 0
 
-    const processFactData = (fact: Fact) => {
+    const processFactData = (fact : API.Fact) => {
       if(fact.requires_trait && (!context.traits || !fact.requires_trait.some(reqTrait => context.traits.includes(reqTrait)))) {
         return null
       }
@@ -99,7 +99,7 @@ class SkillsProcessor {
         totalDefianceBreak += fact.defiance_break
       }
 
-      const handlers : { [k in FactType] : (params : HandlerParams<FactMap[k]>) => string } = {
+      const handlers : { [k in API.FactType] : (params : HandlerParams<API.FactMap[k]>) => string } = {
         Time         : ({ fact }) => `<tem> ${fact.text}: ${fact.duration?.secs}s </tem>`,
         Distance     : ({ fact }) => `<tem> ${fact.text}: ${fact.distance} </tem>`,
         Number       : ({ fact }) => `<tem> ${fact.text}: ${fact.value} </tem>`,
