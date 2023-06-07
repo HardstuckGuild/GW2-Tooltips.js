@@ -71,7 +71,7 @@ class GW2TooltipsV2 {
     }
     
 
-    this.tooltip = TUtilsV2.newElement('div.tooltipWrapper')
+    this.tooltip = TUtilsV2.newElm('div.tooltipWrapper')
     this.tooltip.style.display = 'none';
     document.body.appendChild(this.tooltip)
   }
@@ -105,7 +105,7 @@ class GW2TooltipsV2 {
 
   positionTooltip() {
     const tooltip = this.tooltip
-    const wpadminbar = document.getElementById('wpadminbar')
+    const wpadminbar = document.getElementById('wpadminbar') //TODO(Rennorb) @hardcoded: this accounts for the wordpress bar that might exist.
     const additionaloffset = wpadminbar ? wpadminbar.offsetHeight : 0
 
     let tooltipXpos = this.lastMouseX + 16
@@ -140,6 +140,8 @@ class GW2TooltipsV2 {
 
     for(const gw2Object of scope.getElementsByTagName('gw2object') as HTMLCollectionOf<HTMLElement>) {
       const objId = +String(gw2Object.getAttribute('objId'))
+      //TODO(Rennorb) @cleanup @compat: this is literally just for naming convenience.
+      // Figure out if we can just get rid of the +'s' or if that poses an issue with backwards compat
       const type = (gw2Object.getAttribute('type') || 'skill') + 's'
       if(isNaN(objId) || !(type in objectsToGet)) continue;
 
@@ -174,10 +176,9 @@ class GW2TooltipsV2 {
       for(const obj of storage.values()) {
         const gw2Object = elementsNeedingWikiLinks.get(obj.id)
         if(gw2Object) {
-          let wikiLink = document.createElement('a')
-          wikiLink.setAttribute('href', 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + obj.name)
-          wikiLink.setAttribute('target', '_blank')
-          wikiLink.innerHTML = TUtilsV2.newImg(`https://assets.gw2dat.com/${obj.icon}`, 'iconlarge', obj.name)
+          const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(`https://assets.gw2dat.com/${obj.icon}`, 'iconlarge', obj.name))
+          wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + obj.name
+          wikiLink.target = '_blank'
           gw2Object.append(wikiLink)
         }
       }
@@ -191,6 +192,7 @@ class GW2TooltipsV2 {
         switch (palette.type) {
           case 'Equipment':
             if(palette.weapon_type !== 'None') {
+              //TODO(Rennorb) @cleanup: move this to the api side
               const replaceFn = (_: string, __: string, digit: string) => {
                 if(
                   [
@@ -235,55 +237,41 @@ class GW2TooltipsV2 {
     return skillSlot
   }
 
-  processToolTipInfo(
-    apiObject : API.Skill, // TODO(Rennorb): expand type
-    context   : Context,
-  ) {
-    const basic = document.createElement('tet')
-    const name = `<teb> ${apiObject.name} </teb>`
-    const slot = `<tes>( ${this.processSkillSlot(apiObject)} )</tes><div class="flexbox-fill"></div>`
-
-    let recharge
+  // TODO(Rennorb): expand apiObject type
+  processToolTipInfo(apiObject : API.Skill, context : Context) {
+    let recharge : HTMLElement | '' = ''
     if(context.gameMode !== 'Pve' && apiObject.recharge_override.length) {
-      apiObject.recharge_override.forEach(recharge_mode => {
-        if(recharge_mode.mode === context.gameMode) {
-          recharge = `${
-            recharge_mode.recharge.secs
-              ? `<ter>
-              ${recharge_mode.recharge.secs}
-              ${TUtilsV2.newImg('https://assets.gw2dat.com/156651.png', 'iconsmall')}</ter>`
-              : ''
-          } `
-        }
-      })
-    } else {
-      recharge = `${
-        apiObject.recharge.secs
-          ? `<ter>
-      ${apiObject.recharge.secs}
-      ${TUtilsV2.newImg('https://assets.gw2dat.com/156651.png', 'iconsmall')}</ter>`
-          : ''
-      } `
+      const override = apiObject.recharge_override.find(override =>  override.mode === context.gameMode && override.recharge.secs);
+      if(override && override.mode === context.gameMode && override.recharge.secs) {
+        recharge = TUtilsV2.newElm('ter', 
+          String(override.recharge.secs), 
+          TUtilsV2.newImg('https://assets.gw2dat.com/156651.png', 'iconsmall')
+        );
+      }
+    } else if(apiObject.recharge.secs) {
+      recharge = TUtilsV2.newElm('ter', 
+        String(apiObject.recharge.secs), 
+        TUtilsV2.newImg('https://assets.gw2dat.com/156651.png', 'iconsmall')
+      );
     }
 
-    basic.innerHTML = `
-     ${name}   
-     ${slot}
-     ${recharge}
-`
+    const basic = TUtilsV2.newElm('tet',
+      TUtilsV2.newElm('teb', apiObject.name),
+      TUtilsV2.newElm('tes', `( ${this.processSkillSlot(apiObject)} )`), TUtilsV2.newElm('div.flexbox-fill'),
+      recharge
+    )
 
     const description = document.createElement('ted')
-    description.innerHTML = apiObject.description ? `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>` : ''
-    const tooltip = TUtilsV2.newElement('div.tooltip')
+    if(apiObject.description) description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`
+
+    const tooltip = TUtilsV2.newElm('div.tooltip', 
+      basic, description,
+      ...SkillsProcessor.processFact(apiObject, this.objectData['skills'], context) // TODO(Rennorb) @correctness: should this really use 'skills' ? 
+    )
     tooltip.dataset.id = String(apiObject.id)
     tooltip.style.marginTop = '5px'
-    tooltip.append(basic)
-    tooltip.append(description)
-    const factsElements = SkillsProcessor.processFact(apiObject, this.objectData['skills'], context) // TODO(Rennorb) @correctness: should this really use 'skills' ? 
-    if(factsElements) tooltip.append(...factsElements)
-    this.tooltip.append(tooltip)
 
-    document.body.appendChild(this.tooltip)
+    this.tooltip.append(tooltip)
   }
 
   generateToolTip(initialSkill: API.Skill, gw2Object: HTMLElement) : API.Skill[] {
@@ -320,7 +308,7 @@ class GW2TooltipsV2 {
 
     if(chainTooltips.length > 1) {
       gw2Object.classList.add('cycler')
-      gw2Object.setAttribute('title', 'Right-click to cycle through tooltips')
+      gw2Object.title = 'Right-click to cycle through tooltips'
 
       let currentTooltipIndex = 0
       this.displayCorrectChainTooltip(chainTooltips, currentTooltipIndex)

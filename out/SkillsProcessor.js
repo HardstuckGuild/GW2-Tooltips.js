@@ -60,8 +60,7 @@ class SkillsProcessor {
     }
     static processFact(skill, skillDataCache, context) {
         if (!skill.facts.length && !skill.facts_override)
-            return null;
-        const factWraps = [];
+            return [];
         let totalDefianceBreak = 0;
         const processFactData = (fact) => {
             if (fact.requires_trait && (!context.traits || !fact.requires_trait.some(reqTrait => context.traits.includes(reqTrait)))) {
@@ -115,7 +114,7 @@ class SkillsProcessor {
                     }
                     let htmlContent = `<tem> ${buff.name} (${(_a = fact.duration) === null || _a === void 0 ? void 0 : _a.secs}s) ${TUtilsV2.GW2Text2HTML(buff.description)} ${modifiers} </tem>`;
                     if (fact.apply_count && fact.apply_count > 1) {
-                        htmlContent += TUtilsV2.newElement('div.buffcount', fact.apply_count.toString()).outerHTML;
+                        htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML;
                     }
                     return htmlContent;
                 },
@@ -160,17 +159,12 @@ class SkillsProcessor {
             if (fact.text === 'pull') {
                 htmlContent = `<tem> ${fact.text}: ${fact.value} </tem>`;
             }
-            const factWrap = document.createElement('te');
-            factWrap.innerHTML = `${TUtilsV2.newImg(iconUrl, 'iconmed')} ${htmlContent}`;
-            return factWrap;
+            return TUtilsV2.newElm('te', TUtilsV2.newImg(iconUrl, 'iconmed'), TUtilsV2.fromHTML(htmlContent));
         };
-        const sortedFacts = [...skill.facts].sort((a, b) => a.order - b.order);
-        for (const fact of sortedFacts) {
-            const factWrap = processFactData(fact);
-            if (factWrap) {
-                factWraps.push(factWrap);
-            }
-        }
+        const factWraps = skill.facts
+            .sort((a, b) => a.order - b.order)
+            .map(processFactData)
+            .filter(d => d);
         if ((skill.facts.length == 0 || context.gameMode !== 'Pve') && skill.facts_override) {
             for (const override of skill.facts_override) {
                 if (override.mode === context.gameMode) {
@@ -185,13 +179,11 @@ class SkillsProcessor {
             }
         }
         if (totalDefianceBreak > 0) {
-            const defianceWrap = TUtilsV2.newElement('te.defiance');
-            defianceWrap.innerHTML = `${TUtilsV2.newImg('https://assets.gw2dat.com/1938788.png', 'iconmed')} <tem> Defiance Break: ${totalDefianceBreak} </tem>`;
+            const defianceWrap = TUtilsV2.newElm('te.defiance', TUtilsV2.newImg('https://assets.gw2dat.com/1938788.png', 'iconmed'), TUtilsV2.newElm('tem', `Defiance Break: ${totalDefianceBreak}`));
             factWraps.push(defianceWrap);
         }
         if (skill.range) {
-            const rangeWrap = document.createElement('te');
-            rangeWrap.innerHTML = `${TUtilsV2.newImg(`https://assets.gw2dat.com/156666.png`, 'iconmed')} <tem> Range: ${skill.range} </tem>`;
+            const rangeWrap = TUtilsV2.newElm('te', TUtilsV2.newImg('https://assets.gw2dat.com/156666.png', 'iconmed'), TUtilsV2.newElm('tem', `Range: ${skill.range}`));
             factWraps.push(rangeWrap);
         }
         return factWraps;
