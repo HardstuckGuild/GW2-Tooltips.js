@@ -1,60 +1,51 @@
-class NewGW2API {
-  fetchedIds = new Set<number>()
+class HSAPI {
+  static fetchedIds = new Set<number>()
 
-  processFactsAndOverrides(skill: Skill, idSet: Set<number>) {
-    if (skill.facts.length) {
-      skill.facts.forEach((fact: Fact) => {
-        if (
-          (fact.type === 'Buff' || fact.type === 'BuffBrief') &&
-          fact.buff !== undefined &&
-          !idSet.has(fact.buff)
-        ) {
-          idSet.add(fact.buff)
-        }
-      })
+  static processFactsAndOverrides (skill: Skill, idSet: Set<number>) {
+    for(const fact of skill.facts) {
+      if(fact.type.includes('Buff') && fact.buff !== undefined) {
+        idSet.add(fact.buff)
+      }
     }
-    if (skill.facts_override && skill.facts_override.length) {
-      skill.facts_override.forEach((facts) => {
-        facts.facts.forEach((fact) => {
-          if (
-            (fact.type === 'Buff' || fact.type === 'BuffBrief') &&
-            fact.buff !== undefined &&
-            !idSet.has(fact.buff)
-          ) {
+
+    if(skill.facts_override) {
+      for(const { facts } of skill.facts_override) {
+        for(const fact of facts) {
+          if(fact.type.includes('Buff') && fact.buff !== undefined) {
             idSet.add(fact.buff)
           }
-        })
-      })
+        }
+      }
     }
   }
 
-  processPalettes(skill: Skill, idSet: Set<number>) {
-    skill.palettes.forEach((palette) => {
-      palette.slots.forEach((slot) => {
-        if (
+  static processPalettes(skill: Skill, idSet: Set<number>) {
+    for(const palette of skill.palettes) {
+      for(const slot of palette.slots) {
+        if(
           slot.profession !== 'None' &&
           slot.next_chain &&
           !this.fetchedIds.has(slot.next_chain)
         ) {
           idSet.add(slot.next_chain)
         }
-      })
-    })
-  }
-
-  processSubSkills(skill: Skill, idSet: Set<number>) {
-    if (skill.sub_skills) {
-      skill.sub_skills.forEach((subSkillId) => {
-        if (!this.fetchedIds.has(subSkillId)) {
-          idSet.add(subSkillId)
-        }
-      })
+      }
     }
   }
 
-  async simulateApiResponse(ids: number[], type: string): Promise<Skill[]> {
-    let response = await fetch('../output.json')
-    let allSkills: Skill[] = await response.json()
+  static processSubSkills(skill: Skill, idSet: Set<number>) {
+    if(!skill.sub_skills) return;
+    for(const subSkillId of skill.sub_skills) {
+      if(!this.fetchedIds.has(subSkillId)) {
+        idSet.add(subSkillId)
+      }
+    }
+  }
+
+  static async simulateApiResponse(ids: number[], type: string): Promise<Skill[]> {
+    //let response = await fetch('./output.json')
+    //let allSkills: Skill[] = await response.json()
+    let allSkills: Skill[] = (window as any).DUMP_output
     let skills = allSkills.filter((skill) => ids.includes(skill.id))
 
     ids.forEach((id) => this.fetchedIds.add(id))
@@ -62,44 +53,36 @@ class NewGW2API {
     return skills
   }
 
-  async processApiResponse(
-    type: string,
-    initialIds: number[]
-  ): Promise<Skill[]> {
+  static async processApiResponse(type: string, initialIds: number[]): Promise<Skill[]> {
     let idSet = new Set(initialIds)
     let result: Skill[] = []
-    let skillMap = new Map<number, Skill>()
+    let duplicateTest = new Map<number, Skill>()
 
-    while (idSet.size > 0) {
+    while(idSet.size > 0) {
       let newIds = Array.from(idSet).filter((id) => !this.fetchedIds.has(id))
       idSet.clear()
-      const skills = await this.simulateApiResponse(newIds, type)
 
-      skills.forEach((skill) => {
-        if (!skillMap.has(skill.id)) {
-          skillMap.set(skill.id, skill)
-          result.push(skill)
-          this.processPalettes(skill, idSet)
-          this.processSubSkills(skill, idSet)
-          this.processFactsAndOverrides(skill, idSet)
-        }
-      })
+      for(const skill of await this.simulateApiResponse(newIds, type)) {
+        if(duplicateTest.has(skill.id)) continue;
+
+        duplicateTest.set(skill.id, skill)
+
+        this.processPalettes(skill, idSet)
+        this.processSubSkills(skill, idSet)
+        this.processFactsAndOverrides(skill, idSet)
+        
+        result.push(skill)
+      }
     }
+
     return result
   }
 
-  async getAPIObjects(type: string, ids: number[]): Promise<any> {
-    if (ids && ids.length > 0) {
-      let gatheredObjects: any[] = []
-
-      const response = await this.processApiResponse(type, ids)
-      gatheredObjects = response
-
-      return gatheredObjects
-    } else {
-      return []
+  static async getAPIObjects(type: string, ids: number[]): Promise<any> {
+    let gatheredObjects: any[] = []
+    if(ids.length) {
+      gatheredObjects = await this.processApiResponse(type, ids)
     }
+    return gatheredObjects
   }
 }
-
-const api = new NewGW2API()

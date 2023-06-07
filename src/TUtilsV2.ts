@@ -1,40 +1,26 @@
-class tUtilsv2 {
+class TUtilsV2 {
+  /** @param spec expected to be of shape tagname[.class1[.class2[...]]] */
   static newElement(
-    tag: string,
-    className?: string,
-    inner?: string,
+    spec: string,
+    inner?: string | Node,
     parentNode?: HTMLElement
   ): HTMLElement {
-    const element = document.createElement(tag)
-
-    if (className) {
-      element.className = className
-    }
-
-    if (inner) {
-      element.innerHTML = inner
-    }
-
-    if (parentNode) {
-      parentNode.appendChild(element)
-    }
-
-    return element
-  }
-
-  static isNumeric(str: string | undefined): boolean {
-    return str !== undefined && /^\d+$/.test(str)
+    const [tag, ...classes] = spec.split('.');
+    const el = document.createElement(tag);
+    el.classList.add(...classes);
+    if(inner) el.append(inner);
+    //huh ? 
+    if(parentNode) parentNode.appendChild(el)
+    return el
   }
 
   static newImg(src: string, className = '', alt = '') {
-    if (!src) return ''
-    if (className === 'iconlarge') {
+    if(!src) return ''
+    if(className === 'iconlarge') {
       return `<img width='64' height='64' src='${src}' alt='${alt} icon' class='${className}'/>`
     }
     return `<img width='32' height='32' src='${src}' alt='${alt} icon' class='${className}'/>`
   }
 
-  static capitalizeFirstLetter(str: string) {
-    return str.charAt(0).toUpperCase() + str.slice(1)
-  }
+  static GW2Text2HTML = (text? : string, tag = 'span') => text ? text.replace(/<c=@(.*?)>(.*?)<\/c>/g, `<${tag} class="color-$1">$2</${tag}>`).replace(/%%/g, '%') : '';
 }

@@ -5,6 +5,23 @@
 <script src="../out/SkillsProcessor.js"></script>
 <script src="../out/TUtilsV2.js"></script>
 <script src="../out/TooltipsV2.js" defer></script>
+<style>
+	.tooltipWrapper {
+		position: absolute;
+		top: 0;
+		left: 0;
+		max-width: 95%;
+		background-color: gray;
+		border: black;
+		display: block;
+		flex-direction: column;
+		pointer-events: none;  /* important */
+	}
+	.tooltipWrapper>.tooltip {
+		display: flex;
+		flex-direction: column;
+	}
+</style>
 <head>
 </head>
 <body class="gw2_builds-template-default single single-gw2_builds postid-19944 webp-support">
