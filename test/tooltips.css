@@ -1,0 +1,113 @@
+.flexbox-fill {
+  flex: 1;
+}
+
+.tooltipWrapper {
+	position: absolute;
+	top: 0;
+	left: 0;
+	display: flex;
+
+	flex-direction: column;
+	flex-wrap: wrap;
+	gap: 0 .25rem;
+	
+	pointer-events: none;  /* important */
+}
+.tooltipWrapper > .tooltip {
+	display: flex;
+	flex-direction: column;
+
+	background-color: gray;
+	border: 1px solid black;
+	box-shadow: #000 4px 4px 8px;
+
+	padding: 4px;
+	border-radius: 2px;
+	max-width: min(50ch, 100%);
+	min-width: 40ch;
+	max-height: 80vh;
+	line-height: 1.2;
+	font-size: 0.88em;
+	/*TODO(Rennorb): background image*/
+}
+
+.tooltipWrapper tet {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0 1ch;
+  white-space: nowrap;
+}
+
+.tooltipWrapper teb, .tooltipWrapper te {
+  display: flex;
+  gap: 0 .5ch;
+	position: relative;
+}
+
+.tooltipWrapper teb {
+	font-size: 1.17em;
+}
+
+.tooltipWrapper .buffcount {
+  position: absolute;
+  top: 1.8rem;
+  transform: translateY(-50%);
+  z-index: 1;
+  width: 1.8rem;
+  color: hsl(var(--hs-color-text-accent));
+  font-weight: var(--hs-font-weight-thick);
+  font-size: var(--hs-font-size-s);
+  text-align: right;
+  text-shadow: -1px 2px 0px var(--hs-color-black);
+}
+
+gw2object.gw2objectembed img {
+	transform: scale(1.2);
+	clip-path: inset(8%);
+	margin-right: 0.25ch;
+	height: 1.25em;
+	width: auto;
+}
+
+gw2object[type=specialization] {
+	--gw2-build-spec-gap: 1em;
+	--gw2-build-trait-size: 2.25rem;
+	--gw2-build-item-size: 4rem;
+	--gw2-build-spec-height: calc(var(--gw2-build-trait-size) * 3 + 1em * 5);
+	--gw2-build-spec-width: calc(var(--gw2-build-spec-padding) + var(--gw2-build-spec-gap) * 8 + var(--gw2-build-trait-size) * 6);
+	--gw2-build-spec-aspect-ratio: 3.155;
+
+	display: flex;
+	flex-flow: row nowrap;
+	justify-content: space-evenly;
+	align-items: center;
+	gap: 0;
+	margin: 1em 0;
+	background-position: 10% bottom;
+	background-size: calc(var(--gw2-build-spec-height) * var(--gw2-build-spec-aspect-ratio) + 1024px);
+	background-repeat: no-repeat;
+	padding: 1em 2em;
+	height: var(--gw2-build-spec-height);
+	overflow: hidden;
+}
+
+gw2object[type=specialization] .traitwrapper {
+	display: flex;
+	flex-direction: column;
+	gap: var(--gw2-build-spec-gap);
+}
+
+gw2object[type=specialization] [type=trait] {
+  position: relative;
+  width: var(--gw2-build-trait-size);
+  height: var(--gw2-build-trait-size);
+}
+
+[type=trait] img {
+  width: 100%;
+	height: auto;
+	transform: scale(1.05);
+	background: #000;
+}

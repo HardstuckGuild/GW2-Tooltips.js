@@ -6,6 +6,7 @@
 // It is however unfortunately require for backwards compat. 
 //TODO(Rennorb): Provide a clean way to construct custom tooltips. Currently with the old version we manipulate the cache before the hook function gets called, which really isn't the the best.
 //TODO(Rennorb): This should also compile to a single file for ease of use, either we want to actually put everything back in one file or get tsc to merge the files in a simple way. Another option would be to bundle everything with something like rollup. That way we can also easily produce minified versions, although we will have to introduce node-modules for that which i strongly dislike.
+//TODO(Rennorb): Multi skill tooltips (multiple boxes)
 
 
 

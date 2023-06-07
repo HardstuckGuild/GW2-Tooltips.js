@@ -41,7 +41,7 @@ To archive all of the functionality we use our own proprietary API as opposed to
 	}
 	</script>
 	```
-	<span style="color: red">//TODO(Rennorb): provide separate d.ts file for the Context global</span>
+	If you want to have typings for this context structure you can use `src/Context.d.ts`.
 3. Include the script and style <span style="color: red">//TODO(Rennorb) @prio:low : style does not actually exist in this form </span>
 	```html
 	<head>
