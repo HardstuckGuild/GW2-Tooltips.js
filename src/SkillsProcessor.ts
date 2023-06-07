@@ -81,7 +81,7 @@ class SkillsProcessor {
     return weaponStrength
   }
 
-  static processFact(skill : API.Skill, skillDataCache : Map<number, API.Skill>, context : Context) {
+  static processFact(skill : API.Skill, skillDataCache : Map<number, API.Skill>, context : Context) : HTMLElement[] {
     if(!skill.facts.length && !skill.facts_override) return []
 
     let totalDefianceBreak = 0

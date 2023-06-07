@@ -18,7 +18,7 @@ class TUtilsV2 {
     }
     static fromHTML(html) {
         this.dummy.innerHTML = html;
-        return this.dummy.firstElementChild;
+        return this.dummy.content;
     }
 }
 TUtilsV2.dummy = document.createElement('template');

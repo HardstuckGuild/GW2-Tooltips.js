@@ -7,7 +7,7 @@
 //TODO(Rennorb): Provide a clean way to construct custom tooltips. Currently with the old version we manipulate the cache before the hook function gets called, which really isn't the the best.
 //TODO(Rennorb): This should also compile to a single file for ease of use, either we want to actually put everything back in one file or get tsc to merge the files in a simple way. Another option would be to bundle everything with something like rollup. That way we can also easily produce minified versions, although we will have to introduce node-modules for that which i strongly dislike.
 //TODO(Rennorb): Multi skill tooltips (multiple boxes)
-
+//TODO(Rennorb): Stop using these jank custom tags. There is no reason to do so and its technically not legal per html spec.
 
 
 type TypeBridge<T, K extends keyof T> = [K, T[K]]
@@ -292,12 +292,14 @@ class GW2TooltipsV2 {
         }
       }
 
-      currentSkill.sub_skills?.forEach((subSkillId) => {
-        const subSkillInChain = this.objectData['skills'].get(subSkillId);
-        if(subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
-          addSkillToChain(subSkillInChain)
+      if(currentSkill.sub_skills) {
+        for(const subSkillId of currentSkill.sub_skills) {
+          const subSkillInChain = this.objectData['skills'].get(subSkillId);
+          if(subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
+            addSkillToChain(subSkillInChain)
+          }
         }
-      })
+      }
     }
 
     addSkillToChain(initialSkill)

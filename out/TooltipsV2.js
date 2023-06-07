@@ -194,7 +194,6 @@ class GW2TooltipsV2 {
         const skillChain = [];
         const validTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard'];
         const addSkillToChain = (currentSkill) => {
-            var _a;
             skillChain.push(currentSkill);
             for (const palette of currentSkill.palettes) {
                 for (const slot of palette.slots) {
@@ -206,12 +205,14 @@ class GW2TooltipsV2 {
                     }
                 }
             }
-            (_a = currentSkill.sub_skills) === null || _a === void 0 ? void 0 : _a.forEach((subSkillId) => {
-                const subSkillInChain = this.objectData['skills'].get(subSkillId);
-                if (subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
-                    addSkillToChain(subSkillInChain);
+            if (currentSkill.sub_skills) {
+                for (const subSkillId of currentSkill.sub_skills) {
+                    const subSkillInChain = this.objectData['skills'].get(subSkillId);
+                    if (subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
+                        addSkillToChain(subSkillInChain);
+                    }
                 }
-            });
+            }
         };
         addSkillToChain(initialSkill);
         const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];

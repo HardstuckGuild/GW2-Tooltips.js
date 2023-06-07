@@ -22,9 +22,9 @@ class TUtilsV2 {
   }
 
   static dummy = document.createElement('template');
-  static fromHTML<T extends keyof HTMLElementMap>(html : string) : HTMLElementMap[T] {
+  static fromHTML(html : string) : DocumentFragment {
     this.dummy.innerHTML = html;
-    return this.dummy.firstElementChild as HTMLElementMap[T]
+    return this.dummy.content
   }
 
   static GW2Text2HTML = (text? : string, tag = 'span') => text ? text.replace(/<c=@(.*?)>(.*?)<\/c>/g, `<${tag} class="color-$1">$2</${tag}>`).replace(/%%/g, '%') : '';
