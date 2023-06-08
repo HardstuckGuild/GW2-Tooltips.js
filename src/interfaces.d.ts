@@ -6,6 +6,7 @@ namespace API {
   interface Skill {
     id                : number
     name              : string
+    name_brief?       : string
     description       : string
     icon              : string
     chat_link         : string
@@ -28,17 +29,24 @@ namespace API {
     facts : Fact[]
   }
 
+  type Weapons1H = 'Focus' | 'Shield' | 'Torch' | 'Warhorn' | 'BowShort' | 'Axe' | 'Sword' | 'Dagger' | 'Pistol' | 'Scepter' | 'Mace';
+  type Weapons2H = 'Greatsword' | 'Hammer' | 'Staff' | 'BowLong' | 'Rifle';
+  type WeaponsAquatic = 'Spear';
+
   interface Palette {
     id          : number
-    type        : 'Standard' | 'Toolbelt' | 'Bundle' | 'Equipment' | 'Heal' | 'Elite' | 'Profession' | 'Monster'
-    weapon_type : 'None' | 'Focus' | 'Shield' | 'Torch' | 'Warhorn' | 'Greatsword' | 'Hammer' | 'Staff' | 'BowLong' | 'Rifle' | 'BowShort' | 'Axe' | 'Sword' | 'Dagger' | 'Pistol' | 'Scepter' | 'Mace' | 'Standard'
+    type        : 'Standard' | 'Toolbelt' | 'Bundle' | 'Equipment' | 'Heal' | 'Elite' | 'Profession' | 'Monster' | 'Transformation' | 'Pet'
+    weapon_type : 'None' | 'Standard' | 'BundleLarge' | Weapons1H | Weapons2H | WeaponsAquatic
     slots       : Slot[]
   }
 
   interface Slot {
-    profession : 'None' | string // todo
-    slot       : string
-    next_chain : number
+    profession  : 'None' | string // todo
+    slot        : `${'Main'|'Offhand'|'Main'}${1|2|3|4|5}` | `Offhand${1|2}` 
+      | 'Heal' | 'Standard' | 'Elite'
+      | 'Pet' | `Transformation${1|2|3|4|5}`
+    prev_chain? : number
+    next_chain? : number
   }
 
   interface Modifier {
@@ -164,14 +172,69 @@ namespace API {
     secs  : number
     nanos : number
   }
+
+  interface Trait {
+    id   : number
+    icon : string
+    name : string
+    //TODO
+  }
+
+  interface Item {
+    id : number
+    icon : string
+    name : string
+    //TODO
+  }
+
+  interface Specialization {
+    id : number
+    //TODO
+  }
+
+  interface Pet {
+    id : number
+    icon : string
+    name : string
+    //TODO
+  }
+
+  interface Amulet {
+    id : number
+    icon : string
+    name : string
+    //TODO
+  }
 }
 
-type ObjectDataStorage<T> = {
-  [k in LegacyCompat.ObjectType as `${k}s`] : T
+type ObjectDataStorageKeys = `${LegacyCompat.ObjectType}s`
+
+type ObjectDataStorage = {
+  [k in ObjectDataStorageKeys] : Map<number, APIFetchMap[k]>
 }
 
-interface HandlerParams<TFact = API.Fact>  {
+type ObjectsToFetch = {
+  [k in ObjectDataStorageKeys] : Map<number, HTMLElement[] | undefined>
+}
+
+interface HandlerParams<TFact = API.Fact> {
   fact    : TFact
   buff    : (TFact extends { buff : number } ? API.Skill : undefined) | undefined
   skill   : API.Skill
+}
+
+//TODO(Rennorb): some of these don't exist yet
+type APIFetchMap = {
+  skills         : API.Skill;
+  traits         : API.Trait;
+  items          : API.Item;
+  specializations: API.Specialization;
+  pets           : API.Pet;
+  "pvp/amulets"  : API.Amulet;
+}
+
+type AllFetchResults = APIFetchMap[keyof APIFetchMap]
+
+type InflatorMap = {
+  [k in ObjectDataStorageKeys] : (gw2Object : HTMLElement, data : APIFetchMap[k]) => void
 }

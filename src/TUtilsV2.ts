@@ -7,12 +7,12 @@ class TUtilsV2 {
   static newElm<T extends keyof HTMLElementMap>(spec : T, ...inner : (string | Node)[]) : HTMLElementMap[T] {
     const [tag, ...classes] = spec.split('.');
     const el = document.createElement(tag);
-    el.classList.add(...classes);
-    el.append(...inner);
+    if(classes.length) el.classList.add(...classes);
+    if(inner.length) el.append(...inner);
     return el as HTMLElementMap[T]
   }
 
-  static newImg(src : string, className? : string, alt = '') : HTMLImageElement {
+  static newImg(src : string, className? : string, alt? : string) : HTMLImageElement {
     const img = document.createElement('img')
     img.src = src;
     if(className) img.classList.add(className)
@@ -28,4 +28,7 @@ class TUtilsV2 {
   }
 
   static GW2Text2HTML = (text? : string, tag = 'span') => text ? text.replace(/<c=@(.*?)>(.*?)<\/c>/g, `<${tag} class="color-$1">$2</${tag}>`).replace(/%%/g, '%') : '';
+
+  //todo probably just spit out one value from the api
+  static DurationToSeconds = (dur : API.Duration) => dur.secs + dur.nanos / 1_000_000;
 }

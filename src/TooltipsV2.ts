@@ -7,7 +7,11 @@
 //TODO(Rennorb): Provide a clean way to construct custom tooltips. Currently with the old version we manipulate the cache before the hook function gets called, which really isn't the the best.
 //TODO(Rennorb): This should also compile to a single file for ease of use, either we want to actually put everything back in one file or get tsc to merge the files in a simple way. Another option would be to bundle everything with something like rollup. That way we can also easily produce minified versions, although we will have to introduce node-modules for that which i strongly dislike.
 //TODO(Rennorb): Multi skill tooltips (multiple boxes)
+//TODO(Rennorb): Option to show whole skill-chain (maybe on button hold)?
 //TODO(Rennorb): Stop using these jank custom tags. There is no reason to do so and its technically not legal per html spec.
+//TODO(Rennorb): The positioning code seems a bit wired, it tends to 'stick' to the borders more than it should.
+//TODO(Rennorb) @fixme: impale: the impale buff doesn't have a name, only shows duration
+//TODO(Rennorb) @fixme: rampage: 0s on imob, cripple, and chill (should probably be 'imob, cripple, and chill')
 
 
 type TypeBridge<T, K extends keyof T> = [K, T[K]]
@@ -19,7 +23,7 @@ declare interface ObjectConstructor {
 // Instances aren't needed for anything here.
 class GW2TooltipsV2 {
   tooltip       : HTMLElement
-  objectData    : ObjectDataStorage<Map<number, API.Skill>> = { //TODO(Rennorb) @hammer: don't use skill for each type
+  objectData    : ObjectDataStorage = { //TODO(Rennorb) @hammer: don't use skill for each type
     skills         : new Map<number, API.Skill>(),
     items          : new Map<number, API.Skill>(),
     traits         : new Map<number, API.Skill>(),
@@ -28,8 +32,9 @@ class GW2TooltipsV2 {
     specializations: new Map<number, API.Skill>(),
   }
   
+  cycleTooltipsHandler? : VoidFunction;
   cycling = false
-  cyclePos!    : number
+  cyclePos!    : number  
   baseTooltip! : number
   lastMouseX!  : number
   lastMouseY!  : number
@@ -74,10 +79,22 @@ class GW2TooltipsV2 {
     this.tooltip = TUtilsV2.newElm('div.tooltipWrapper')
     this.tooltip.style.display = 'none';
     document.body.appendChild(this.tooltip)
+
+    document.addEventListener('mousemove', event => {
+      gw2tooltips.lastMouseX = event.pageX
+      gw2tooltips.lastMouseY = event.pageY
+      if(this.tooltip.style.display != 'none')
+        gw2tooltips.positionTooltip()
+    })
+    document.addEventListener('contextmenu', event => {
+      if(!this.cycleTooltipsHandler) return;
+      event.preventDefault()
+      this.cycleTooltipsHandler();
+    })
   }
 
-  async fetchAPIObjects<T>(key: string, value: number[]) : Promise<T[]> {
-    let result : T[] = [];
+  async fetchAPIObjects<T extends keyof APIFetchMap>(key : T, value: number[]) : Promise<APIFetchMap[T][]> {
+    let result : APIFetchMap[T][] = [];
     try {
       result = await HSAPI.getAPIObjects(key, value)
     } catch (error) {
@@ -127,16 +144,15 @@ class GW2TooltipsV2 {
   }
 
   hookDocument(scope: { getElementsByTagName(qualifiedName: string): HTMLCollectionOf<Element> }, _unused? : any) : void {
-    const objectsToGet : ObjectDataStorage<number[]> = {
-      skills         : [],
-      traits         : [],
-      items          : [],
-      specializations: [],
-      pets           : [],
-      'pvp/amulets'  : [],
+    //NOTE(Rennorb): need to use an array since there might be multiple occurrences of the same id in a given scope
+    const objectsToGet : ObjectsToFetch = {
+      skills         : new Map<number, HTMLElement[] | undefined>(),
+      traits         : new Map<number, HTMLElement[] | undefined>(),
+      items          : new Map<number, HTMLElement[] | undefined>(),
+      specializations: new Map<number, HTMLElement[] | undefined>(),
+      pets           : new Map<number, HTMLElement[] | undefined>(),
+      'pvp/amulets'  : new Map<number, HTMLElement[] | undefined>(),
     }
-
-    let elementsNeedingWikiLinks = new Map<number, Element>()
 
     for(const gw2Object of scope.getElementsByTagName('gw2object') as HTMLCollectionOf<HTMLElement>) {
       const objId = +String(gw2Object.getAttribute('objId'))
@@ -145,49 +161,76 @@ class GW2TooltipsV2 {
       const type = (gw2Object.getAttribute('type') || 'skill') + 's'
       if(isNaN(objId) || !(type in objectsToGet)) continue;
 
-      objectsToGet[type as keyof typeof objectsToGet].push(objId)
-      elementsNeedingWikiLinks.set(objId, gw2Object)
+      const elementsWithThisId = objectsToGet[type as keyof typeof objectsToGet].get(objId);
+      if(elementsWithThisId) elementsWithThisId.push(gw2Object)
+      else objectsToGet[type as keyof typeof objectsToGet].set(objId, [gw2Object])
 
       gw2Object.addEventListener('mouseenter', (e) => {
         const element = e.target as HTMLElement;
-        const type = (element.getAttribute('type') || 'skill') + 's';
+        const type = (element.getAttribute('type') || 'skill') + 's' as ObjectDataStorageKeys;
         const objId = +String(element.getAttribute('objId'))
 
+        if(type != 'skills') return; //TODO(Rennorb) disabled for now
+
         this.tooltip.replaceChildren();
-        const data = this.objectData[type as keyof typeof this.objectData].get(objId)
+        const data = this.objectData[type].get(objId)
         if(data) {
-          this.generateToolTip(data, element) //TODO(Rennorb) @fixme: this add another set of handlers on each mouseenter. 
+          this.generateToolTip(data, element)
           this.tooltip.style.display = ''; //empty value resets actual value to use stylesheet
         }
       })
       gw2Object.addEventListener('mouseleave', () => {
         this.tooltip.style.display = 'none';
+        this.cycleTooltipsHandler = undefined;
       })
     }
 
     Object.entries(objectsToGet).forEach(async ([key, values]) => {
-      if(values.length == 0) return;
+      if(values.size == 0) return;
 
       const storage = this.objectData[key];
+      const elementLookup = objectsToGet[key];
+      const inflator = this.inflators[key];
 
-      for(const skill of await this.fetchAPIObjects<API.Skill>(key, values))
-        storage.set(skill.id, skill)
+      const apiResponse = await this.fetchAPIObjects(key, Array.from(values.keys()))
+      for(const apiObject of apiResponse)
+        storage.set(apiObject.id, apiObject as any) //TODO
 
-      for(const obj of storage.values()) {
-        const gw2Object = elementsNeedingWikiLinks.get(obj.id)
-        if(gw2Object) {
-          const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(`https://assets.gw2dat.com/${obj.icon}`, 'iconlarge', obj.name))
-          wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + obj.name
-          wikiLink.target = '_blank'
-          gw2Object.append(wikiLink)
-        }
+      for(const data of apiResponse) {
+        const objects = elementLookup.get(data.id)
+        if(!objects) continue;
+
+        for(const gw2Object of objects)
+          inflator(gw2Object, data as any); //TODO
       }
     })
   }
 
-  processSkillSlot(skill: API.Skill) : string | undefined {
+  inflators : InflatorMap = (function() {
+    //TODO(Rennorb): can be changed once the icon url resolution is figured for types other than skills
+    const genericIconInflater = (clazz : string = '', icon? : string) => (gw2Object : HTMLElement, data : { name : string, icon : string }) => {
+      const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(icon || `https://assets.gw2dat.com/${data.icon}`, clazz, data.name));
+      wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + data.name;
+      wikiLink.target = '_blank';
+      gw2Object.append(wikiLink);
+    }
+
+    return {
+      skills: genericIconInflater('iconlarge'),
+      traits: genericIconInflater('', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAE4AAABHCAIAAAAmx+aCAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAD1SURBVHhe7dPRDYMgFEZh5nIg53Eal3EYC7cWwYBplFh7/M9LA16MX2vd/JhEJSYqMVGJiUpMVGKiEhOVmKjERCUmKjFRiYlK7FbUaeic64ZpWTbuLLV3tfpxGfm+e1PXxqA+4KsWbtjSLeqBSlR7I/vRPnzxwW12KdHEF/hzINbiK7yA6st+HD+4rrNTkWqFS9nBk11B3X3e9NjfU/cf10a4VNtOg1I3e7ZkUrdbYGo+Z4sKtXT4TL/4r9ruO38tnCtS08HNfQ/Vjnr7RCUmKjFRiYlKTFRiohITlZioxEQlJioxUYmJSkxUYqISE5WYqLzm+QXuoFiEasepKQAAAABJRU5ErkJggg=='),
+      items: genericIconInflater('', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEkAAABJCAIAAAD+EZyLAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFhSURBVGhD7ZoxkoIwFIYfexa0cDwBnkArT4ElNnuDPQC2dtvaqyeQE1gt3CWSEAOoszuzJoy/838N/CSZ4Zu8FxoipZS8KR/2+o7QDRO6YUI3TOiGCd0woRsmdMOEbpjQDRO6YUI3TOiGCd0eUG1mUTTbVDa+Iv727bh6NVfW5B+Y+lxsRYr1KNKsjnZEb+YV99DtsVnX0Ay66X4KQP2TMk9Ekry0UalD2s/NE0kP5r4/3Yy0g9fYy/b+CcK5mQmdF+zm25c3ubPYj1ywfqv2u0LS5dxGkXg8FTn/PKy10aT2no5jG5v8NGHPku3C9o9GN+SghHW7K6tT5vYmPMHcfivBgfDnpnuk2O2dzPwzT+pvQnvy1wf8sN92f25x9m1kdGsZoTg71Qde23Jfk3LQkhT+g4EJ3TChGyZ0w4RumNANE7phQjdM6IYJ3TChGyZ0w4RumNANE7phQjdM6IaIyAXGxL3ck02bowAAAABJRU5ErkJggg=='),
+      specializations: function (gw2Object: HTMLElement, data: API.Specialization): void {
+        //TODO
+      },
+      pets: genericIconInflater('', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEkAAABJCAIAAAD+EZyLAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFqSURBVGhD7dkxcoJAFMbxtzmLpMjkBHgCrHIKLLXJPbAMR7BKI54gnCBV5C5kFxYEmdHMwCPzMd+vcUCc8e8+lkJTlqUs1JN/XSK2YWIbJrZhYhsmtmFiGya2YWIbJrZhmqjtvDV960Ph3/o/E65bmFxKL4vzfWC2Z//OHe5H0foddGYy+shikfTzD3GKtO634CUU+f5pF6Q7tH49i8PamE0q4ta4c346fopGcsvUmcn6hMTZ8OCS2OjrpYMPTkilrfr+7XF11GRavWPNtglnshktY4K92K/7tVu508XpmEv8FlXXOKvn1964qtHZJ5uuVrrx2Y67x+agtZfc6Ixk7TZeg37bbCM4MMO6Re9JaO/F6w5vnwft49o9K/LjSafcz8hID7e76jHg9S+sN1VnMLgj8f83TGzDxDZMbMPENkxsw8Q2TGzDxDZMbMPENkxsw8Q2TGzDxDZMbMPENkxsw8Q2TGzDtNw2kV87CKi1eKVduQAAAABJRU5ErkJggg=='),
+      "pvp/amulets": genericIconInflater('iconlarge', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEkAAABJCAIAAAD+EZyLAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAILSURBVGhD7Zo7csIwEEDlnMWmYDiBOQHQUHEEU0KTjpKOBsq4o6WiAZ8An4BJAb6LI602tvzBv2ESltnXoI/1efJKcoEVx7F4Uz7w9x1hN5qwG03YjSbsRhN2owm70YTdaMJuNGE3mrAbTdiNJuxGE3ajyYu4RbuhZQ13EWafQyO3YG4p5gHmidDELTj6wnVd4R//X04tc9P328BNqXmr/ew15NoQ13DfukJ4ZyORcvaEcLd3qNHoelUOyEp4UAGFZntsDWnoovA0go2MYTTZyRSpczOMCuMnE8BBkvmY+WQC2ZxEFZS7mY/mRjUb1VETk9HpEApvOlJpeyLDMjyccsEu5/AF9WI0VXOSI5v59nEc7dZyE5yxE3ux37rhctNhN1S7gZrbd3TO7g1EiVyK05drPOjZmNX5tpjLCcCw11v7+6HSTavNJr+ThRdRJfc0/DHcOpqxj6UtqXIDNREuHRwDR/kLOXNfApdFEg2NqXDTby23b9XW7iaXD9DodsVUls4hWOCxW7BZyrhf5dZLHyhdtja09Nf63pXfWI7svpTRpzo8nPQrSN7XyXWtVqjp2j50Uzd2ZksjMMVOtzieeBDhzvdKn+5l2IuLPOvTLbfu35OQNDup+wbk/87QhN1owm40YTeasBtN2I0m7EYTdqMJu9GE3WjCbjRhN5qwG03YjSbsRhN2o4gQPxqF5ksm6ZNyAAAAAElFTkSuQmCC'),
+    }
+  })()
+
+  //TODO(Rennorb): this is neither complete, nor reliable 
+  getSlotName(skill: API.Skill) : string | undefined {
     let skillSlot
-    skill.palettes.forEach((palette) => {
+    for(const palette of skill.palettes) {
       for(const slot of palette.slots) {
         switch (palette.type) {
           case 'Equipment':
@@ -195,14 +238,7 @@ class GW2TooltipsV2 {
               //TODO(Rennorb) @cleanup: move this to the api side
               const replaceFn = (_: string, __: string, digit: string) => {
                 if(
-                  [
-                    'Greatsword',
-                    'Hammer',
-                    'BowLong',
-                    'Rifle',
-                    'BowShort',
-                    'Staff',
-                  ].includes(palette.weapon_type) &&
+                  ['Greatsword', 'Hammer', 'BowLong', 'Rifle', 'BowShort', 'Staff'].includes(palette.weapon_type) &&
                   ['Offhand1', 'Offhand2'].includes(slot.slot)
                 ) {
                   digit = digit === '1' ? '4' : '5'
@@ -231,9 +267,11 @@ class GW2TooltipsV2 {
             break
           case 'Profession':
             skillSlot = slot.slot
+          default:
+            console.error(`unknown palette type '${palette.type}' for skill '${skill.name}'`)
         }
       }
-    })
+    }
     return skillSlot
   }
 
@@ -241,23 +279,23 @@ class GW2TooltipsV2 {
   processToolTipInfo(apiObject : API.Skill, context : Context) {
     let recharge : HTMLElement | '' = ''
     if(context.gameMode !== 'Pve' && apiObject.recharge_override.length) {
-      const override = apiObject.recharge_override.find(override =>  override.mode === context.gameMode && override.recharge.secs);
-      if(override && override.mode === context.gameMode && override.recharge.secs) {
+      const override = apiObject.recharge_override.find(override =>  override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge));
+      if(override && override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge)) {
         recharge = TUtilsV2.newElm('ter', 
-          String(override.recharge.secs), 
+          String(TUtilsV2.DurationToSeconds(override.recharge)), 
           TUtilsV2.newImg('https://assets.gw2dat.com/156651.png', 'iconsmall')
         );
       }
-    } else if(apiObject.recharge.secs) {
+    } else if(TUtilsV2.DurationToSeconds(apiObject.recharge)) {
       recharge = TUtilsV2.newElm('ter', 
-        String(apiObject.recharge.secs), 
+        String(TUtilsV2.DurationToSeconds(apiObject.recharge)), 
         TUtilsV2.newImg('https://assets.gw2dat.com/156651.png', 'iconsmall')
       );
     }
 
     const basic = TUtilsV2.newElm('tet',
       TUtilsV2.newElm('teb', apiObject.name),
-      TUtilsV2.newElm('tes', `( ${this.processSkillSlot(apiObject)} )`), TUtilsV2.newElm('div.flexbox-fill'),
+      TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`), TUtilsV2.newElm('div.flexbox-fill'),
       recharge
     )
 
@@ -304,6 +342,8 @@ class GW2TooltipsV2 {
 
     addSkillToChain(initialSkill)
 
+    //TODO(Rennorb) @cleanup: return the html objects instead of appending them them in here
+
     const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
     skillChain.forEach(skill => this.processToolTipInfo(skill, context))
     const chainTooltips = Array.from(this.tooltip.children) as HTMLElement[]
@@ -315,18 +355,12 @@ class GW2TooltipsV2 {
       let currentTooltipIndex = 0
       this.displayCorrectChainTooltip(chainTooltips, currentTooltipIndex)
 
-      gw2Object.addEventListener('contextmenu', event => {
-        event.preventDefault()
-        gw2tooltips.cycleTooltips()
+      this.cycleTooltipsHandler = () => {
+        gw2tooltips.cycleTooltips() //TODO(Rennorb) @cleanup: why are there two functions with basically the same name
         currentTooltipIndex = (currentTooltipIndex + 1) % chainTooltips.length
         gw2tooltips.displayCorrectChainTooltip(chainTooltips, currentTooltipIndex)
-      })
+      };
     }
-    gw2Object.addEventListener('mousemove', event => {
-      gw2tooltips.lastMouseX = event.pageX
-      gw2tooltips.lastMouseY = event.pageY
-      gw2tooltips.positionTooltip()
-    })
     return skillChain
   }
 }

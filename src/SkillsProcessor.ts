@@ -50,24 +50,26 @@ class SkillsProcessor {
 
   static getWeaponStrength({ weapon_type, type : palette_type} : API.Palette) : number {
     let weaponStrength = {
-      None      : 0,
-      Focus     : 900,
-      Shield    : 900,
-      Torch     : 900,
-      Warhorn   : 900,
-      Greatsword: 1100,
-      Hammer    : 1100,
-      Staff     : 1100,
-      BowLong   : 1050,
-      Rifle     : 1150,
-      BowShort  : 1000,
-      Axe       : 1000,
-      Sword     : 1000,
-      Dagger    : 1000,
-      Pistol    : 1000,
-      Scepter   : 1000,
-      Mace      : 1000,
-      Standard  : 690.5,
+      None       : 0,
+      BundleLarge: 0,
+      Standard   : 690.5,
+      Focus      : 900,
+      Shield     : 900,
+      Torch      : 900,
+      Warhorn    : 900,
+      Greatsword : 1100,
+      Hammer     : 1100,
+      Staff      : 1100,
+      BowLong    : 1050,
+      Rifle      : 1150,
+      BowShort   : 1000,
+      Axe        : 1000,
+      Sword      : 1000,
+      Dagger     : 1000,
+      Pistol     : 1000,
+      Scepter    : 1000,
+      Mace       : 1000,
+      Spear      : 1000,
     }[weapon_type]
 
     if(weapon_type === 'None') {
@@ -99,7 +101,7 @@ class SkillsProcessor {
       }
 
       const handlers : { [k in API.FactType] : (params : HandlerParams<API.FactMap[k]>) => string } = {
-        Time         : ({ fact }) => `<tem> ${fact.text}: ${fact.duration?.secs}s </tem>`,
+        Time         : ({ fact }) => `<tem> ${fact.text}: ${TUtilsV2.DurationToSeconds(fact.duration)}s </tem>`,
         Distance     : ({ fact }) => `<tem> ${fact.text}: ${fact.distance} </tem>`,
         Number       : ({ fact }) => `<tem> ${fact.text}: ${fact.value} </tem>`,
         ComboField   : ({ fact }) => `<tem> ${fact.text}: ${fact.field_type} </tem>`,
@@ -130,22 +132,22 @@ class SkillsProcessor {
                 modifier.flags.includes('MulByDuration') &&
                 !modifier.flags.includes('FormatPercent')
               ) {
-                modifierValue *= fact.duration!.secs
+                modifierValue *= TUtilsV2.DurationToSeconds(fact.duration)
               }
 
               if(modifier.flags.includes('FormatPercent')) {
                 if(modifier.flags.includes('NonStacking')) {
                   modifiers += ` ${Math.round(modifierValue)}% ${modifier.description}`
                 } else {
-                  modifiers += ` ${Math.round(fact.apply_count! * modifierValue)}% ${modifier.description}`
+                  modifiers += ` ${Math.round(fact.apply_count * modifierValue)}% ${modifier.description}`
                 }
               } else {
-                modifiers += ` ${Math.round(fact.apply_count! * modifierValue)} ${modifier.description}`
+                modifiers += ` ${Math.round(fact.apply_count * modifierValue)} ${modifier.description}`
               }
             }
           }
           
-          let htmlContent = `<tem> ${buff.name} (${fact.duration?.secs}s) ${TUtilsV2.GW2Text2HTML(buff.description)} ${modifiers} </tem>`
+          let htmlContent = `<tem> ${buff.name} (${TUtilsV2.DurationToSeconds(fact.duration)}s): ${TUtilsV2.GW2Text2HTML(buff.description)} ${modifiers} </tem>`
 
           if(fact.apply_count && fact.apply_count > 1) {
             htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML
@@ -177,25 +179,25 @@ class SkillsProcessor {
             return `<tem> ${fact.text}: (${fact.hit_count}x) ${Math.round(
               (Math.round(weaponStrength) *
                 context.stats.power *
-                (fact.hit_count! * fact.dmg_multiplier!)) /
+                (fact.hit_count * fact.dmg_multiplier)) /
                 2597
             )} </tem>`
           } else {
             return `<tem> ${fact.text}: ${Math.round(
-              (fact.hit_count! *
+              (fact.hit_count *
                 Math.round(weaponStrength) *
                 context.stats.power *
-                (fact.hit_count! * fact.dmg_multiplier!)) /
+                (fact.hit_count * fact.dmg_multiplier)) /
                 2597
             )} </tem>`
           }
         },
         AttributeAdjust: ({ fact }) =>
           `<tem> ${fact.text} : ${Math.round(
-            (fact.value! +
-              context.stats[fact.target!.toLowerCase() as keyof Stats] * fact.attribute_multiplier! +
-              context.stats.level ** fact.level_exponent! * fact.level_multiplier!) *
-              fact.hit_count!
+            (fact.value +
+              context.stats[fact.target!.toLowerCase() as keyof Stats] * fact.attribute_multiplier +
+              context.stats.level ** fact.level_exponent * fact.level_multiplier) *
+              fact.hit_count
           )} </tem>`,
       }
 

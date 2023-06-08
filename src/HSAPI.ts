@@ -78,8 +78,9 @@ class HSAPI {
     return result
   }
 
-  static async getAPIObjects(type : string, ids : number[]) : Promise<any> {
-    let gatheredObjects : any[] = []
+  //TODO(Rennorb) @cleanup: why are there like 5 different functions that call each other to fetch api data. Fake api not included
+  static async getAPIObjects<T extends keyof APIFetchMap>(type : T, ids : number[]) : Promise<APIFetchMap[T][]> {
+    let gatheredObjects : APIFetchMap[T][] = []
     if(ids.length) {
       gatheredObjects = await this.processApiResponse(type, ids)
     }

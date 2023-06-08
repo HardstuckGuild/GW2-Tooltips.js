@@ -30,6 +30,8 @@ class SkillsProcessor {
     static getWeaponStrength({ weapon_type, type: palette_type }) {
         let weaponStrength = {
             None: 0,
+            BundleLarge: 0,
+            Standard: 690.5,
             Focus: 900,
             Shield: 900,
             Torch: 900,
@@ -46,7 +48,7 @@ class SkillsProcessor {
             Pistol: 1000,
             Scepter: 1000,
             Mace: 1000,
-            Standard: 690.5,
+            Spear: 1000,
         }[weapon_type];
         if (weapon_type === 'None') {
             if (palette_type === 'Standard' || palette_type === 'Toolbelt') {
@@ -72,7 +74,7 @@ class SkillsProcessor {
                 totalDefianceBreak += fact.defiance_break;
             }
             const handlers = {
-                Time: ({ fact }) => { var _a; return `<tem> ${fact.text}: ${(_a = fact.duration) === null || _a === void 0 ? void 0 : _a.secs}s </tem>`; },
+                Time: ({ fact }) => `<tem> ${fact.text}: ${TUtilsV2.DurationToSeconds(fact.duration)}s </tem>`,
                 Distance: ({ fact }) => `<tem> ${fact.text}: ${fact.distance} </tem>`,
                 Number: ({ fact }) => `<tem> ${fact.text}: ${fact.value} </tem>`,
                 ComboField: ({ fact }) => `<tem> ${fact.text}: ${fact.field_type} </tem>`,
@@ -82,7 +84,6 @@ class SkillsProcessor {
                 StunBreak: (params) => '',
                 PrefixedBuffBrief: (params) => '',
                 Buff: ({ fact, buff }) => {
-                    var _a;
                     if (!buff)
                         console.error('buff #', fact.buff, ' is apparently missing in the cache');
                     buff = buff || this.MissingBuff;
@@ -97,7 +98,7 @@ class SkillsProcessor {
                             let modifierValue = this.calculateModifier(modifier, context.stats);
                             if (modifier.flags.includes('MulByDuration') &&
                                 !modifier.flags.includes('FormatPercent')) {
-                                modifierValue *= fact.duration.secs;
+                                modifierValue *= TUtilsV2.DurationToSeconds(fact.duration);
                             }
                             if (modifier.flags.includes('FormatPercent')) {
                                 if (modifier.flags.includes('NonStacking')) {
@@ -112,7 +113,7 @@ class SkillsProcessor {
                             }
                         }
                     }
-                    let htmlContent = `<tem> ${buff.name} (${(_a = fact.duration) === null || _a === void 0 ? void 0 : _a.secs}s) ${TUtilsV2.GW2Text2HTML(buff.description)} ${modifiers} </tem>`;
+                    let htmlContent = `<tem> ${buff.name} (${TUtilsV2.DurationToSeconds(fact.duration)}s): ${TUtilsV2.GW2Text2HTML(buff.description)} ${modifiers} </tem>`;
                     if (fact.apply_count && fact.apply_count > 1) {
                         htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML;
                     }
