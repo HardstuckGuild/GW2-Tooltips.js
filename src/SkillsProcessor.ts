@@ -1,115 +1,82 @@
 class SkillsProcessor {
-  static MissingBuff: API.Skill = {
-    id: 0,
-    name: 'Missing Buff',
-    description: 'This Buff failed to load',
-    icon: '0.png',
-    chat_link: '',
-    facts: [],
-    categories: [],
-    range: 0,
-    recharge: { secs: 0, nanos: 0 },
+  static MissingBuff : API.Skill = {
+    id               : 0,
+    name             : 'Missing Buff',
+    description      : 'This Buff failed to load',
+    icon             : '0.png',
+    chat_link        : '',
+    facts            : [],
+    categories       : [],
+    range            : 0,
+    recharge         : { secs: 0, nanos: 0 },
     recharge_override: [],
-    activation: { secs: 0, nanos: 0 },
-    palettes: [],
-    modifiers: [],
+    activation       : { secs: 0, nanos: 0 },
+    palettes         : [],
+    modifiers        : [],
   }
 
   static iconSource = 'https://assets.gw2dat.com//'
   static calculateModifier(
-    {
-      formula,
-      base_amount,
-      formula_param1: level_scaling,
-      formula_param2,
-    }: API.Modifier,
-    {
-      level,
-      power,
-      conditionDamage: condition_damage,
-      healing: healing_power,
-    }: Stats
+    { formula, base_amount, formula_param1: level_scaling, formula_param2 } : API.Modifier,
+    { level, power, conditionDamage: condition_damage, healing: healing_power } : Stats,
   ) {
     //TODO(Rennorb): this is **screaming** tabledrive me
     switch (formula) {
       case 0:
-        return level * level_scaling + base_amount
+        return         level * level_scaling + base_amount
       case 1:
-        return (
-          level * level_scaling +
-          base_amount +
-          condition_damage * formula_param2
-        )
+        return         level * level_scaling + base_amount + condition_damage * formula_param2
       case 2:
-        return (
-          level * level * level_scaling +
-          base_amount +
-          condition_damage * formula_param2
-        )
+        return level * level * level_scaling + base_amount + condition_damage * formula_param2
       case 6:
-        return base_amount
+        return                                 base_amount
       case 7:
-        return (
-          level * level_scaling + base_amount + healing_power * formula_param2
-        )
+        return         level * level_scaling + base_amount + healing_power * formula_param2
       case 8:
-        return (
-          level * level * level_scaling +
-          base_amount +
-          healing_power * formula_param2
-        )
+        return level * level * level_scaling + base_amount + healing_power * formula_param2
       case 9:
       case 10:
-        return level * level_scaling + base_amount
+        return         level * level_scaling + base_amount
       case 11:
-        return level * level_scaling + base_amount - formula_param2
+        return         level * level_scaling + base_amount - formula_param2
       case 13:
-        return level * level_scaling + base_amount + power * formula_param2
+        return         level * level_scaling + base_amount + power * formula_param2
       case 14:
-        return (
-          level * level * level_scaling + base_amount + power * formula_param2
-        )
+        return level * level * level_scaling + base_amount + power * formula_param2
     }
 
-    console.warn(
-      'Could not find formula #',
-      formula,
-      ', using base amount for now!'
-    )
-    return base_amount //TODO(Rennorb) @correctness
+    console.warn('Could not find formula #', formula, ', using base amount for now!')
+    return base_amount; //TODO(Rennorb) @correctness
   }
 
-  static getWeaponStrength({
-    weapon_type,
-    type: palette_type,
-  }: API.Palette): number {
+  static getWeaponStrength({ weapon_type, type : palette_type} : API.Palette) : number {
     let weaponStrength = {
-      None: 0,
+      None       : 0,
       BundleLarge: 0,
-      Standard: 690.5,
-      Focus: 900,
-      Shield: 900,
-      Torch: 900,
-      Warhorn: 900,
-      Greatsword: 1100,
-      Hammer: 1100,
-      Staff: 1100,
-      BowLong: 1050,
-      Rifle: 1150,
-      BowShort: 1000,
-      Axe: 1000,
-      Sword: 1000,
-      Dagger: 1000,
-      Pistol: 1000,
-      Scepter: 1000,
-      Mace: 1000,
-      Spear: 1000,
+      Standard   : 690.5,
+      Focus      : 900,
+      Shield     : 900,
+      Torch      : 900,
+      Warhorn    : 900,
+      Greatsword : 1100,
+      Hammer     : 1100,
+      Staff      : 1100,
+      BowLong    : 1050,
+      Rifle      : 1150,
+      BowShort   : 1000,
+      Axe        : 1000,
+      Sword      : 1000,
+      Dagger     : 1000,
+      Pistol     : 1000,
+      Scepter    : 1000,
+      Mace       : 1000,
+      Spear      : 1000,
     }[weapon_type]
 
-    if (weapon_type === 'None') {
-      if (palette_type === 'Standard' || palette_type === 'Toolbelt') {
+    if(weapon_type === 'None') {
+      if(palette_type === 'Standard' || palette_type === 'Toolbelt') {
         weaponStrength = 690.5
-      } else if (palette_type === 'Bundle') {
+      } else if(palette_type === 'Bundle') {
         weaponStrength = 922.5
       }
     }
@@ -117,165 +84,96 @@ class SkillsProcessor {
     return weaponStrength
   }
 
-  static processFact(
-    skill: API.Skill | API.Trait,
-    skillDataCache: Map<number, API.Skill>,
-    context: Context
-  ): HTMLElement[] {
-    if (!skill.facts.length && !skill.facts_override) return []
+  static processFact(skill : API.Skill | API.Trait, skillDataCache : Map<number, API.Skill>, context : Context) : HTMLElement[] {
+    if(!skill.facts.length && !skill.facts_override) return []
 
     let totalDefianceBreak = 0
 
-    const processFactData = (fact: API.Fact) => {
-      if (
-        fact.requires_trait &&
-        (!context.traits ||
-          !fact.requires_trait.some((reqTrait) =>
-            context.traits.includes(reqTrait)
-          ))
-      ) {
+    const processFactData = (fact : API.Fact) => {
+      if(fact.requires_trait && (!context.traits || !fact.requires_trait.some(reqTrait => context.traits.includes(reqTrait)))) {
         return null
       }
 
       let iconUrl = `${this.iconSource}${fact.icon}`
       let htmlContent = ''
 
-      if (fact.defiance_break) {
+      if(fact.defiance_break) {
         totalDefianceBreak += fact.defiance_break
       }
 
-      const handlers: {
-        [k in API.FactType]: (params: HandlerParams<API.FactMap[k]>) => string
-      } = {
-        Time: ({ fact }) =>
-          `<tem> ${fact.text}: ${TUtilsV2.DurationToSeconds(
-            fact.duration
-          )}s </tem>`,
-        Distance: ({ fact }) => `<tem> ${fact.text}: ${fact.distance} </tem>`,
-        Number: ({ fact }) => `<tem> ${fact.text}: ${fact.value} </tem>`,
-        ComboField: ({ fact }) =>
-          `<tem> ${fact.text}: ${fact.field_type} </tem>`,
-        ComboFinisher: ({ fact }) =>
-          `<tem> ${fact.text}: ${fact.finisher_type} </tem>`,
-        NoData: ({ fact }) => `<tem> ${fact.text} </tem>`,
-        Percent: ({ fact }) =>
-          `<tem> ${TUtilsV2.GW2Text2HTML(fact.text)}: ${fact.percent}% </tem>`,
-        StunBreak: ({ fact }) => `<tem>Breaks Stun</tem>`,
+      const handlers : { [k in API.FactType] : (params : HandlerParams<API.FactMap[k]>) => string } = {
+        Time         : ({ fact }) => `<tem> ${fact.text}: ${TUtilsV2.DurationToSeconds(fact.duration)}s </tem>`,
+        Distance     : ({ fact }) => `<tem> ${fact.text}: ${fact.distance} </tem>`,
+        Number       : ({ fact }) => `<tem> ${fact.text}: ${fact.value} </tem>`,
+        ComboField   : ({ fact }) => `<tem> ${fact.text}: ${fact.field_type} </tem>`,
+        ComboFinisher: ({ fact }) => `<tem> ${fact.text}: ${fact.finisher_type} </tem>`,
+        NoData       : ({ fact }) => `<tem> ${fact.text} </tem>`,
+        Percent      : ({ fact }) => `<tem> ${TUtilsV2.GW2Text2HTML(fact.text)}: ${fact.percent}% </tem>`,
+        StunBreak    : ({ fact }) => `<tem>Breaks Stun</tem>`,
+        //now for the more complex ones
         PrefixedBuffBrief: ({ fact }) => {
           const prefix = skillDataCache.get(fact.prefix)
           const buff = skillDataCache.get(fact.buff)
           iconUrl = `${this.iconSource}${prefix?.icon}`
-          const buffIcon = TUtilsV2.newImg(
-            `${this.iconSource}${buff?.icon}`,
-            'iconmed'
-          )
-          return `<tem> ${buffIcon.outerHTML} ${
-            buff?.name_brief || buff?.name
-          } </tem> `
+          const buffIcon = TUtilsV2.newImg(`${this.iconSource}${buff?.icon}`, 'iconmed')
+          return `<tem> ${buffIcon.outerHTML} ${buff?.name_brief || buff?.name} </tem>`
         },
-        //now for the more complex ones
         Buff: ({ fact, buff }) => {
-          if (!buff)
-            console.error(
-              'buff #',
-              fact.buff,
-              ' is apparently missing in the cache'
-            )
+          if(!buff) console.error('buff #', fact.buff, ' is apparently missing in the cache');
           buff = buff || this.MissingBuff // in case we didn't get the buff we wanted from the api
 
           let modifiers = ''
           iconUrl = `${this.iconSource}${buff.icon}`
-          if (buff.modifiers) {
-            for (const modifier of buff.modifiers) {
-              if (
-                (modifier.trait_req &&
-                  !context.traits.includes(modifier.trait_req)) ||
+          if(buff.modifiers) {
+            for(const modifier of buff.modifiers) {
+              if(
+                (modifier.trait_req && !context.traits.includes(modifier.trait_req)) ||
                 (modifier.mode && modifier.mode !== context.gameMode)
               ) {
                 continue
               }
 
-              let modifierValue = this.calculateModifier(
-                modifier,
-                context.stats
-              )
+              let modifierValue = this.calculateModifier(modifier, context.stats)
 
-              if (
+              if(
                 modifier.flags.includes('MulByDuration') &&
                 !modifier.flags.includes('FormatPercent')
               ) {
                 modifierValue *= TUtilsV2.DurationToSeconds(fact.duration)
               }
 
-              if (modifier.flags.includes('FormatPercent')) {
-                if (modifier.flags.includes('NonStacking')) {
-                  modifiers += ` ${Math.round(modifierValue)}% ${
-                    modifier.description
-                  }`
+              if(modifier.flags.includes('FormatPercent')) {
+                if(modifier.flags.includes('NonStacking')) {
+                  modifiers += ` ${Math.round(modifierValue)}% ${modifier.description}`
                 } else {
-                  modifiers += ` ${Math.round(
-                    fact.apply_count * modifierValue
-                  )}% ${modifier.description}`
+                  modifiers += ` ${Math.round(fact.apply_count * modifierValue)}% ${modifier.description}`
                 }
               } else {
-                modifiers += ` ${Math.round(
-                  fact.apply_count * modifierValue
-                )} ${modifier.description}`
+                modifiers += ` ${Math.round(fact.apply_count * modifierValue)} ${modifier.description}`
               }
             }
           }
 
-          const fixDescriptionText = (description: string | undefined) => {
-            return (
-              description
-                ?.replace(/<c=@.*?>(.*?)<\/c>/g, '$1')
-                .replace(/%%/g, '%') || ''
-            )
-          }
+          //TODO(Rennorb) @cleanup
+          const fixDescriptionText = (description: string | undefined) => description?.replace(/<c=@.*?>(.*?)<\/c>/g, '$1').replace(/%%/g, '%') || ''
 
-          const getDurationText = (duration: { secs?: number } | undefined) => {
-            return duration?.secs && duration?.secs >= 1
-              ? `(${duration?.secs}s)`
-              : ''
-          }
+          const getDurationText = (duration: { secs?: number } | undefined) => duration?.secs && duration?.secs >= 1 ? `(${duration?.secs}s)` : ''
 
-          const getDescriptionOrModifiers = (
-            hasDescriptionBrief: boolean,
-            descriptionContent: string | undefined,
-            modifiers: string
-          ) => {
-            return hasDescriptionBrief ? descriptionContent : modifiers
-          }
+          const getDescriptionOrModifiers = (hasDescriptionBrief: boolean, descriptionContent: string | undefined, modifiers: string) => hasDescriptionBrief ? descriptionContent : modifiers
 
           const hasDescriptionBrief = Boolean(buff?.description_brief)
-          const descriptionContent = hasDescriptionBrief
-            ? buff?.description_brief
-            : fixDescriptionText(buff?.description)
+          const descriptionContent = hasDescriptionBrief ? buff?.description_brief : fixDescriptionText(buff?.description)
           const durationText = getDurationText(fact.duration)
 
-          htmlContent = `<tem> ${
-            buff?.name_brief || buff?.name
-          } ${durationText} ${getDescriptionOrModifiers(
-            hasDescriptionBrief,
-            descriptionContent,
-            modifiers
-          )} </tem>`
+          htmlContent = `<tem> ${buff?.name_brief || buff?.name} ${durationText} ${getDescriptionOrModifiers(hasDescriptionBrief, descriptionContent, modifiers)} </tem>`
 
-          if (fact.apply_count && fact.apply_count > 1) {
-            htmlContent += TUtilsV2.newElm(
-              'div.buffcount',
-              fact.apply_count.toString()
-            ).outerHTML
+          if(fact.apply_count && fact.apply_count > 1) {
+            htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML
           }
           return htmlContent
         },
         BuffBrief: ({ fact, buff }) => {
-          if (!buff)
-            console.error(
-              'buff #',
-              fact.buff,
-              ' is apparently missing in the cache'
-            )
+          if(!buff) console.error('buff #', fact.buff, ' is apparently missing in the cache');
           buff = buff || this.MissingBuff // in case we didn't get the buff we wanted from the api
 
           iconUrl = `${this.iconSource}${buff.icon}`
@@ -283,19 +181,19 @@ class SkillsProcessor {
         },
         Damage: ({ fact, skill }) => {
           let weaponStrength = 0
-          if (skill.palettes.length) {
+          if(skill.palettes.length) {
             const relevantPalette = skill.palettes.find(
               (palette) =>
                 palette.slots &&
                 palette.slots.some((slot) => slot.profession !== 'None')
             )
 
-            if (relevantPalette) {
+            if(relevantPalette) {
               weaponStrength = this.getWeaponStrength(relevantPalette)
             }
           }
 
-          if (fact.hit_count && fact.hit_count > 1) {
+          if(fact.hit_count && fact.hit_count > 1) {
             return `<tem> ${fact.text}: (${fact.hit_count}x) ${Math.round(
               (Math.round(weaponStrength) *
                 context.stats.power *
@@ -315,43 +213,33 @@ class SkillsProcessor {
         AttributeAdjust: ({ fact }) =>
           `<tem> ${fact.text} : ${Math.round(
             (fact.value +
-              context.stats[fact.target!.toLowerCase() as keyof Stats] *
-                fact.attribute_multiplier +
-              context.stats.level ** fact.level_exponent *
-                fact.level_multiplier) *
+              context.stats[fact.target!.toLowerCase() as keyof Stats] * fact.attribute_multiplier +
+              context.stats.level ** fact.level_exponent * fact.level_multiplier) *
               fact.hit_count
           )} </tem>`,
       }
 
       const buff = fact.buff ? skillDataCache.get(fact.buff) : undefined
 
-      const data: HandlerParams = { fact, buff, skill } as any
+      const data : HandlerParams = { fact, buff, skill } as any //TODO(Rennorb) @hammer
       htmlContent = handlers[fact.type](data as any) //TODO(Rennorb) @hammer
 
-      return TUtilsV2.newElm(
-        'te',
-        TUtilsV2.newImg(iconUrl, 'iconmed'),
-        TUtilsV2.fromHTML(htmlContent)
-      )
+      return TUtilsV2.newElm('te', TUtilsV2.newImg(iconUrl, 'iconmed'), TUtilsV2.fromHTML(htmlContent))
     }
 
-    const factWraps = skill.facts
-      .sort((a, b) => a.order - b.order)
-      .map(processFactData)
-      .filter((d) => d) as HTMLElement[] // ts doesn't understand what the predicate does
+    const factWraps = 
+      skill.facts
+        .sort((a, b) => a.order - b.order)
+        .map(processFactData)
+        .filter(d => d) as HTMLElement[] // ts doesn't understand what the predicate does
 
-    if (
-      (skill.facts.length == 0 || context.gameMode !== 'Pve') &&
-      skill.facts_override
-    ) {
-      for (const override of skill.facts_override) {
-        if (override.mode === context.gameMode) {
-          const sortedOverrideFacts = [...override.facts].sort(
-            (a, b) => a.order - b.order
-          )
-          sortedOverrideFacts.forEach((fact) => {
+    if((skill.facts.length == 0 || context.gameMode !== 'Pve') && skill.facts_override) {
+      for(const override of skill.facts_override) {
+        if(override.mode === context.gameMode) {
+          const sortedOverrideFacts = [...override.facts].sort((a, b) => a.order - b.order)
+          sortedOverrideFacts.forEach(fact => {
             const factWrap = processFactData(fact)
-            if (factWrap) {
+            if(factWrap) {
               factWraps.push(factWrap)
             }
           })
@@ -359,9 +247,8 @@ class SkillsProcessor {
       }
     }
 
-    if (totalDefianceBreak > 0) {
-      const defianceWrap = TUtilsV2.newElm(
-        'te.defiance',
+    if(totalDefianceBreak > 0) {
+      const defianceWrap = TUtilsV2.newElm('te.defiance',
         TUtilsV2.newImg(`${this.iconSource}1938788.png`, 'iconmed'),
         TUtilsV2.newElm('tem', `Defiance Break: ${totalDefianceBreak}`)
       )
@@ -369,8 +256,7 @@ class SkillsProcessor {
     }
 
     if('range' in skill && skill.range) {
-      const rangeWrap = TUtilsV2.newElm(
-        'te',
+      const rangeWrap = TUtilsV2.newElm('te',
         TUtilsV2.newImg(`${this.iconSource}156666.png`, 'iconmed'),
         TUtilsV2.newElm('tem', `Range: ${skill.range}`)
       )

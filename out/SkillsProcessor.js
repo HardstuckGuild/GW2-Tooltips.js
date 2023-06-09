@@ -1,25 +1,19 @@
 "use strict";
 class SkillsProcessor {
-    static calculateModifier({ formula, base_amount, formula_param1: level_scaling, formula_param2, }, { level, power, conditionDamage: condition_damage, healing: healing_power, }) {
+    static calculateModifier({ formula, base_amount, formula_param1: level_scaling, formula_param2 }, { level, power, conditionDamage: condition_damage, healing: healing_power }) {
         switch (formula) {
             case 0:
                 return level * level_scaling + base_amount;
             case 1:
-                return (level * level_scaling +
-                    base_amount +
-                    condition_damage * formula_param2);
+                return level * level_scaling + base_amount + condition_damage * formula_param2;
             case 2:
-                return (level * level * level_scaling +
-                    base_amount +
-                    condition_damage * formula_param2);
+                return level * level * level_scaling + base_amount + condition_damage * formula_param2;
             case 6:
                 return base_amount;
             case 7:
-                return (level * level_scaling + base_amount + healing_power * formula_param2);
+                return level * level_scaling + base_amount + healing_power * formula_param2;
             case 8:
-                return (level * level * level_scaling +
-                    base_amount +
-                    healing_power * formula_param2);
+                return level * level * level_scaling + base_amount + healing_power * formula_param2;
             case 9:
             case 10:
                 return level * level_scaling + base_amount;
@@ -28,12 +22,12 @@ class SkillsProcessor {
             case 13:
                 return level * level_scaling + base_amount + power * formula_param2;
             case 14:
-                return (level * level * level_scaling + base_amount + power * formula_param2);
+                return level * level * level_scaling + base_amount + power * formula_param2;
         }
         console.warn('Could not find formula #', formula, ', using base amount for now!');
         return base_amount;
     }
-    static getWeaponStrength({ weapon_type, type: palette_type, }) {
+    static getWeaponStrength({ weapon_type, type: palette_type }) {
         let weaponStrength = {
             None: 0,
             BundleLarge: 0,
@@ -71,9 +65,7 @@ class SkillsProcessor {
             return [];
         let totalDefianceBreak = 0;
         const processFactData = (fact) => {
-            if (fact.requires_trait &&
-                (!context.traits ||
-                    !fact.requires_trait.some((reqTrait) => context.traits.includes(reqTrait)))) {
+            if (fact.requires_trait && (!context.traits || !fact.requires_trait.some(reqTrait => context.traits.includes(reqTrait)))) {
                 return null;
             }
             let iconUrl = `${this.iconSource}${fact.icon}`;
@@ -95,7 +87,7 @@ class SkillsProcessor {
                     const buff = skillDataCache.get(fact.buff);
                     iconUrl = `${this.iconSource}${prefix === null || prefix === void 0 ? void 0 : prefix.icon}`;
                     const buffIcon = TUtilsV2.newImg(`${this.iconSource}${buff === null || buff === void 0 ? void 0 : buff.icon}`, 'iconmed');
-                    return `<tem> ${buffIcon.outerHTML} ${(buff === null || buff === void 0 ? void 0 : buff.name_brief) || (buff === null || buff === void 0 ? void 0 : buff.name)} </tem> `;
+                    return `<tem> ${buffIcon.outerHTML} ${(buff === null || buff === void 0 ? void 0 : buff.name_brief) || (buff === null || buff === void 0 ? void 0 : buff.name)} </tem>`;
                 },
                 Buff: ({ fact, buff }) => {
                     if (!buff)
@@ -105,8 +97,7 @@ class SkillsProcessor {
                     iconUrl = `${this.iconSource}${buff.icon}`;
                     if (buff.modifiers) {
                         for (const modifier of buff.modifiers) {
-                            if ((modifier.trait_req &&
-                                !context.traits.includes(modifier.trait_req)) ||
+                            if ((modifier.trait_req && !context.traits.includes(modifier.trait_req)) ||
                                 (modifier.mode && modifier.mode !== context.gameMode)) {
                                 continue;
                             }
@@ -128,21 +119,11 @@ class SkillsProcessor {
                             }
                         }
                     }
-                    const fixDescriptionText = (description) => {
-                        return ((description === null || description === void 0 ? void 0 : description.replace(/<c=@.*?>(.*?)<\/c>/g, '$1').replace(/%%/g, '%')) || '');
-                    };
-                    const getDurationText = (duration) => {
-                        return (duration === null || duration === void 0 ? void 0 : duration.secs) && (duration === null || duration === void 0 ? void 0 : duration.secs) >= 1
-                            ? `(${duration === null || duration === void 0 ? void 0 : duration.secs}s)`
-                            : '';
-                    };
-                    const getDescriptionOrModifiers = (hasDescriptionBrief, descriptionContent, modifiers) => {
-                        return hasDescriptionBrief ? descriptionContent : modifiers;
-                    };
+                    const fixDescriptionText = (description) => (description === null || description === void 0 ? void 0 : description.replace(/<c=@.*?>(.*?)<\/c>/g, '$1').replace(/%%/g, '%')) || '';
+                    const getDurationText = (duration) => (duration === null || duration === void 0 ? void 0 : duration.secs) && (duration === null || duration === void 0 ? void 0 : duration.secs) >= 1 ? `(${duration === null || duration === void 0 ? void 0 : duration.secs}s)` : '';
+                    const getDescriptionOrModifiers = (hasDescriptionBrief, descriptionContent, modifiers) => hasDescriptionBrief ? descriptionContent : modifiers;
                     const hasDescriptionBrief = Boolean(buff === null || buff === void 0 ? void 0 : buff.description_brief);
-                    const descriptionContent = hasDescriptionBrief
-                        ? buff === null || buff === void 0 ? void 0 : buff.description_brief
-                        : fixDescriptionText(buff === null || buff === void 0 ? void 0 : buff.description);
+                    const descriptionContent = hasDescriptionBrief ? buff === null || buff === void 0 ? void 0 : buff.description_brief : fixDescriptionText(buff === null || buff === void 0 ? void 0 : buff.description);
                     const durationText = getDurationText(fact.duration);
                     htmlContent = `<tem> ${(buff === null || buff === void 0 ? void 0 : buff.name_brief) || (buff === null || buff === void 0 ? void 0 : buff.name)} ${durationText} ${getDescriptionOrModifiers(hasDescriptionBrief, descriptionContent, modifiers)} </tem>`;
                     if (fact.apply_count && fact.apply_count > 1) {
@@ -181,10 +162,8 @@ class SkillsProcessor {
                     }
                 },
                 AttributeAdjust: ({ fact }) => `<tem> ${fact.text} : ${Math.round((fact.value +
-                    context.stats[fact.target.toLowerCase()] *
-                        fact.attribute_multiplier +
-                    context.stats.level ** fact.level_exponent *
-                        fact.level_multiplier) *
+                    context.stats[fact.target.toLowerCase()] * fact.attribute_multiplier +
+                    context.stats.level ** fact.level_exponent * fact.level_multiplier) *
                     fact.hit_count)} </tem>`,
             };
             const buff = fact.buff ? skillDataCache.get(fact.buff) : undefined;
@@ -195,13 +174,12 @@ class SkillsProcessor {
         const factWraps = skill.facts
             .sort((a, b) => a.order - b.order)
             .map(processFactData)
-            .filter((d) => d);
-        if ((skill.facts.length == 0 || context.gameMode !== 'Pve') &&
-            skill.facts_override) {
+            .filter(d => d);
+        if ((skill.facts.length == 0 || context.gameMode !== 'Pve') && skill.facts_override) {
             for (const override of skill.facts_override) {
                 if (override.mode === context.gameMode) {
                     const sortedOverrideFacts = [...override.facts].sort((a, b) => a.order - b.order);
-                    sortedOverrideFacts.forEach((fact) => {
+                    sortedOverrideFacts.forEach(fact => {
                         const factWrap = processFactData(fact);
                         if (factWrap) {
                             factWraps.push(factWrap);

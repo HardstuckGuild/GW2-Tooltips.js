@@ -45,9 +45,7 @@ class APICache {
                 {
                     for (const palette of datum.palettes) {
                         for (const slot of palette.slots) {
-                            if (slot.profession !== 'None' &&
-                                slot.next_chain &&
-                                !this.storage.items.has(slot.next_chain)) {
+                            if (slot.profession !== 'None' && slot.next_chain && !this.storage.items.has(slot.next_chain)) {
                                 connectedIdsStorage.skills.add(slot.next_chain);
                             }
                         }
