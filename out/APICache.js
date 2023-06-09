@@ -9,7 +9,7 @@ class APICache {
             items: new Set(),
             traits: new Set(),
             pets: new Set(),
-            "pvp/amulets": new Set(),
+            'pvp/amulets': new Set(),
             specializations: new Set(),
         }, { [endpoint]: new Set(initialIds) });
         const findNextRelevantEndpoint = () => {
@@ -45,7 +45,9 @@ class APICache {
                 {
                     for (const palette of datum.palettes) {
                         for (const slot of palette.slots) {
-                            if (slot.profession !== 'None' && slot.next_chain && !this.storage.items.has(slot.next_chain)) {
+                            if (slot.profession !== 'None' &&
+                                slot.next_chain &&
+                                !this.storage.items.has(slot.next_chain)) {
                                 connectedIdsStorage.skills.add(slot.next_chain);
                             }
                         }
@@ -57,12 +59,18 @@ class APICache {
                         if (fact.type == 'Buff' || fact.type == 'BuffBrief') {
                             connectedIdsStorage.skills.add(fact.buff);
                         }
+                        if (fact.type === 'PrefixedBuffBrief') {
+                            connectedIdsStorage.skills.add(fact.prefix);
+                        }
                     }
                     if (datum.facts_override) {
                         for (const { facts } of datum.facts_override) {
                             for (const fact of facts) {
                                 if (fact.type == 'Buff' || fact.type == 'BuffBrief') {
                                     connectedIdsStorage.skills.add(fact.buff);
+                                }
+                                if (fact.type === 'PrefixedBuffBrief') {
+                                    connectedIdsStorage.skills.add(fact.prefix);
                                 }
                             }
                         }
@@ -77,6 +85,6 @@ APICache.storage = {
     items: new Map(),
     traits: new Map(),
     pets: new Map(),
-    "pvp/amulets": new Map(),
+    'pvp/amulets': new Map(),
     specializations: new Map(),
 };
