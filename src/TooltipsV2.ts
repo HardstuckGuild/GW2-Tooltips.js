@@ -12,6 +12,7 @@
 //TODO(Rennorb): The positioning code seems a bit wired, it tends to 'stick' to the borders more than it should.
 //TODO(Rennorb) @fixme: impale: the impale buff doesn't have a name, only shows duration
 //TODO(Rennorb) @fixme: rampage: 0s on imob, cripple, and chill (should probably be 'imob, cripple, and chill')
+//TODO(Rennorb): Figure out how to handle boon descriptions. Currently we always show the full description which sometimes leads to duplicate information and also differs from how they are rendered in game. 
 
 
 type TypeBridge<T, K extends keyof T> = [K, T[K]]
@@ -22,15 +23,7 @@ declare interface ObjectConstructor {
 //TODO(Rennorb) @cleanup: make static class or just turn the whole project into a module with functions only.
 // Instances aren't needed for anything here.
 class GW2TooltipsV2 {
-  tooltip       : HTMLElement
-  objectData    : ObjectDataStorage = { //TODO(Rennorb) @hammer: don't use skill for each type
-    skills         : new Map<number, API.Skill>(),
-    items          : new Map<number, API.Skill>(),
-    traits         : new Map<number, API.Skill>(),
-    pets           : new Map<number, API.Skill>(),
-    "pvp/amulets"  : new Map<number, API.Skill>(),
-    specializations: new Map<number, API.Skill>(),
-  }
+  tooltip      : HTMLElement
   
   cycleTooltipsHandler? : VoidFunction;
   cycling = false
@@ -40,7 +33,6 @@ class GW2TooltipsV2 {
   lastMouseY!  : number
 
   context : Context[] = [];
-
   static defaultContext : Context = {
     traits   : [],
     gameMode : 'Pve',
@@ -63,6 +55,11 @@ class GW2TooltipsV2 {
     return Object.assign({}, this.defaultContext, partialContext, { stats });
   }
 
+  config : Config;
+  static defaultConfig : Config = {
+    autoInitialize: true,
+  }
+
   constructor() {
     if(window.GW2TooltipsContext instanceof Array) {
       for(const partialContext of window.GW2TooltipsContext)
@@ -74,7 +71,8 @@ class GW2TooltipsV2 {
     else{
       this.context.push(GW2TooltipsV2.createCompleteContext({}))
     }
-    
+
+    this.config = Object.assign({}, GW2TooltipsV2.defaultConfig, window.GW2TooltipsConfig)
 
     this.tooltip = TUtilsV2.newElm('div.tooltipWrapper')
     this.tooltip.style.display = 'none';
@@ -93,15 +91,6 @@ class GW2TooltipsV2 {
     })
   }
 
-  async fetchAPIObjects<T extends keyof APIFetchMap>(key : T, value: number[]) : Promise<APIFetchMap[T][]> {
-    let result : APIFetchMap[T][] = [];
-    try {
-      result = await HSAPI.getAPIObjects(key, value)
-    } catch (error) {
-      console.error(error)
-    }
-    return result;
-  }
   displayCorrectChainTooltip(tooltips: HTMLElement[], tooltipIndex: number) {
     for(let index = 0; index < tooltips.length; index++) {
       tooltips[index].style.display = index === tooltipIndex ? '' : 'none'
@@ -166,16 +155,15 @@ class GW2TooltipsV2 {
       else objectsToGet[type as keyof typeof objectsToGet].set(objId, [gw2Object])
 
       gw2Object.addEventListener('mouseenter', (e) => {
-        const element = e.target as HTMLElement;
-        const type = (element.getAttribute('type') || 'skill') + 's' as ObjectDataStorageKeys;
-        const objId = +String(element.getAttribute('objId'))
+        const gw2Object = e.target as HTMLElement;
+        const type = (gw2Object.getAttribute('type') || 'skill') + 's' as ObjectDataStorageKeys;
+        const objId = +String(gw2Object.getAttribute('objId'))
 
-        if(type != 'skills') return; //TODO(Rennorb) disabled for now
-
+        if(type != 'skills') return; //TODO(Rennorb): others disabled for now
         this.tooltip.replaceChildren();
-        const data = this.objectData[type].get(objId)
+        const data = APICache.storage[type].get(objId)
         if(data) {
-          this.generateToolTip(data, element)
+          this.generateToolTip(data, gw2Object)
           this.tooltip.style.display = ''; //empty value resets actual value to use stylesheet
         }
       })
@@ -188,17 +176,14 @@ class GW2TooltipsV2 {
     Object.entries(objectsToGet).forEach(async ([key, values]) => {
       if(values.size == 0) return;
 
-      const storage = this.objectData[key];
-      const elementLookup = objectsToGet[key];
       const inflator = this.inflators[key];
+      const cache = APICache.storage[key];
 
-      const apiResponse = await this.fetchAPIObjects(key, Array.from(values.keys()))
-      for(const apiObject of apiResponse)
-        storage.set(apiObject.id, apiObject as any) //TODO
+      await APICache.ensureExistence(key, values.keys())
 
-      for(const data of apiResponse) {
-        const objects = elementLookup.get(data.id)
-        if(!objects) continue;
+      for(const [id, objects] of objectsToGet[key]) {
+        const data = cache.get(id);
+        if(!objects || !data) continue;
 
         for(const gw2Object of objects)
           inflator(gw2Object, data as any); //TODO
@@ -217,7 +202,7 @@ class GW2TooltipsV2 {
 
     return {
       skills: genericIconInflater('iconlarge'),
-      traits: genericIconInflater('', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAE4AAABHCAIAAAAmx+aCAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAD1SURBVHhe7dPRDYMgFEZh5nIg53Eal3EYC7cWwYBplFh7/M9LA16MX2vd/JhEJSYqMVGJiUpMVGKiEhOVmKjERCUmKjFRiYlK7FbUaeic64ZpWTbuLLV3tfpxGfm+e1PXxqA+4KsWbtjSLeqBSlR7I/vRPnzxwW12KdHEF/hzINbiK7yA6st+HD+4rrNTkWqFS9nBk11B3X3e9NjfU/cf10a4VNtOg1I3e7ZkUrdbYGo+Z4sKtXT4TL/4r9ruO38tnCtS08HNfQ/Vjnr7RCUmKjFRiYlKTFRiohITlZioxEQlJioxUYmJSkxUYqISE5WYqLzm+QXuoFiEasepKQAAAABJRU5ErkJggg=='),
+      traits: genericIconInflater(),
       items: genericIconInflater('', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEkAAABJCAIAAAD+EZyLAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFhSURBVGhD7ZoxkoIwFIYfexa0cDwBnkArT4ElNnuDPQC2dtvaqyeQE1gt3CWSEAOoszuzJoy/838N/CSZ4Zu8FxoipZS8KR/2+o7QDRO6YUI3TOiGCd0woRsmdMOEbpjQDRO6YUI3TOiGCd0eUG1mUTTbVDa+Iv727bh6NVfW5B+Y+lxsRYr1KNKsjnZEb+YV99DtsVnX0Ay66X4KQP2TMk9Ekry0UalD2s/NE0kP5r4/3Yy0g9fYy/b+CcK5mQmdF+zm25c3ubPYj1ywfqv2u0LS5dxGkXg8FTn/PKy10aT2no5jG5v8NGHPku3C9o9GN+SghHW7K6tT5vYmPMHcfivBgfDnpnuk2O2dzPwzT+pvQnvy1wf8sN92f25x9m1kdGsZoTg71Qde23Jfk3LQkhT+g4EJ3TChGyZ0w4RumNANE7phQjdM6IYJ3TChGyZ0w4RumNANE7phQjdM6IaIyAXGxL3ck02bowAAAABJRU5ErkJggg=='),
       specializations: function (gw2Object: HTMLElement, data: API.Specialization): void {
         //TODO
@@ -304,7 +289,7 @@ class GW2TooltipsV2 {
 
     const tooltip = TUtilsV2.newElm('div.tooltip', 
       basic, description,
-      ...SkillsProcessor.processFact(apiObject, this.objectData['skills'], context) // TODO(Rennorb) @correctness: should this really use 'skills' ? 
+      ...SkillsProcessor.processFact(apiObject, APICache.storage['skills'], context) // TODO(Rennorb) @correctness: should this really use 'skills' ? 
     )
     tooltip.dataset.id = String(apiObject.id)
     tooltip.style.marginTop = '5px'
@@ -322,7 +307,7 @@ class GW2TooltipsV2 {
       for(const palette of currentSkill.palettes) {
         for(const slot of palette.slots) {
           if(slot.next_chain && slot.profession !== 'None') {
-            const nextSkillInChain = this.objectData['skills'].get(slot.next_chain);
+            const nextSkillInChain = APICache.storage['skills'].get(slot.next_chain);
             if(nextSkillInChain) {
               addSkillToChain(nextSkillInChain)
             }
@@ -332,7 +317,7 @@ class GW2TooltipsV2 {
 
       if(currentSkill.sub_skills) {
         for(const subSkillId of currentSkill.sub_skills) {
-          const subSkillInChain = this.objectData['skills'].get(subSkillId);
+          const subSkillInChain = APICache.storage['skills'].get(subSkillId);
           if(subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
             addSkillToChain(subSkillInChain)
           }
@@ -365,5 +350,6 @@ class GW2TooltipsV2 {
   }
 }
 
+
 const gw2tooltips = new GW2TooltipsV2()
-gw2tooltips.hookDocument(document)
+if(gw2tooltips.config.autoInitialize) gw2tooltips.hookDocument(document)

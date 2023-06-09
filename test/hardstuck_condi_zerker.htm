@@ -1,10 +1,22 @@
 <!DOCTYPE html>
 <html class="no-js" style="scroll-behavior: smooth;" lang="en-US">
-<script src="./output.js"></script>
 <script src="../out/HSAPI.js"></script>
 <script src="../out/SkillsProcessor.js"></script>
 <script src="../out/TUtilsV2.js"></script>
+<script src="../out/APICache.js"></script>
 <script src="../out/TooltipsV2.js" defer></script>
+
+<script src="./output.skills.js"></script>
+<script src="./output.traits.js"></script>
+<script>
+	var GW2TooltipsConfig = {
+		autoInitialize: false,
+	}
+	window.addEventListener('load', () => {
+		APICache.apiImpl = new FakeAPI();
+		gw2tooltips.hookDocument(document)
+	})
+</script>
 <link rel="stylesheet" href="./tooltips.css" />
 <head>
 </head>

@@ -5,14 +5,6 @@ class GW2TooltipsV2 {
         return Object.assign({}, this.defaultContext, partialContext, { stats });
     }
     constructor() {
-        this.objectData = {
-            skills: new Map(),
-            items: new Map(),
-            traits: new Map(),
-            pets: new Map(),
-            "pvp/amulets": new Map(),
-            specializations: new Map(),
-        };
         this.cycling = false;
         this.context = [];
         this.inflators = (function () {
@@ -24,7 +16,7 @@ class GW2TooltipsV2 {
             };
             return {
                 skills: genericIconInflater('iconlarge'),
-                traits: genericIconInflater('', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAE4AAABHCAIAAAAmx+aCAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAD1SURBVHhe7dPRDYMgFEZh5nIg53Eal3EYC7cWwYBplFh7/M9LA16MX2vd/JhEJSYqMVGJiUpMVGKiEhOVmKjERCUmKjFRiYlK7FbUaeic64ZpWTbuLLV3tfpxGfm+e1PXxqA+4KsWbtjSLeqBSlR7I/vRPnzxwW12KdHEF/hzINbiK7yA6st+HD+4rrNTkWqFS9nBk11B3X3e9NjfU/cf10a4VNtOg1I3e7ZkUrdbYGo+Z4sKtXT4TL/4r9ruO38tnCtS08HNfQ/Vjnr7RCUmKjFRiYlKTFRiohITlZioxEQlJioxUYmJSkxUYqISE5WYqLzm+QXuoFiEasepKQAAAABJRU5ErkJggg=='),
+                traits: genericIconInflater(),
                 items: genericIconInflater('', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEkAAABJCAIAAAD+EZyLAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFhSURBVGhD7ZoxkoIwFIYfexa0cDwBnkArT4ElNnuDPQC2dtvaqyeQE1gt3CWSEAOoszuzJoy/838N/CSZ4Zu8FxoipZS8KR/2+o7QDRO6YUI3TOiGCd0woRsmdMOEbpjQDRO6YUI3TOiGCd0eUG1mUTTbVDa+Iv727bh6NVfW5B+Y+lxsRYr1KNKsjnZEb+YV99DtsVnX0Ay66X4KQP2TMk9Ekry0UalD2s/NE0kP5r4/3Yy0g9fYy/b+CcK5mQmdF+zm25c3ubPYj1ywfqv2u0LS5dxGkXg8FTn/PKy10aT2no5jG5v8NGHPku3C9o9GN+SghHW7K6tT5vYmPMHcfivBgfDnpnuk2O2dzPwzT+pvQnvy1wf8sN92f25x9m1kdGsZoTg71Qde23Jfk3LQkhT+g4EJ3TChGyZ0w4RumNANE7phQjdM6IYJ3TChGyZ0w4RumNANE7phQjdM6IaIyAXGxL3ck02bowAAAABJRU5ErkJggg=='),
                 specializations: function (gw2Object, data) {
                 },
@@ -42,6 +34,7 @@ class GW2TooltipsV2 {
         else {
             this.context.push(GW2TooltipsV2.createCompleteContext({}));
         }
+        this.config = Object.assign({}, GW2TooltipsV2.defaultConfig, window.GW2TooltipsConfig);
         this.tooltip = TUtilsV2.newElm('div.tooltipWrapper');
         this.tooltip.style.display = 'none';
         document.body.appendChild(this.tooltip);
@@ -57,16 +50,6 @@ class GW2TooltipsV2 {
             event.preventDefault();
             this.cycleTooltipsHandler();
         });
-    }
-    async fetchAPIObjects(key, value) {
-        let result = [];
-        try {
-            result = await HSAPI.getAPIObjects(key, value);
-        }
-        catch (error) {
-            console.error(error);
-        }
-        return result;
     }
     displayCorrectChainTooltip(tooltips, tooltipIndex) {
         for (let index = 0; index < tooltips.length; index++) {
@@ -122,15 +105,15 @@ class GW2TooltipsV2 {
             else
                 objectsToGet[type].set(objId, [gw2Object]);
             gw2Object.addEventListener('mouseenter', (e) => {
-                const element = e.target;
-                const type = (element.getAttribute('type') || 'skill') + 's';
-                const objId = +String(element.getAttribute('objId'));
+                const gw2Object = e.target;
+                const type = (gw2Object.getAttribute('type') || 'skill') + 's';
+                const objId = +String(gw2Object.getAttribute('objId'));
                 if (type != 'skills')
                     return;
                 this.tooltip.replaceChildren();
-                const data = this.objectData[type].get(objId);
+                const data = APICache.storage[type].get(objId);
                 if (data) {
-                    this.generateToolTip(data, element);
+                    this.generateToolTip(data, gw2Object);
                     this.tooltip.style.display = '';
                 }
             });
@@ -142,15 +125,12 @@ class GW2TooltipsV2 {
         Object.entries(objectsToGet).forEach(async ([key, values]) => {
             if (values.size == 0)
                 return;
-            const storage = this.objectData[key];
-            const elementLookup = objectsToGet[key];
             const inflator = this.inflators[key];
-            const apiResponse = await this.fetchAPIObjects(key, Array.from(values.keys()));
-            for (const apiObject of apiResponse)
-                storage.set(apiObject.id, apiObject);
-            for (const data of apiResponse) {
-                const objects = elementLookup.get(data.id);
-                if (!objects)
+            const cache = APICache.storage[key];
+            await APICache.ensureExistence(key, values.keys());
+            for (const [id, objects] of objectsToGet[key]) {
+                const data = cache.get(id);
+                if (!objects || !data)
                     continue;
                 for (const gw2Object of objects)
                     inflator(gw2Object, data);
@@ -215,7 +195,7 @@ class GW2TooltipsV2 {
         const description = document.createElement('ted');
         if (apiObject.description)
             description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`;
-        const tooltip = TUtilsV2.newElm('div.tooltip', basic, description, ...SkillsProcessor.processFact(apiObject, this.objectData['skills'], context));
+        const tooltip = TUtilsV2.newElm('div.tooltip', basic, description, ...SkillsProcessor.processFact(apiObject, APICache.storage['skills'], context));
         tooltip.dataset.id = String(apiObject.id);
         tooltip.style.marginTop = '5px';
         this.tooltip.append(tooltip);
@@ -228,7 +208,7 @@ class GW2TooltipsV2 {
             for (const palette of currentSkill.palettes) {
                 for (const slot of palette.slots) {
                     if (slot.next_chain && slot.profession !== 'None') {
-                        const nextSkillInChain = this.objectData['skills'].get(slot.next_chain);
+                        const nextSkillInChain = APICache.storage['skills'].get(slot.next_chain);
                         if (nextSkillInChain) {
                             addSkillToChain(nextSkillInChain);
                         }
@@ -237,7 +217,7 @@ class GW2TooltipsV2 {
             }
             if (currentSkill.sub_skills) {
                 for (const subSkillId of currentSkill.sub_skills) {
-                    const subSkillInChain = this.objectData['skills'].get(subSkillId);
+                    const subSkillInChain = APICache.storage['skills'].get(subSkillId);
                     if (subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
                         addSkillToChain(subSkillInChain);
                     }
@@ -279,5 +259,9 @@ GW2TooltipsV2.defaultContext = {
         critDamage: 0,
     },
 };
+GW2TooltipsV2.defaultConfig = {
+    autoInitialize: true,
+};
 const gw2tooltips = new GW2TooltipsV2();
-gw2tooltips.hookDocument(document);
+if (gw2tooltips.config.autoInitialize)
+    gw2tooltips.hookDocument(document);

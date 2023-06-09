@@ -4,22 +4,23 @@ namespace LegacyCompat {
 
 namespace API {
   interface Skill {
-    id                : number
-    name              : string
-    name_brief?       : string
-    description       : string
-    icon              : string
-    chat_link         : string
-    facts             : Fact[]
-    facts_override?   : FactsOverride[]
-    categories        : any[]
-    range             : number
-    recharge          : Duration
-    recharge_override : RechargeOverride[]
-    activation        : Duration
-    palettes          : Palette[]
-    sub_skills?       : number[]
-    modifiers         : Modifier[]
+    id                 : number
+    name               : string
+    name_brief?        : string
+    description        : string
+    description_brief? : string
+    icon               : string
+    chat_link          : string
+    facts              : Fact[]
+    facts_override?    : FactsOverride[]
+    categories         : any[]
+    range              : number
+    recharge           : Duration
+    recharge_override  : RechargeOverride[]
+    activation         : Duration
+    palettes           : Palette[]
+    sub_skills?        : number[]
+    modifiers          : Modifier[]
   }
 
   type Fact = FactMap[keyof FactMap];
@@ -56,7 +57,7 @@ namespace API {
     formula_param2 : number
     formula        : number
     description    : string
-    flags          : ('FormatDuration' | 'FormatPercent' | 'MulByDuration' | 'NonStacking')[]
+    flags          : ('FormatDuration' | 'FormatPercent' | 'SkipNextEntry' | 'MulByDuration' | 'DivDurationBy3' | 'DivDurationBy10' | 'NonStacking')[]
     trait_req?     : number
     mode?          : GameMode
   }
@@ -210,7 +211,7 @@ namespace API {
 type ObjectDataStorageKeys = `${LegacyCompat.ObjectType}s`
 
 type ObjectDataStorage = {
-  [k in ObjectDataStorageKeys] : Map<number, APIFetchMap[k]>
+  [k in ObjectDataStorageKeys] : Map<number, APIResponseTypeMap[k]>
 }
 
 type ObjectsToFetch = {
@@ -224,17 +225,21 @@ interface HandlerParams<TFact = API.Fact> {
 }
 
 //TODO(Rennorb): some of these don't exist yet
-type APIFetchMap = {
+type APIResponseTypeMap = {
   skills         : API.Skill;
   traits         : API.Trait;
   items          : API.Item;
   specializations: API.Specialization;
   pets           : API.Pet;
-  "pvp/amulets"  : API.Amulet;
+  'pvp/amulets'  : API.Amulet;
 }
 
-type AllFetchResults = APIFetchMap[keyof APIFetchMap]
+type Endpoints = keyof APIResponseTypeMap;
 
 type InflatorMap = {
-  [k in ObjectDataStorageKeys] : (gw2Object : HTMLElement, data : APIFetchMap[k]) => void
+  [k in ObjectDataStorageKeys] : (gw2Object : HTMLElement, data : APIResponseTypeMap[k]) => void
+}
+
+interface APIImplementation {
+  bulkRequest<T extends Endpoints>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]>;
 }

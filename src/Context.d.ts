@@ -1,7 +1,10 @@
 // This file is meant for anyone who want to have typings for the tooltips.js context structure 
 
+//NOTE(Rennorb): these are separate window objects to allow using just either or.
+// Most of the time the only interesting thing will be to set up the context.
 declare interface Window {
   GW2TooltipsContext : PartialContext[] | PartialContext | undefined;
+  GW2TooltipsConfig  : Config | undefined;
 }
 
 type PartialContext = Omit<Partial<Context>, 'stats'>  & { stats?: Partial<Stats> }
@@ -26,4 +29,9 @@ interface Stats {
   concentration  : number
   healing        : number
   critDamage     : number
+}
+
+// defaults for this can be found in TooltipsV2.ts
+interface Config {
+   autoInitialize : bool
 }
