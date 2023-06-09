@@ -83,7 +83,7 @@ class SkillsProcessor {
     return weaponStrength
   }
 
-  static processFact(skill : API.Skill, skillDataCache : Map<number, API.Skill>, context : Context) : HTMLElement[] {
+  static processFact(skill : API.Skill | API.Trait, skillDataCache : Map<number, API.Skill>, context : Context) : HTMLElement[] {
     if(!skill.facts.length && !skill.facts_override) return []
 
     let totalDefianceBreak = 0
@@ -203,8 +203,8 @@ class SkillsProcessor {
 
       const buff = fact.buff ? skillDataCache.get(fact.buff) : undefined;
 
-      const data : HandlerParams = { fact, buff, skill };
-      htmlContent = handlers[fact.type](data as any)//TODO(Rennorb) @hammer
+      const data : HandlerParams = { fact, buff, skill } as any; //TODO(Rennorb) @hammer
+      htmlContent = handlers[fact.type](data as any) //TODO(Rennorb) @hammer
 
       if(fact.text === 'pull') { //TODO(Rennorb): ?
         htmlContent = `<tem> ${fact.text}: ${fact.value} </tem>`
@@ -241,7 +241,7 @@ class SkillsProcessor {
       factWraps.push(defianceWrap)
     }
 
-    if(skill.range) {
+    if('range' in skill && skill.range) {
       const rangeWrap = TUtilsV2.newElm('te', 
         TUtilsV2.newImg('https://assets.gw2dat.com/156666.png', 'iconmed'),
         TUtilsV2.newElm('tem', `Range: ${skill.range}`)

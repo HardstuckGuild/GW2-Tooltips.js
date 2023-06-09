@@ -183,7 +183,7 @@ class SkillsProcessor {
             const defianceWrap = TUtilsV2.newElm('te.defiance', TUtilsV2.newImg('https://assets.gw2dat.com/1938788.png', 'iconmed'), TUtilsV2.newElm('tem', `Defiance Break: ${totalDefianceBreak}`));
             factWraps.push(defianceWrap);
         }
-        if (skill.range) {
+        if ('range' in skill && skill.range) {
             const rangeWrap = TUtilsV2.newElm('te', TUtilsV2.newImg('https://assets.gw2dat.com/156666.png', 'iconmed'), TUtilsV2.newElm('tem', `Range: ${skill.range}`));
             factWraps.push(rangeWrap);
         }

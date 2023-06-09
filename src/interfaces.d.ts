@@ -7,20 +7,22 @@ namespace API {
     id                 : number
     name               : string
     name_brief?        : string
-    description        : string
+    description?       : string
     description_brief? : string
-    icon               : string
-    chat_link          : string
+    icon?              : string
+    chat_link          : string //TODO(Rennorb) who cares
     facts              : Fact[]
     facts_override?    : FactsOverride[]
     categories         : any[]
     range              : number
     recharge           : Duration
     recharge_override  : RechargeOverride[]
-    activation         : Duration
+    activation?        : Duration
+    evade_duration?    : Duration
     palettes           : Palette[]
+    cost?              : number
     sub_skills?        : number[]
-    modifiers          : Modifier[]
+    modifiers?         : Modifier[]
   }
 
   type Fact = FactMap[keyof FactMap];
@@ -175,10 +177,15 @@ namespace API {
   }
 
   interface Trait {
-    id   : number
-    icon : string
-    name : string
-    //TODO
+    id                 : number
+    icon?              : string
+    name               : string
+    name_brief?        : string
+    description?       : string
+    description_brief? : string
+    facts              : Fact[]
+    slot               : 'Minor' | 'Major' | 'MadLib' | 'Automatic'; //TODO(Rennorb): fix this on the api side lol
+    facts_override     : undefined //TODO(Rennorb): not exported yet
   }
 
   interface Item {

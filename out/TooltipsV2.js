@@ -108,12 +108,11 @@ class GW2TooltipsV2 {
                 const gw2Object = e.target;
                 const type = (gw2Object.getAttribute('type') || 'skill') + 's';
                 const objId = +String(gw2Object.getAttribute('objId'));
-                if (type != 'skills')
+                if (type != 'skills' && type != 'traits')
                     return;
-                this.tooltip.replaceChildren();
                 const data = APICache.storage[type].get(objId);
                 if (data) {
-                    this.generateToolTip(data, gw2Object);
+                    this.tooltip.replaceChildren(...this.generateToolTip(data, gw2Object));
                     this.tooltip.style.display = '';
                 }
             });
@@ -128,7 +127,7 @@ class GW2TooltipsV2 {
             const inflator = this.inflators[key];
             const cache = APICache.storage[key];
             await APICache.ensureExistence(key, values.keys());
-            for (const [id, objects] of objectsToGet[key]) {
+            for (const [id, objects] of values) {
                 const data = cache.get(id);
                 if (!objects || !data)
                     continue;
@@ -182,52 +181,57 @@ class GW2TooltipsV2 {
     }
     processToolTipInfo(apiObject, context) {
         let recharge = '';
-        if (context.gameMode !== 'Pve' && apiObject.recharge_override.length) {
-            const override = apiObject.recharge_override.find(override => override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge));
-            if (override && override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge)) {
-                recharge = TUtilsV2.newElm('ter', String(TUtilsV2.DurationToSeconds(override.recharge)), TUtilsV2.newImg('https://assets.gw2dat.com/156651.png', 'iconsmall'));
+        const isSkill = 'recharge_override' in apiObject;
+        if (isSkill) {
+            if (context.gameMode !== 'Pve' && apiObject.recharge_override.length) {
+                const override = apiObject.recharge_override.find(override => override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge));
+                if (override && override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge)) {
+                    recharge = TUtilsV2.newElm('ter', String(TUtilsV2.DurationToSeconds(override.recharge)), TUtilsV2.newImg('https://assets.gw2dat.com/156651.png', 'iconsmall'));
+                }
+            }
+            else if (TUtilsV2.DurationToSeconds(apiObject.recharge)) {
+                recharge = TUtilsV2.newElm('ter', String(TUtilsV2.DurationToSeconds(apiObject.recharge)), TUtilsV2.newImg('https://assets.gw2dat.com/156651.png', 'iconsmall'));
             }
         }
-        else if (TUtilsV2.DurationToSeconds(apiObject.recharge)) {
-            recharge = TUtilsV2.newElm('ter', String(TUtilsV2.DurationToSeconds(apiObject.recharge)), TUtilsV2.newImg('https://assets.gw2dat.com/156651.png', 'iconsmall'));
-        }
-        const basic = TUtilsV2.newElm('tet', TUtilsV2.newElm('teb', apiObject.name), TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`), TUtilsV2.newElm('div.flexbox-fill'), recharge);
+        const basic = TUtilsV2.newElm('tet', TUtilsV2.newElm('teb', apiObject.name), TUtilsV2.newElm('tes', `( ${isSkill ? this.getSlotName(apiObject) : apiObject.slot} )`), TUtilsV2.newElm('div.flexbox-fill'), recharge);
         const description = document.createElement('ted');
         if (apiObject.description)
             description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`;
         const tooltip = TUtilsV2.newElm('div.tooltip', basic, description, ...SkillsProcessor.processFact(apiObject, APICache.storage['skills'], context));
         tooltip.dataset.id = String(apiObject.id);
         tooltip.style.marginTop = '5px';
-        this.tooltip.append(tooltip);
+        return tooltip;
     }
     generateToolTip(initialSkill, gw2Object) {
         const skillChain = [];
         const validTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard'];
         const addSkillToChain = (currentSkill) => {
             skillChain.push(currentSkill);
-            for (const palette of currentSkill.palettes) {
-                for (const slot of palette.slots) {
-                    if (slot.next_chain && slot.profession !== 'None') {
-                        const nextSkillInChain = APICache.storage['skills'].get(slot.next_chain);
-                        if (nextSkillInChain) {
-                            addSkillToChain(nextSkillInChain);
+            if ('palettes' in currentSkill) {
+                for (const palette of currentSkill.palettes) {
+                    for (const slot of palette.slots) {
+                        if (slot.next_chain && slot.profession !== 'None') {
+                            const nextSkillInChain = APICache.storage['skills'].get(slot.next_chain);
+                            if (nextSkillInChain) {
+                                addSkillToChain(nextSkillInChain);
+                            }
                         }
                     }
                 }
-            }
-            if (currentSkill.sub_skills) {
-                for (const subSkillId of currentSkill.sub_skills) {
-                    const subSkillInChain = APICache.storage['skills'].get(subSkillId);
-                    if (subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
-                        addSkillToChain(subSkillInChain);
+                if (currentSkill.sub_skills) {
+                    for (const subSkillId of currentSkill.sub_skills) {
+                        const subSkillInChain = APICache.storage['skills'].get(subSkillId);
+                        if (subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
+                            addSkillToChain(subSkillInChain);
+                        }
                     }
                 }
             }
         };
         addSkillToChain(initialSkill);
         const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
-        skillChain.forEach(skill => this.processToolTipInfo(skill, context));
-        const chainTooltips = Array.from(this.tooltip.children);
+        const chainTooltips = skillChain.map(skill => this.processToolTipInfo(skill, context));
+        chainTooltips.forEach(tooltip => this.tooltip.append(tooltip));
         if (chainTooltips.length > 1) {
             gw2Object.classList.add('cycler');
             gw2Object.title = 'Right-click to cycle through tooltips';
@@ -239,7 +243,7 @@ class GW2TooltipsV2 {
                 gw2tooltips.displayCorrectChainTooltip(chainTooltips, currentTooltipIndex);
             };
         }
-        return skillChain;
+        return chainTooltips;
     }
 }
 GW2TooltipsV2.defaultContext = {

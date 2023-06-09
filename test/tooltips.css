@@ -111,3 +111,7 @@ gw2object[type=specialization] [type=trait] {
 	transform: scale(1.05);
 	background: #000;
 }
+
+.gw2objectembed[type="specialization"] img, .trait_minor img {
+  clip-path: polygon(50% 0, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%) !important;
+}
