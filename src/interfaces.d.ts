@@ -228,7 +228,7 @@ type ObjectsToFetch = {
 interface HandlerParams<TFact = API.Fact> {
 	fact    : TFact
 	buff    : (TFact extends { buff : number } ? API.Skill : undefined) | undefined
-	skill   : API.Skill
+	skill   : API.Skill | API.Trait & { [k : string] : undefined  } //to allow for conditional chaining for unknown props. 
 }
 
 //TODO(Rennorb): some of these don't exist yet

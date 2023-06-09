@@ -60,7 +60,7 @@ class SkillsProcessor {
         }
         return weaponStrength;
     }
-    static processFact(skill, skillDataCache, context) {
+    static processFact(skill, context) {
         if (!skill.facts.length && !skill.facts_override)
             return [];
         let totalDefianceBreak = 0;
@@ -68,7 +68,7 @@ class SkillsProcessor {
             if (fact.requires_trait && (!context.traits || !fact.requires_trait.some(reqTrait => context.traits.includes(reqTrait)))) {
                 return null;
             }
-            let iconUrl = `${this.iconSource}${fact.icon}`;
+            let iconSlug = fact.icon;
             let htmlContent = '';
             if (fact.defiance_break) {
                 totalDefianceBreak += fact.defiance_break;
@@ -83,18 +83,25 @@ class SkillsProcessor {
                 Percent: ({ fact }) => `<tem> ${TUtilsV2.GW2Text2HTML(fact.text)}: ${fact.percent}% </tem>`,
                 StunBreak: ({ fact }) => `<tem>Breaks Stun</tem>`,
                 PrefixedBuffBrief: ({ fact }) => {
-                    const prefix = skillDataCache.get(fact.prefix);
-                    const buff = skillDataCache.get(fact.buff);
-                    iconUrl = `${this.iconSource}${prefix === null || prefix === void 0 ? void 0 : prefix.icon}`;
-                    const buffIcon = TUtilsV2.newImg(`${this.iconSource}${buff === null || buff === void 0 ? void 0 : buff.icon}`, 'iconmed');
-                    return `<tem> ${buffIcon.outerHTML} ${(buff === null || buff === void 0 ? void 0 : buff.name_brief) || (buff === null || buff === void 0 ? void 0 : buff.name)} </tem>`;
+                    let prefix = APICache.storage.skills.get(fact.prefix);
+                    if (!prefix) {
+                        console.error('prefix #', fact.prefix, ' is apparently missing in the cache');
+                        prefix = this.MissingBuff;
+                    }
+                    iconSlug = prefix.icon || iconSlug;
+                    let buff = APICache.storage.skills.get(fact.buff);
+                    if (!buff) {
+                        console.error('buff #', fact.buff, ' is apparently missing in the cache');
+                        buff = this.MissingBuff;
+                    }
+                    return `<tem> ${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML} ${buff.name_brief || buff.name} </tem>`;
                 },
                 Buff: ({ fact, buff }) => {
                     if (!buff)
                         console.error('buff #', fact.buff, ' is apparently missing in the cache');
                     buff = buff || this.MissingBuff;
                     let modifiers = '';
-                    iconUrl = `${this.iconSource}${buff.icon}`;
+                    iconSlug = buff.icon;
                     if (buff.modifiers) {
                         for (const modifier of buff.modifiers) {
                             if ((modifier.trait_req && !context.traits.includes(modifier.trait_req)) ||
@@ -119,11 +126,10 @@ class SkillsProcessor {
                             }
                         }
                     }
-                    const fixDescriptionText = (description) => (description === null || description === void 0 ? void 0 : description.replace(/<c=@.*?>(.*?)<\/c>/g, '$1').replace(/%%/g, '%')) || '';
                     const getDurationText = (duration) => (duration === null || duration === void 0 ? void 0 : duration.secs) && (duration === null || duration === void 0 ? void 0 : duration.secs) >= 1 ? `(${duration === null || duration === void 0 ? void 0 : duration.secs}s)` : '';
                     const getDescriptionOrModifiers = (hasDescriptionBrief, descriptionContent, modifiers) => hasDescriptionBrief ? descriptionContent : modifiers;
                     const hasDescriptionBrief = Boolean(buff === null || buff === void 0 ? void 0 : buff.description_brief);
-                    const descriptionContent = hasDescriptionBrief ? buff === null || buff === void 0 ? void 0 : buff.description_brief : fixDescriptionText(buff === null || buff === void 0 ? void 0 : buff.description);
+                    const descriptionContent = hasDescriptionBrief ? buff === null || buff === void 0 ? void 0 : buff.description_brief : TUtilsV2.GW2Text2HTML(buff === null || buff === void 0 ? void 0 : buff.description);
                     const durationText = getDurationText(fact.duration);
                     htmlContent = `<tem> ${(buff === null || buff === void 0 ? void 0 : buff.name_brief) || (buff === null || buff === void 0 ? void 0 : buff.name)} ${durationText} ${getDescriptionOrModifiers(hasDescriptionBrief, descriptionContent, modifiers)} </tem>`;
                     if (fact.apply_count && fact.apply_count > 1) {
@@ -135,12 +141,13 @@ class SkillsProcessor {
                     if (!buff)
                         console.error('buff #', fact.buff, ' is apparently missing in the cache');
                     buff = buff || this.MissingBuff;
-                    iconUrl = `${this.iconSource}${buff.icon}`;
+                    iconSlug = buff.icon;
                     return TUtilsV2.GW2Text2HTML(fact.text);
                 },
                 Damage: ({ fact, skill }) => {
+                    var _a;
                     let weaponStrength = 0;
-                    if (skill.palettes.length) {
+                    if ((_a = skill.palettes) === null || _a === void 0 ? void 0 : _a.length) {
                         const relevantPalette = skill.palettes.find((palette) => palette.slots &&
                             palette.slots.some((slot) => slot.profession !== 'None'));
                         if (relevantPalette) {
@@ -166,10 +173,10 @@ class SkillsProcessor {
                     context.stats.level ** fact.level_exponent * fact.level_multiplier) *
                     fact.hit_count)} </tem>`,
             };
-            const buff = fact.buff ? skillDataCache.get(fact.buff) : undefined;
+            const buff = APICache.storage.skills.get(fact.buff || 0);
             const data = { fact, buff, skill };
             htmlContent = handlers[fact.type](data);
-            return TUtilsV2.newElm('te', TUtilsV2.newImg(iconUrl, 'iconmed'), TUtilsV2.fromHTML(htmlContent));
+            return TUtilsV2.newElm('te', TUtilsV2.newImg(iconSlug, 'iconmed'), TUtilsV2.fromHTML(htmlContent));
         };
         const factWraps = skill.facts
             .sort((a, b) => a.order - b.order)
@@ -189,11 +196,11 @@ class SkillsProcessor {
             }
         }
         if (totalDefianceBreak > 0) {
-            const defianceWrap = TUtilsV2.newElm('te.defiance', TUtilsV2.newImg(`${this.iconSource}1938788.png`, 'iconmed'), TUtilsV2.newElm('tem', `Defiance Break: ${totalDefianceBreak}`));
+            const defianceWrap = TUtilsV2.newElm('te.defiance', TUtilsV2.newImg('1938788.png', 'iconmed'), TUtilsV2.newElm('tem', `Defiance Break: ${totalDefianceBreak}`));
             factWraps.push(defianceWrap);
         }
         if ('range' in skill && skill.range) {
-            const rangeWrap = TUtilsV2.newElm('te', TUtilsV2.newImg(`${this.iconSource}156666.png`, 'iconmed'), TUtilsV2.newElm('tem', `Range: ${skill.range}`));
+            const rangeWrap = TUtilsV2.newElm('te', TUtilsV2.newImg('156666.png', 'iconmed'), TUtilsV2.newElm('tem', `Range: ${skill.range}`));
             factWraps.push(rangeWrap);
         }
         return factWraps;
@@ -203,7 +210,6 @@ SkillsProcessor.MissingBuff = {
     id: 0,
     name: 'Missing Buff',
     description: 'This Buff failed to load',
-    icon: '0.png',
     chat_link: '',
     facts: [],
     categories: [],
@@ -214,4 +220,3 @@ SkillsProcessor.MissingBuff = {
     palettes: [],
     modifiers: [],
 };
-SkillsProcessor.iconSource = 'https://assets.gw2dat.com//';

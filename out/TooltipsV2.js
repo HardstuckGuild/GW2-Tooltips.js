@@ -9,7 +9,7 @@ class GW2TooltipsV2 {
         this.context = [];
         this.inflators = (function () {
             const genericIconInflater = (clazz = '', icon) => (gw2Object, data) => {
-                const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(icon || `https://assets.gw2dat.com/${data.icon}`, clazz, data.name));
+                const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(icon || data.icon, clazz, data.name));
                 wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + data.name;
                 wikiLink.target = '_blank';
                 gw2Object.append(wikiLink);
@@ -76,11 +76,7 @@ class GW2TooltipsV2 {
             tooltipXpos = window.innerWidth - 22 - tooltip.offsetWidth;
         }
         let tooltipYpos = this.lastMouseY - 6 - tooltip.offsetHeight;
-        if (this.lastMouseY -
-            tooltip.offsetHeight -
-            13 -
-            document.documentElement.scrollTop <
-            0) {
+        if (this.lastMouseY - tooltip.offsetHeight - 13 - document.documentElement.scrollTop < 0) {
             tooltipYpos = additionaloffset + 6 + document.documentElement.scrollTop;
         }
         tooltip.style.transform = `translate(${tooltipXpos}px, ${tooltipYpos}px)`;
@@ -186,18 +182,18 @@ class GW2TooltipsV2 {
             if (context.gameMode !== 'Pve' && apiObject.recharge_override.length) {
                 const override = apiObject.recharge_override.find(override => override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge));
                 if (override && override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge)) {
-                    recharge = TUtilsV2.newElm('ter', String(TUtilsV2.DurationToSeconds(override.recharge)), TUtilsV2.newImg('https://assets.gw2dat.com/156651.png', 'iconsmall'));
+                    recharge = TUtilsV2.newElm('ter', String(TUtilsV2.DurationToSeconds(override.recharge)), TUtilsV2.newImg('156651.png', 'iconsmall'));
                 }
             }
             else if (TUtilsV2.DurationToSeconds(apiObject.recharge)) {
-                recharge = TUtilsV2.newElm('ter', String(TUtilsV2.DurationToSeconds(apiObject.recharge)), TUtilsV2.newImg('https://assets.gw2dat.com/156651.png', 'iconsmall'));
+                recharge = TUtilsV2.newElm('ter', String(TUtilsV2.DurationToSeconds(apiObject.recharge)), TUtilsV2.newImg('156651.png', 'iconsmall'));
             }
         }
         const basic = TUtilsV2.newElm('tet', TUtilsV2.newElm('teb', apiObject.name), TUtilsV2.newElm('tes', `( ${isSkill ? this.getSlotName(apiObject) : apiObject.slot} )`), TUtilsV2.newElm('div.flexbox-fill'), recharge);
         const description = document.createElement('ted');
         if (apiObject.description)
             description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`;
-        const tooltip = TUtilsV2.newElm('div.tooltip', basic, description, ...SkillsProcessor.processFact(apiObject, APICache.storage['skills'], context));
+        const tooltip = TUtilsV2.newElm('div.tooltip', basic, description, ...SkillsProcessor.processFact(apiObject, context));
         tooltip.dataset.id = String(apiObject.id);
         tooltip.style.marginTop = '5px';
         return tooltip;
@@ -211,7 +207,7 @@ class GW2TooltipsV2 {
                 for (const palette of currentSkill.palettes) {
                     for (const slot of palette.slots) {
                         if (slot.next_chain && slot.profession !== 'None') {
-                            const nextSkillInChain = APICache.storage['skills'].get(slot.next_chain);
+                            const nextSkillInChain = APICache.storage.skills.get(slot.next_chain);
                             if (nextSkillInChain) {
                                 addSkillToChain(nextSkillInChain);
                             }
@@ -220,7 +216,7 @@ class GW2TooltipsV2 {
                 }
                 if (currentSkill.sub_skills) {
                     for (const subSkillId of currentSkill.sub_skills) {
-                        const subSkillInChain = APICache.storage['skills'].get(subSkillId);
+                        const subSkillInChain = APICache.storage.skills.get(subSkillId);
                         if (subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
                             addSkillToChain(subSkillInChain);
                         }

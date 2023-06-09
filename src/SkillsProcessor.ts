@@ -3,7 +3,6 @@ class SkillsProcessor {
 		id               : 0,
 		name             : 'Missing Buff',
 		description      : 'This Buff failed to load',
-		icon             : '0.png',
 		chat_link        : '',
 		facts            : [],
 		categories       : [],
@@ -15,7 +14,6 @@ class SkillsProcessor {
 		modifiers        : [],
 	}
 
-	static iconSource = 'https://assets.gw2dat.com//'
 	static calculateModifier(
 		{ formula, base_amount, formula_param1: level_scaling, formula_param2 } : API.Modifier,
 		{ level, power, conditionDamage: condition_damage, healing: healing_power } : Stats,
@@ -84,7 +82,7 @@ class SkillsProcessor {
 		return weaponStrength
 	}
 
-	static processFact(skill : API.Skill | API.Trait, skillDataCache : Map<number, API.Skill>, context : Context) : HTMLElement[] {
+	static processFact(skill : API.Skill | API.Trait, context : Context) : HTMLElement[] {
 		if(!skill.facts.length && !skill.facts_override) return []
 
 		let totalDefianceBreak = 0
@@ -94,7 +92,7 @@ class SkillsProcessor {
 				return null
 			}
 
-			let iconUrl = `${this.iconSource}${fact.icon}`
+			let iconSlug = fact.icon
 			let htmlContent = ''
 
 			if(fact.defiance_break) {
@@ -112,18 +110,25 @@ class SkillsProcessor {
 				StunBreak    : ({ fact }) => `<tem>Breaks Stun</tem>`,
 				//now for the more complex ones
 				PrefixedBuffBrief: ({ fact }) => {
-					const prefix = skillDataCache.get(fact.prefix)
-					const buff = skillDataCache.get(fact.buff)
-					iconUrl = `${this.iconSource}${prefix?.icon}`
-					const buffIcon = TUtilsV2.newImg(`${this.iconSource}${buff?.icon}`, 'iconmed')
-					return `<tem> ${buffIcon.outerHTML} ${buff?.name_brief || buff?.name} </tem>`
+					let prefix = APICache.storage.skills.get(fact.prefix)
+					if(!prefix) {
+						console.error('prefix #', fact.prefix, ' is apparently missing in the cache');
+						prefix = this.MissingBuff
+					}
+					iconSlug = prefix.icon || iconSlug
+					let buff = APICache.storage.skills.get(fact.buff)
+					if(!buff) {
+						console.error('buff #', fact.buff, ' is apparently missing in the cache');
+						buff = this.MissingBuff
+					}
+					return `<tem> ${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML} ${buff.name_brief || buff.name} </tem>`
 				},
 				Buff: ({ fact, buff }) => {
 					if(!buff) console.error('buff #', fact.buff, ' is apparently missing in the cache');
 					buff = buff || this.MissingBuff // in case we didn't get the buff we wanted from the api
 
 					let modifiers = ''
-					iconUrl = `${this.iconSource}${buff.icon}`
+					iconSlug = buff.icon
 					if(buff.modifiers) {
 						for(const modifier of buff.modifiers) {
 							if(
@@ -154,15 +159,12 @@ class SkillsProcessor {
 						}
 					}
 
-					//TODO(Rennorb) @cleanup
-					const fixDescriptionText = (description: string | undefined) => description?.replace(/<c=@.*?>(.*?)<\/c>/g, '$1').replace(/%%/g, '%') || ''
-
 					const getDurationText = (duration: { secs?: number } | undefined) => duration?.secs && duration?.secs >= 1 ? `(${duration?.secs}s)` : ''
 
 					const getDescriptionOrModifiers = (hasDescriptionBrief: boolean, descriptionContent: string | undefined, modifiers: string) => hasDescriptionBrief ? descriptionContent : modifiers
 
 					const hasDescriptionBrief = Boolean(buff?.description_brief)
-					const descriptionContent = hasDescriptionBrief ? buff?.description_brief : fixDescriptionText(buff?.description)
+					const descriptionContent = hasDescriptionBrief ? buff?.description_brief : TUtilsV2.GW2Text2HTML(buff?.description)
 					const durationText = getDurationText(fact.duration)
 
 					htmlContent = `<tem> ${buff?.name_brief || buff?.name} ${durationText} ${getDescriptionOrModifiers(hasDescriptionBrief, descriptionContent, modifiers)} </tem>`
@@ -176,12 +178,12 @@ class SkillsProcessor {
 					if(!buff) console.error('buff #', fact.buff, ' is apparently missing in the cache');
 					buff = buff || this.MissingBuff // in case we didn't get the buff we wanted from the api
 
-					iconUrl = `${this.iconSource}${buff.icon}`
+					iconSlug = buff.icon
 					return TUtilsV2.GW2Text2HTML(fact.text)
 				},
 				Damage: ({ fact, skill }) => {
 					let weaponStrength = 0
-					if(skill.palettes.length) {
+					if(skill.palettes?.length) {
 						const relevantPalette = skill.palettes.find(
 							(palette) =>
 								palette.slots &&
@@ -219,12 +221,11 @@ class SkillsProcessor {
 					)} </tem>`,
 			}
 
-			const buff = fact.buff ? skillDataCache.get(fact.buff) : undefined
-
+			const buff = APICache.storage.skills.get(fact.buff || 0)
 			const data : HandlerParams = { fact, buff, skill } as any //TODO(Rennorb) @hammer
 			htmlContent = handlers[fact.type](data as any) //TODO(Rennorb) @hammer
 
-			return TUtilsV2.newElm('te', TUtilsV2.newImg(iconUrl, 'iconmed'), TUtilsV2.fromHTML(htmlContent))
+			return TUtilsV2.newElm('te', TUtilsV2.newImg(iconSlug, 'iconmed'), TUtilsV2.fromHTML(htmlContent))
 		}
 
 		const factWraps = 
@@ -249,7 +250,7 @@ class SkillsProcessor {
 
 		if(totalDefianceBreak > 0) {
 			const defianceWrap = TUtilsV2.newElm('te.defiance',
-				TUtilsV2.newImg(`${this.iconSource}1938788.png`, 'iconmed'),
+				TUtilsV2.newImg('1938788.png', 'iconmed'),
 				TUtilsV2.newElm('tem', `Defiance Break: ${totalDefianceBreak}`)
 			)
 			factWraps.push(defianceWrap)
@@ -257,7 +258,7 @@ class SkillsProcessor {
 
 		if('range' in skill && skill.range) {
 			const rangeWrap = TUtilsV2.newElm('te',
-				TUtilsV2.newImg(`${this.iconSource}156666.png`, 'iconmed'),
+				TUtilsV2.newImg('156666.png', 'iconmed'),
 				TUtilsV2.newElm('tem', `Range: ${skill.range}`)
 			)
 			factWraps.push(rangeWrap)

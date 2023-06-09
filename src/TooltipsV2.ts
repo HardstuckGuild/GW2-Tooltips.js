@@ -119,13 +119,7 @@ class GW2TooltipsV2 {
 			tooltipXpos = window.innerWidth - 22 - tooltip.offsetWidth
 		}
 		let tooltipYpos = this.lastMouseY - 6 - tooltip.offsetHeight
-		if(
-			this.lastMouseY -
-				tooltip.offsetHeight -
-				13 -
-				document.documentElement.scrollTop <
-			0
-		) {
+		if(this.lastMouseY - tooltip.offsetHeight - 13 - document.documentElement.scrollTop < 0) {
 			tooltipYpos = additionaloffset + 6 + document.documentElement.scrollTop
 		}
 
@@ -194,7 +188,7 @@ class GW2TooltipsV2 {
 	inflators : InflatorMap = (function() {
 		//TODO(Rennorb): can be changed once the icon url resolution is figured for types other than skills
 		const genericIconInflater = (clazz : string = '', icon? : string) => (gw2Object : HTMLElement, data : { name : string, icon? : string }) => {
-			const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(icon || `https://assets.gw2dat.com/${data.icon}`, clazz, data.name));
+			const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(icon || data.icon, clazz, data.name));
 			wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + data.name;
 			wikiLink.target = '_blank';
 			gw2Object.append(wikiLink);
@@ -270,13 +264,13 @@ class GW2TooltipsV2 {
 				if(override && override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge)) {
 					recharge = TUtilsV2.newElm('ter', 
 						String(TUtilsV2.DurationToSeconds(override.recharge)), 
-						TUtilsV2.newImg('https://assets.gw2dat.com/156651.png', 'iconsmall')
+						TUtilsV2.newImg('156651.png', 'iconsmall')
 					);
 				}
 			} else if(TUtilsV2.DurationToSeconds(apiObject.recharge)) {
 				recharge = TUtilsV2.newElm('ter', 
 					String(TUtilsV2.DurationToSeconds(apiObject.recharge)), 
-					TUtilsV2.newImg('https://assets.gw2dat.com/156651.png', 'iconsmall')
+					TUtilsV2.newImg('156651.png', 'iconsmall')
 				);
 			}
 		}
@@ -292,7 +286,7 @@ class GW2TooltipsV2 {
 
 		const tooltip = TUtilsV2.newElm('div.tooltip', 
 			basic, description,
-			...SkillsProcessor.processFact(apiObject, APICache.storage['skills'], context) // TODO(Rennorb) @correctness: should this really use 'skills' ? 
+			...SkillsProcessor.processFact(apiObject, context)
 		)
 		tooltip.dataset.id = String(apiObject.id)
 		tooltip.style.marginTop = '5px'
@@ -311,7 +305,7 @@ class GW2TooltipsV2 {
 				for(const palette of currentSkill.palettes) {
 					for(const slot of palette.slots) {
 						if(slot.next_chain && slot.profession !== 'None') {
-							const nextSkillInChain = APICache.storage['skills'].get(slot.next_chain);
+							const nextSkillInChain = APICache.storage.skills.get(slot.next_chain);
 							if(nextSkillInChain) {
 								addSkillToChain(nextSkillInChain)
 							}
@@ -321,7 +315,7 @@ class GW2TooltipsV2 {
 
 				if(currentSkill.sub_skills) {
 					for(const subSkillId of currentSkill.sub_skills) {
-						const subSkillInChain = APICache.storage['skills'].get(subSkillId);
+						const subSkillInChain = APICache.storage.skills.get(subSkillId);
 						if(subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
 							addSkillToChain(subSkillInChain)
 						}
