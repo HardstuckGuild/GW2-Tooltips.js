@@ -32,6 +32,8 @@ namespace API {
 		facts : Fact[]
 	}
 
+	type Attributes = 'None' | Capitalize<Exclude<keyof Stats, 'level'>>;
+
 	type Weapons1H = 'Focus' | 'Shield' | 'Torch' | 'Warhorn' | 'BowShort' | 'Axe' | 'Sword' | 'Dagger' | 'Pistol' | 'Scepter' | 'Mace';
 	type Weapons2H = 'Greatsword' | 'Hammer' | 'Staff' | 'BowLong' | 'Rifle';
 	type WeaponsAquatic = 'Spear';
@@ -65,7 +67,7 @@ namespace API {
 	}
 
 	
-	interface BasicFact<Type> {
+	interface BasicFact<Type extends keyof FactMap> {
 		type            : Type
 		order           : number
 		requires_trait? : number[]
@@ -86,10 +88,41 @@ namespace API {
 		text : string
 		buff : number
 	}
+	interface BuffConversionFact extends BasicFact<'BuffConversion'> {
+		text?   : string
+    icon    : string
+    source  : Attributes
+    target  : Attributes
+    percent : number
+	}
+	interface PrefixedBuffFact extends BasicFact<'PrefixedBuff'>{
+    text?       : string
+    icon        : string
+    apply_count : number
+    buff        : number
+    prefix      : number
+    duration    : Duration
+	}
 	interface PrefixedBuffBriefFact extends BasicFact<'PrefixedBuffBrief'>{
+		text?  : string
 		icon   : string
 		buff   : number
 		prefix : number
+	}
+	interface RadiusFact extends BasicFact<'Radius'> {
+		text  : string
+		icon  : string
+		value : number
+	}
+	interface RangeFact extends BasicFact<'Range'> {
+		text  : string
+		icon  : string
+		value : number
+	}
+	interface RechargeFact extends BasicFact<'Recharge'> {
+		text  : string
+		icon  : string
+		value : Duration
 	}
 	interface TimeFact extends BasicFact<'Time'> {
 		text     : string
@@ -118,6 +151,14 @@ namespace API {
 		icon          : string
 		finisher_type : ComboFinisherType
 	}
+	interface HealingAdjustFact extends BasicFact<'HealingAdjust'> {
+    text?      : string
+    icon       : string
+    value      : number
+    attribute  : Attributes
+    multiplier : number
+    hit_count  : number
+	}
 	interface NoDataFact extends BasicFact<'NoData'> {
 		text : string
 		icon : string
@@ -134,10 +175,10 @@ namespace API {
 		percent : number
 	}
 	interface AttributeAdjustFact extends BasicFact<'AttributeAdjust'> {
-		text                 : string
+		text?                : string
 		icon                 : string
 		value                : number
-		target               : Capitalize<keyof Stats>,
+		target               : Attributes,
 		attribute_multiplier : number
 		level_exponent       : number
 		level_multiplier     : number
@@ -149,19 +190,28 @@ namespace API {
 	}
 	
 	type FactMap = {
-		Buff              : BuffFact 
-		BuffBrief         : BuffBriefFact 
+		AttributeAdjust   : AttributeAdjustFact
+		Buff              : BuffFact
+		BuffBrief         : BuffBriefFact
+		BuffConversion    : BuffConversionFact
+		ComboField        : ComboFieldFact
+		ComboFinisher     : ComboFinisherFact
+		Damage            : DamageFact
+		Distance          : DistanceFact
+		Duration          : never
+		Heal              : never
+		HealingAdjust     : HealingAdjustFact
+		NoData            : NoDataFact
+		Number            : NumberFact
+		Percent           : PercentFact
+		PrefixedBuff      : PrefixedBuffFact
 		PrefixedBuffBrief : PrefixedBuffBriefFact
-		Time              : TimeFact 
-		Distance          : DistanceFact 
-		Number            : NumberFact 
-		ComboField        : ComboFieldFact 
-		ComboFinisher     : ComboFinisherFact 
-		NoData            : NoDataFact 
-		Damage            : DamageFact 
-		Percent           : PercentFact 
-		AttributeAdjust   : AttributeAdjustFact 
-		StunBreak         : StunBreakFact;
+		Radius            : RadiusFact
+		Range             : RangeFact
+		Recharge          : RechargeFact
+		StunBreak         : StunBreakFact
+		Time              : TimeFact
+		Unblockable       : never
 	}
 
 	type FactType = keyof FactMap;

@@ -157,7 +157,7 @@ class GW2TooltipsV2 {
 
 				const data = APICache.storage[type].get(objId)
 				if(data) {
-					this.tooltip.replaceChildren(...this.generateToolTip(data, gw2Object));
+					this.tooltip.replaceChildren(...this.generateToolTipList(data, gw2Object));
 					this.tooltip.style.display = ''; //empty value resets actual value to use stylesheet
 				}
 			})
@@ -246,6 +246,9 @@ class GW2TooltipsV2 {
 						break
 					case 'Profession':
 						skillSlot = slot.slot
+						break;
+					case 'Monster':
+						break;
 					default:
 						console.error(`unknown palette type '${palette.type}' for skill '${skill.name}'`)
 				}
@@ -255,7 +258,7 @@ class GW2TooltipsV2 {
 	}
 
 	// TODO(Rennorb): expand apiObject type
-	processToolTipInfo(apiObject : API.Skill | API.Trait, context : Context) : HTMLElement {
+	generateToolTip(apiObject : API.Skill | API.Trait, context : Context) : HTMLElement {
 		let recharge : HTMLElement | '' = ''
 		const isSkill = 'recharge_override' in apiObject;
 		if(isSkill){
@@ -294,7 +297,7 @@ class GW2TooltipsV2 {
 		return tooltip;
 	}
 
-	generateToolTip(initialSkill: API.Skill | API.Trait, gw2Object: HTMLElement) : HTMLElement[] {
+	generateToolTipList(initialSkill: API.Skill | API.Trait, gw2Object: HTMLElement) : HTMLElement[] {
 		const skillChain : (typeof initialSkill)[] = []
 		const validTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard']
 
@@ -327,7 +330,7 @@ class GW2TooltipsV2 {
 		addSkillToChain(initialSkill)
 
 		const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
-		const chainTooltips = skillChain.map(skill => this.processToolTipInfo(skill, context));
+		const chainTooltips = skillChain.map(skill => this.generateToolTip(skill, context));
 		chainTooltips.forEach(tooltip => this.tooltip.append(tooltip))
 
 		if(chainTooltips.length > 1) {

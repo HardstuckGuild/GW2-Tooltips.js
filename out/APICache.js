@@ -21,10 +21,10 @@ class APICache {
         let currentEndpoint = endpoint;
         let i = 0;
         do {
-            console.info(`[gw2-tooltips API cache] round #${i++} for a ${endpoint} request, currently fetching ${currentEndpoint}`);
             const storageSet = this.storage[currentEndpoint];
-            const request = Array.from(additionalIds[endpoint].values());
-            additionalIds[endpoint].clear();
+            const request = Array.from(additionalIds[currentEndpoint].values());
+            additionalIds[currentEndpoint].clear();
+            console.info(`[gw2-tooltips API cache] round #${i++} for a ${endpoint} request, currently fetching ${currentEndpoint}. Ids: `, request);
             try {
                 const response = await this.apiImpl.bulkRequest(currentEndpoint, request);
                 for (const datum of response) {
@@ -40,6 +40,20 @@ class APICache {
         } while ((currentEndpoint = findNextRelevantEndpoint()) && i < 100);
     }
     static collectConnectedIds({ endpoint, datum }, connectedIdsStorage) {
+        const addFacts = (facts) => {
+            for (const fact of facts) {
+                if (fact.type == 'Buff' || fact.type == 'BuffBrief') {
+                    if (!this.storage.skills.has(fact.buff))
+                        connectedIdsStorage.skills.add(fact.buff);
+                }
+                if (fact.type === 'PrefixedBuffBrief' || fact.type === 'PrefixedBuff') {
+                    if (!this.storage.skills.has(fact.prefix))
+                        connectedIdsStorage.skills.add(fact.prefix);
+                    if (!this.storage.skills.has(fact.buff))
+                        connectedIdsStorage.skills.add(fact.buff);
+                }
+            }
+        };
         switch (endpoint) {
             case 'skills':
                 {
@@ -51,28 +65,20 @@ class APICache {
                         }
                     }
                     if (datum.sub_skills) {
-                        datum.sub_skills.forEach(Set.prototype.add.bind(connectedIdsStorage.skills));
+                        for (const subSkill of datum.sub_skills)
+                            if (!this.storage.skills.has(subSkill))
+                                connectedIdsStorage.skills.add(subSkill);
                     }
-                    for (const fact of datum.facts) {
-                        if (fact.type == 'Buff' || fact.type == 'BuffBrief') {
-                            connectedIdsStorage.skills.add(fact.buff);
-                        }
-                        if (fact.type === 'PrefixedBuffBrief') {
-                            connectedIdsStorage.skills.add(fact.prefix);
-                        }
-                    }
+                    addFacts(datum.facts);
                     if (datum.facts_override) {
-                        for (const { facts } of datum.facts_override) {
-                            for (const fact of facts) {
-                                if (fact.type == 'Buff' || fact.type == 'BuffBrief') {
-                                    connectedIdsStorage.skills.add(fact.buff);
-                                }
-                                if (fact.type === 'PrefixedBuffBrief') {
-                                    connectedIdsStorage.skills.add(fact.prefix);
-                                }
-                            }
-                        }
+                        for (const { facts } of datum.facts_override)
+                            addFacts(facts);
                     }
+                }
+                break;
+            case 'traits':
+                {
+                    addFacts(datum.facts);
                 }
                 break;
         }

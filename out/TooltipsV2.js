@@ -108,7 +108,7 @@ class GW2TooltipsV2 {
                     return;
                 const data = APICache.storage[type].get(objId);
                 if (data) {
-                    this.tooltip.replaceChildren(...this.generateToolTip(data, gw2Object));
+                    this.tooltip.replaceChildren(...this.generateToolTipList(data, gw2Object));
                     this.tooltip.style.display = '';
                 }
             });
@@ -168,6 +168,9 @@ class GW2TooltipsV2 {
                         break;
                     case 'Profession':
                         skillSlot = slot.slot;
+                        break;
+                    case 'Monster':
+                        break;
                     default:
                         console.error(`unknown palette type '${palette.type}' for skill '${skill.name}'`);
                 }
@@ -175,7 +178,7 @@ class GW2TooltipsV2 {
         }
         return skillSlot;
     }
-    processToolTipInfo(apiObject, context) {
+    generateToolTip(apiObject, context) {
         let recharge = '';
         const isSkill = 'recharge_override' in apiObject;
         if (isSkill) {
@@ -198,7 +201,7 @@ class GW2TooltipsV2 {
         tooltip.style.marginTop = '5px';
         return tooltip;
     }
-    generateToolTip(initialSkill, gw2Object) {
+    generateToolTipList(initialSkill, gw2Object) {
         const skillChain = [];
         const validTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard'];
         const addSkillToChain = (currentSkill) => {
@@ -226,7 +229,7 @@ class GW2TooltipsV2 {
         };
         addSkillToChain(initialSkill);
         const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
-        const chainTooltips = skillChain.map(skill => this.processToolTipInfo(skill, context));
+        const chainTooltips = skillChain.map(skill => this.generateToolTip(skill, context));
         chainTooltips.forEach(tooltip => this.tooltip.append(tooltip));
         if (chainTooltips.length > 1) {
             gw2Object.classList.add('cycler');

@@ -28,3 +28,4 @@ TUtilsV2.missingImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHEAAABuC
 TUtilsV2.dummy = document.createElement('template');
 TUtilsV2.GW2Text2HTML = (text, tag = 'span') => text ? text.replace(/<c=@(.*?)>(.*?)<\/c>/g, `<${tag} class="color-$1">$2</${tag}>`).replace(/%%/g, '%') : '';
 TUtilsV2.DurationToSeconds = (dur) => dur.secs + dur.nanos / 1000000;
+TUtilsV2.Uncapitalize = (str) => str.charAt(0).toLowerCase() + str.slice(1);

@@ -107,8 +107,29 @@ class SkillsProcessor {
 				ComboFinisher: ({ fact }) => `<tem> ${fact.text}: ${fact.finisher_type} </tem>`,
 				NoData       : ({ fact }) => `<tem> ${fact.text} </tem>`,
 				Percent      : ({ fact }) => `<tem> ${TUtilsV2.GW2Text2HTML(fact.text)}: ${fact.percent}% </tem>`,
-				StunBreak    : ({ fact }) => `<tem>Breaks Stun</tem>`,
+				Radius       : ({ fact }) => `<tem> ${fact.text} </tem>`, //TODO(Rennorb) @completeness
+				Range        : ({ fact }) => `<tem> ${fact.text} </tem>`, //TODO(Rennorb) @completeness
+				Recharge     : ({ fact }) => `<tem> ${fact.text} </tem>`, //TODO(Rennorb) @completeness
+				HealingAdjust: ({ fact }) => `<tem> ${fact.text} </tem>`, //TODO(Rennorb) @completeness
+				Heal         : () => `<tem> !!Heal </tem>`, //TODO(Rennorb) @completeness
+				Duration     : () => `<tem> !!Duration </tem>`, //TODO(Rennorb) @completeness
+				StunBreak    : () => `<tem> Breaks Stun </tem>`,
+				Unblockable  : () => `<tem> Unblockable </tem>`,
 				//now for the more complex ones
+				PrefixedBuff : ({ fact }) => {
+					let prefix = APICache.storage.skills.get(fact.prefix)
+					if(!prefix) {
+						console.error('prefix #', fact.prefix, ' is apparently missing in the cache');
+						prefix = this.MissingBuff
+					}
+					iconSlug = prefix.icon || iconSlug
+					let buff = APICache.storage.skills.get(fact.buff)
+					if(!buff) {
+						console.error('buff #', fact.buff, ' is apparently missing in the cache');
+						buff = this.MissingBuff
+					}
+					return `<tem> ${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML} ${buff.name_brief || buff.name} </tem>`
+				},
 				PrefixedBuffBrief: ({ fact }) => {
 					let prefix = APICache.storage.skills.get(fact.prefix)
 					if(!prefix) {
@@ -159,15 +180,12 @@ class SkillsProcessor {
 						}
 					}
 
-					const getDurationText = (duration: { secs?: number } | undefined) => duration?.secs && duration?.secs >= 1 ? `(${duration?.secs}s)` : ''
+					//TORO(Rennorb) @cleanup @correctness: look at this again
+					const description = buff.description_brief || TUtilsV2.GW2Text2HTML(buff.description) || modifiers
+					const seconds = TUtilsV2.DurationToSeconds(fact.duration)
+					const durationText =  seconds ? `(${seconds}s)` : ''
 
-					const getDescriptionOrModifiers = (hasDescriptionBrief: boolean, descriptionContent: string | undefined, modifiers: string) => hasDescriptionBrief ? descriptionContent : modifiers
-
-					const hasDescriptionBrief = Boolean(buff?.description_brief)
-					const descriptionContent = hasDescriptionBrief ? buff?.description_brief : TUtilsV2.GW2Text2HTML(buff?.description)
-					const durationText = getDurationText(fact.duration)
-
-					htmlContent = `<tem> ${buff?.name_brief || buff?.name} ${durationText} ${getDescriptionOrModifiers(hasDescriptionBrief, descriptionContent, modifiers)} </tem>`
+					htmlContent = `<tem> ${buff?.name_brief || buff?.name} ${durationText} ${description} </tem>`
 
 					if(fact.apply_count && fact.apply_count > 1) {
 						htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML
@@ -212,13 +230,18 @@ class SkillsProcessor {
 						)} </tem>`
 					}
 				},
-				AttributeAdjust: ({ fact }) =>
-					`<tem> ${fact.text} : ${Math.round(
-						(fact.value +
-							context.stats[fact.target!.toLowerCase() as keyof Stats] * fact.attribute_multiplier +
-							context.stats.level ** fact.level_exponent * fact.level_multiplier) *
-							fact.hit_count
-					)} </tem>`,
+				AttributeAdjust: ({ fact }) =>{
+					//TODO(Rennorb) @cleanup
+					const attribute = (context.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0
+					const value = Math.round(fact.value + attribute * fact.attribute_multiplier + context.stats.level ** fact.level_exponent * fact.level_multiplier)
+					return `<tem> ${fact.text} : ${value} </tem>`
+				},
+				BuffConversion : ({ fact }) =>{
+					//TODO(Rennorb) @cleanup
+					const attribute = (context.stats as any)[TUtilsV2.Uncapitalize(fact.source)] || 0
+					const value = Math.round(attribute * fact.percent / 100)
+					return `<tem> Converting ${fact.percent}% of ${fact.source} to ${fact.target} (+${value}) </tem>`
+				}
 			}
 
 			const buff = APICache.storage.skills.get(fact.buff || 0)
