@@ -180,18 +180,16 @@ class GW2TooltipsV2 {
     }
     generateToolTip(apiObject, context) {
         let recharge = '';
-        const isSkill = 'recharge_override' in apiObject;
-        if (isSkill) {
-            if (context.gameMode !== 'Pve' && apiObject.recharge_override.length) {
-                const override = apiObject.recharge_override.find(override => override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge));
-                if (override && override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge)) {
-                    recharge = TUtilsV2.newElm('ter', String(TUtilsV2.DurationToSeconds(override.recharge)), TUtilsV2.newImg('156651.png', 'iconsmall'));
-                }
-            }
-            else if (TUtilsV2.DurationToSeconds(apiObject.recharge)) {
-                recharge = TUtilsV2.newElm('ter', String(TUtilsV2.DurationToSeconds(apiObject.recharge)), TUtilsV2.newImg('156651.png', 'iconsmall'));
+        if ('recharge_override' in apiObject && apiObject.recharge_override.length) {
+            const override = apiObject.recharge_override.find(override => override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge));
+            if (override && override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge)) {
+                recharge = TUtilsV2.newElm('ter', TUtilsV2.DurationToSeconds(override.recharge) + 's', TUtilsV2.newImg('156651.png', 'iconsmall'));
             }
         }
+        else if ('recharge' in apiObject && apiObject.recharge && TUtilsV2.DurationToSeconds(apiObject.recharge)) {
+            recharge = TUtilsV2.newElm('ter', TUtilsV2.DurationToSeconds(apiObject.recharge) + 's', TUtilsV2.newImg('156651.png', 'iconsmall'));
+        }
+        const isSkill = 'recharge_override' in apiObject;
         const basic = TUtilsV2.newElm('tet', TUtilsV2.newElm('teb', apiObject.name), TUtilsV2.newElm('tes', `( ${isSkill ? this.getSlotName(apiObject) : apiObject.slot} )`), TUtilsV2.newElm('div.flexbox-fill'), recharge);
         const description = document.createElement('ted');
         if (apiObject.description)
@@ -240,6 +238,7 @@ class GW2TooltipsV2 {
                 gw2tooltips.cycleTooltips();
                 currentTooltipIndex = (currentTooltipIndex + 1) % chainTooltips.length;
                 gw2tooltips.displayCorrectChainTooltip(chainTooltips, currentTooltipIndex);
+                this.positionTooltip();
             };
         }
         return chainTooltips;

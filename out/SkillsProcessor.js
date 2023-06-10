@@ -161,7 +161,8 @@ class SkillsProcessor {
                         console.error('buff #', fact.buff, ' is apparently missing in the cache');
                     buff = buff || this.MissingBuff;
                     iconSlug = buff.icon;
-                    return TUtilsV2.GW2Text2HTML(fact.text);
+                    let text = TUtilsV2.GW2Text2HTML(fact.text).replace("%str1%", buff.name);
+                    return `<tem> ${text} </tem> `;
                 },
                 Damage: ({ fact, skill }) => {
                     var _a;

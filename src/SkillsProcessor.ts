@@ -197,7 +197,8 @@ class SkillsProcessor {
 					buff = buff || this.MissingBuff // in case we didn't get the buff we wanted from the api
 
 					iconSlug = buff.icon
-					return TUtilsV2.GW2Text2HTML(fact.text)
+					let text = TUtilsV2.GW2Text2HTML(fact.text).replace("%str1%", buff.name);
+					return `<tem> ${text} </tem> `
 				},
 				Damage: ({ fact, skill }) => {
 					let weaponStrength = 0
