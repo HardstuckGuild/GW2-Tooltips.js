@@ -1,4 +1,5 @@
 // This file is meant for anyone who want to have typings for the tooltips.js context structure 
+// Defaults for these structures can be found in TooltipsV2.ts
 
 //NOTE(Rennorb): these are separate window objects to allow using just either or.
 // Most of the time the only interesting thing will be to set up the context.
@@ -10,9 +11,10 @@ declare interface Window {
 type PartialContext = Omit<Partial<Context>, 'stats'>  & { stats?: Partial<Stats> }
 
 interface Context {
-	traits   : any[] //TODO(Rennorb): specify further. this should be number[] or maybe the traitline ids and up/mid/down choices
-	gameMode : GameMode
-	stats    : Stats
+	traits      : any[] //TODO(Rennorb): specify further. this should be number[] or maybe the traitline ids and up/mid/down choices
+	gameMode    : GameMode
+	targetArmor : number
+	stats       : Stats
 }
 
 type GameMode = 'Pve' | 'Pvp' | 'Wvw';
@@ -31,7 +33,6 @@ interface Stats {
 	critDamage     : number
 }
 
-// defaults for this can be found in TooltipsV2.ts
 interface Config {
 	 autoInitialize : bool
 }

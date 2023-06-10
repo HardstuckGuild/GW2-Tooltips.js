@@ -47,7 +47,7 @@ class SkillsProcessor {
 		return base_amount; //TODO(Rennorb) @correctness
 	}
 
-	static getWeaponStrength({ weapon_type, type : palette_type} : API.Palette) : number {
+	static getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) : number {
 		let weaponStrength = {
 			None       : 0,
 			BundleLarge: 0,
@@ -82,7 +82,7 @@ class SkillsProcessor {
 		return weaponStrength
 	}
 
-	static processFact(skill : API.Skill | API.Trait, context : Context) : HTMLElement[] {
+	static generateFacts(skill : API.Skill | API.Trait, context : Context) : HTMLElement[] {
 		if(!skill.facts.length && !skill.facts_override) return []
 
 		let totalDefianceBreak = 0
@@ -93,13 +93,12 @@ class SkillsProcessor {
 			}
 
 			let iconSlug = fact.icon
-			let htmlContent = ''
 
 			if(fact.defiance_break) {
 				totalDefianceBreak += fact.defiance_break
 			}
 
-			const handlers : { [k in API.FactType] : (params : HandlerParams<API.FactMap[k]>) => string } = {
+			const factInflators : FactInflatorMap = {
 				Time         : ({ fact }) => `<tem> ${fact.text}: ${TUtilsV2.DurationToSeconds(fact.duration)}s </tem>`,
 				Distance     : ({ fact }) => `<tem> ${fact.text}: ${fact.distance} </tem>`,
 				Number       : ({ fact }) => `<tem> ${fact.text}: ${fact.value} </tem>`,
@@ -185,7 +184,7 @@ class SkillsProcessor {
 					const seconds = TUtilsV2.DurationToSeconds(fact.duration)
 					const durationText =  seconds ? `(${seconds}s)` : ''
 
-					htmlContent = `<tem> ${buff?.name_brief || buff?.name} ${durationText} ${description} </tem>`
+					let htmlContent = `<tem> ${buff.name_brief || buff.name} ${durationText} ${description} </tem>`
 
 					if(fact.apply_count && fact.apply_count > 1) {
 						htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML
@@ -201,35 +200,27 @@ class SkillsProcessor {
 					return `<tem> ${text} </tem> `
 				},
 				Damage: ({ fact, skill }) => {
-					let weaponStrength = 0
+					//NOTE(Rennorb) The default formula is: weapon_strength * factor * power / target_armor.
+					// 690.5 is the midpoint weapon strength for slot skills (except bundles).
+					//TODO(Rennorb) @hardcoded @correctness: This value is hardcoded for usage with traits as they currently don't have any pointer that would provide weapon strength information.
+					// This will probably fail in some cases where damage facts on traits reference bundle skills (e.g. kits).
+					let weaponStrength = 690.5;
 					if(skill.palettes?.length) {
-						const relevantPalette = skill.palettes.find(
-							(palette) =>
-								palette.slots &&
-								palette.slots.some((slot) => slot.profession !== 'None')
-						)
+						const relevantPalette = skill.palettes.find(palette => palette.slots.some(slot => slot.profession !== 'None'))
 
 						if(relevantPalette) {
 							weaponStrength = this.getWeaponStrength(relevantPalette)
 						}
 					}
 
-					if(fact.hit_count && fact.hit_count > 1) {
-						return `<tem> ${fact.text}: (${fact.hit_count}x) ${Math.round(
-							(Math.round(weaponStrength) *
-								context.stats.power *
-								(fact.hit_count * fact.dmg_multiplier)) /
-								2597
-						)} </tem>`
-					} else {
-						return `<tem> ${fact.text}: ${Math.round(
-							(fact.hit_count *
-								Math.round(weaponStrength) *
-								context.stats.power *
-								(fact.hit_count * fact.dmg_multiplier)) /
-								2597
-						)} </tem>`
+					let hitCountLabel = '';
+					let damage = weaponStrength * fact.hit_count * fact.dmg_multiplier * context.stats.power / context.targetArmor;
+					if(!fact.hit_count) console.warn("0 hit count: ", fact); //TODO(Rennorb) @debug
+					if(fact.hit_count > 1) {
+						damage *= fact.hit_count;
+						hitCountLabel = `(${fact.hit_count}x)`;
 					}
+					return `<tem> ${fact.text}: ${hitCountLabel} ${Math.round(damage)} </tem>`
 				},
 				AttributeAdjust: ({ fact }) =>{
 					//TODO(Rennorb) @cleanup
@@ -247,7 +238,7 @@ class SkillsProcessor {
 
 			const buff = APICache.storage.skills.get(fact.buff || 0)
 			const data : HandlerParams = { fact, buff, skill } as any //TODO(Rennorb) @hammer
-			htmlContent = handlers[fact.type](data as any) //TODO(Rennorb) @hammer
+			const htmlContent = factInflators[fact.type](data as any) //TODO(Rennorb) @hammer
 
 			return TUtilsV2.newElm('te', TUtilsV2.newImg(iconSlug, 'iconmed'), TUtilsV2.fromHTML(htmlContent))
 		}
@@ -290,4 +281,8 @@ class SkillsProcessor {
 
 		return factWraps
 	}
+}
+
+type FactInflatorMap = {
+	[k in API.FactType] : (params : HandlerParams<API.FactMap[k]>) => string
 }

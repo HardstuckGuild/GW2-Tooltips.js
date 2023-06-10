@@ -60,7 +60,7 @@ class SkillsProcessor {
         }
         return weaponStrength;
     }
-    static processFact(skill, context) {
+    static generateFacts(skill, context) {
         if (!skill.facts.length && !skill.facts_override)
             return [];
         let totalDefianceBreak = 0;
@@ -69,11 +69,10 @@ class SkillsProcessor {
                 return null;
             }
             let iconSlug = fact.icon;
-            let htmlContent = '';
             if (fact.defiance_break) {
                 totalDefianceBreak += fact.defiance_break;
             }
-            const handlers = {
+            const factInflators = {
                 Time: ({ fact }) => `<tem> ${fact.text}: ${TUtilsV2.DurationToSeconds(fact.duration)}s </tem>`,
                 Distance: ({ fact }) => `<tem> ${fact.text}: ${fact.distance} </tem>`,
                 Number: ({ fact }) => `<tem> ${fact.text}: ${fact.value} </tem>`,
@@ -150,7 +149,7 @@ class SkillsProcessor {
                     const description = buff.description_brief || TUtilsV2.GW2Text2HTML(buff.description) || modifiers;
                     const seconds = TUtilsV2.DurationToSeconds(fact.duration);
                     const durationText = seconds ? `(${seconds}s)` : '';
-                    htmlContent = `<tem> ${(buff === null || buff === void 0 ? void 0 : buff.name_brief) || (buff === null || buff === void 0 ? void 0 : buff.name)} ${durationText} ${description} </tem>`;
+                    let htmlContent = `<tem> ${buff.name_brief || buff.name} ${durationText} ${description} </tem>`;
                     if (fact.apply_count && fact.apply_count > 1) {
                         htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML;
                     }
@@ -166,27 +165,22 @@ class SkillsProcessor {
                 },
                 Damage: ({ fact, skill }) => {
                     var _a;
-                    let weaponStrength = 0;
+                    let weaponStrength = 690.5;
                     if ((_a = skill.palettes) === null || _a === void 0 ? void 0 : _a.length) {
-                        const relevantPalette = skill.palettes.find((palette) => palette.slots &&
-                            palette.slots.some((slot) => slot.profession !== 'None'));
+                        const relevantPalette = skill.palettes.find(palette => palette.slots.some(slot => slot.profession !== 'None'));
                         if (relevantPalette) {
                             weaponStrength = this.getWeaponStrength(relevantPalette);
                         }
                     }
-                    if (fact.hit_count && fact.hit_count > 1) {
-                        return `<tem> ${fact.text}: (${fact.hit_count}x) ${Math.round((Math.round(weaponStrength) *
-                            context.stats.power *
-                            (fact.hit_count * fact.dmg_multiplier)) /
-                            2597)} </tem>`;
+                    let hitCountLabel = '';
+                    let damage = weaponStrength * fact.hit_count * fact.dmg_multiplier * context.stats.power / context.targetArmor;
+                    if (!fact.hit_count)
+                        console.warn("0 hit count: ", fact);
+                    if (fact.hit_count > 1) {
+                        damage *= fact.hit_count;
+                        hitCountLabel = `(${fact.hit_count}x)`;
                     }
-                    else {
-                        return `<tem> ${fact.text}: ${Math.round((fact.hit_count *
-                            Math.round(weaponStrength) *
-                            context.stats.power *
-                            (fact.hit_count * fact.dmg_multiplier)) /
-                            2597)} </tem>`;
-                    }
+                    return `<tem> ${fact.text}: ${hitCountLabel} ${Math.round(damage)} </tem>`;
                 },
                 AttributeAdjust: ({ fact }) => {
                     const attribute = context.stats[TUtilsV2.Uncapitalize(fact.target)] || 0;
@@ -201,7 +195,7 @@ class SkillsProcessor {
             };
             const buff = APICache.storage.skills.get(fact.buff || 0);
             const data = { fact, buff, skill };
-            htmlContent = handlers[fact.type](data);
+            const htmlContent = factInflators[fact.type](data);
             return TUtilsV2.newElm('te', TUtilsV2.newImg(iconSlug, 'iconmed'), TUtilsV2.fromHTML(htmlContent));
         };
         const factWraps = skill.facts

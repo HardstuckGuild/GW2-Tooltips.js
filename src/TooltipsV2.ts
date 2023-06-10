@@ -9,6 +9,8 @@
 //TODO(Rennorb): The positioning code seems a bit wired, it tends to 'stick' to the borders more than it should.
 //TODO(Rennorb) @fixme: impale: the impale buff doesn't have a name, only shows duration
 //TODO(Rennorb): Figure out how to handle boon descriptions. Have a toggle between 'realistic as in game' and 'full information'
+//TODO(Rennorb) @correctness: Some of the code uses very aggressive rounding resulting in wrong numbers in some places. Look over this again.
+// In general only round right before displaying a number, calculations always happen with non rounded values.
 
 
 type TypeBridge<T, K extends keyof T> = [K, T[K]]
@@ -30,9 +32,10 @@ class GW2TooltipsV2 {
 
 	context : Context[] = [];
 	static defaultContext : Context = {
-		traits   : [],
-		gameMode : 'Pve',
-		stats    : {
+		traits     : [],
+		gameMode   : 'Pve',
+		targetArmor: 2597,
+		stats      : {
 			level          : 80,
 			power          : 1000,
 			toughness      : 1000,
@@ -283,7 +286,7 @@ class GW2TooltipsV2 {
 
 		const tooltip = TUtilsV2.newElm('div.tooltip', 
 			basic, description,
-			...SkillsProcessor.processFact(apiObject, context)
+			...SkillsProcessor.generateFacts(apiObject, context)
 		)
 		tooltip.dataset.id = String(apiObject.id)
 		tooltip.style.marginTop = '5px'

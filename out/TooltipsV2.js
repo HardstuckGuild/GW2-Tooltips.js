@@ -194,7 +194,7 @@ class GW2TooltipsV2 {
         const description = document.createElement('ted');
         if (apiObject.description)
             description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`;
-        const tooltip = TUtilsV2.newElm('div.tooltip', basic, description, ...SkillsProcessor.processFact(apiObject, context));
+        const tooltip = TUtilsV2.newElm('div.tooltip', basic, description, ...SkillsProcessor.generateFacts(apiObject, context));
         tooltip.dataset.id = String(apiObject.id);
         tooltip.style.marginTop = '5px';
         return tooltip;
@@ -247,6 +247,7 @@ class GW2TooltipsV2 {
 GW2TooltipsV2.defaultContext = {
     traits: [],
     gameMode: 'Pve',
+    targetArmor: 2597,
     stats: {
         level: 80,
         power: 1000,
