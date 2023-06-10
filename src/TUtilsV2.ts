@@ -32,7 +32,7 @@ class TUtilsV2 {
 	static GW2Text2HTML = (text? : string, tag = 'span') => text ? text.replace(/<c=@(.*?)>(.*?)<\/c>/g, `<${tag} class="color-$1">$2</${tag}>`).replace(/%%/g, '%') : '';
 
 	//todo probably just spit out one value from the api
-	static DurationToSeconds = (dur : API.Duration) => dur.secs + dur.nanos / 1_000_000;
+	static DurationToSeconds = (dur : API.Duration) => dur.secs + dur.nanos / 10e8;
 
 	//TODO(Rennorb) @cleanup: we should jsut use consistent names.
 	static Uncapitalize = <T extends string>(str : T) => str.charAt(0).toLowerCase() + str.slice(1) as Uncapitalize<T>;
