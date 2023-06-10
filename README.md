@@ -17,7 +17,6 @@ To archive all of the functionality we use our own proprietary API as opposed to
 
 ### (legacy)
 1. Define `<gw2object objId='{id}' type={skill|trait|boon|...} />` in your html 
-	<span style="color: red">//TODO(Rennorb) @incomplete: definition not complete </span>
 2. Optionally define one or more context(s) in a window-scoped object '`GW2TooltipsContext`'
 	```html
 	<script>
@@ -42,6 +41,7 @@ To archive all of the functionality we use our own proprietary API as opposed to
 	</script>
 	```
 	If you want to have typings for this context structure you can use `src/Context.d.ts`.
+3. Optionally define config structures <span style="color: red">//TODO(Rennorb)</span>
 3. Include the script and style <span style="color: red">//TODO(Rennorb) @prio:low : style does not actually exist in this form </span>
 	```html
 	<head>

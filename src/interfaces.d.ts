@@ -235,7 +235,9 @@ namespace API {
 		description_brief? : string
 		facts              : Fact[]
 		slot               : 'Minor' | 'Major' | 'MadLib' | 'Automatic'; //TODO(Rennorb): fix this on the api side lol
+		recharge?          : Duration
 		facts_override     : undefined //TODO(Rennorb): not exported yet
+		provides_weapon_access? : WeaponAccess []
 	}
 
 	interface Item {

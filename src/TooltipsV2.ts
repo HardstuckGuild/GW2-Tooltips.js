@@ -1,9 +1,6 @@
 //TODO(Rennorb) @issues:
-// traits are still very messed up and some effects seem to have issues aswell - might just be a issue with the dataset tho.
 // The way that affecting traits are captures also seems wrong, but i haven't looked into that yet. 
 // The user needs to specify what traits should be used or we may provide a capture function for them that can be called on a trait object, but we should never to it automagically.
-// Instantly hooking the whole document also doesn't sit right with me, we should provide an option to disable it.
-// It is however unfortunately require for backwards compat. 
 //TODO(Rennorb): Provide a clean way to construct custom tooltips. Currently with the old version we manipulate the cache before the hook function gets called, which really isn't the the best.
 //TODO(Rennorb): This should also compile to a single file for ease of use, either we want to actually put everything back in one file or get tsc to merge the files in a simple way. Another option would be to bundle everything with something like rollup. That way we can also easily produce minified versions, although we will have to introduce node-modules for that which i strongly dislike.
 //TODO(Rennorb): Multi skill tooltips (multiple boxes)
@@ -11,8 +8,7 @@
 //TODO(Rennorb): Stop using these jank custom tags. There is no reason to do so and its technically not legal per html spec.
 //TODO(Rennorb): The positioning code seems a bit wired, it tends to 'stick' to the borders more than it should.
 //TODO(Rennorb) @fixme: impale: the impale buff doesn't have a name, only shows duration
-//TODO(Rennorb) @fixme: rampage: 0s on imob, cripple, and chill (should probably be 'imob, cripple, and chill')
-//TODO(Rennorb): Figure out how to handle boon descriptions. Currently we always show the full description which sometimes leads to duplicate information and also differs from how they are rendered in game. 
+//TODO(Rennorb): Figure out how to handle boon descriptions. Have a toggle between 'realistic as in game' and 'full information'
 
 
 type TypeBridge<T, K extends keyof T> = [K, T[K]]
@@ -260,24 +256,22 @@ class GW2TooltipsV2 {
 	// TODO(Rennorb): expand apiObject type
 	generateToolTip(apiObject : API.Skill | API.Trait, context : Context) : HTMLElement {
 		let recharge : HTMLElement | '' = ''
-		const isSkill = 'recharge_override' in apiObject;
-		if(isSkill){
-			if(context.gameMode !== 'Pve' && apiObject.recharge_override.length) {
-				const override = apiObject.recharge_override.find(override =>  override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge));
-				if(override && override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge)) {
-					recharge = TUtilsV2.newElm('ter', 
-						String(TUtilsV2.DurationToSeconds(override.recharge)), 
-						TUtilsV2.newImg('156651.png', 'iconsmall')
-					);
-				}
-			} else if(TUtilsV2.DurationToSeconds(apiObject.recharge)) {
+		if('recharge_override' in apiObject && apiObject.recharge_override.length) {
+			const override = apiObject.recharge_override.find(override =>  override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge));
+			if(override && override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge)) {
 				recharge = TUtilsV2.newElm('ter', 
-					String(TUtilsV2.DurationToSeconds(apiObject.recharge)), 
+					TUtilsV2.DurationToSeconds(override.recharge)+'s', 
 					TUtilsV2.newImg('156651.png', 'iconsmall')
 				);
 			}
+		} else if('recharge' in apiObject && apiObject.recharge && TUtilsV2.DurationToSeconds(apiObject.recharge)) {
+			recharge = TUtilsV2.newElm('ter', 
+				TUtilsV2.DurationToSeconds(apiObject.recharge)+'s', 
+				TUtilsV2.newImg('156651.png', 'iconsmall')
+			);
 		}
 
+		const isSkill = 'recharge_override' in apiObject; //TODO(Rennorb): do the slot stuff serverside
 		const basic = TUtilsV2.newElm('tet',
 			TUtilsV2.newElm('teb', apiObject.name),
 			TUtilsV2.newElm('tes', `( ${isSkill ? this.getSlotName(apiObject) : apiObject.slot} )`), TUtilsV2.newElm('div.flexbox-fill'),
@@ -344,6 +338,7 @@ class GW2TooltipsV2 {
 				gw2tooltips.cycleTooltips() //TODO(Rennorb) @cleanup: why are there two functions with basically the same name
 				currentTooltipIndex = (currentTooltipIndex + 1) % chainTooltips.length
 				gw2tooltips.displayCorrectChainTooltip(chainTooltips, currentTooltipIndex)
+				this.positionTooltip()
 			};
 		}
 		return chainTooltips
