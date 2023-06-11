@@ -92,6 +92,7 @@ gw2object[type=specialization] {
 	--gw2-build-spec-width: calc(var(--gw2-build-spec-padding) + var(--gw2-build-spec-gap) * 8 + var(--gw2-build-trait-size) * 6);
 	--gw2-build-spec-aspect-ratio: 3.155;
 
+	position: relative;
 	display: flex;
 	flex-flow: row nowrap;
 	justify-content: space-evenly;
@@ -116,6 +117,23 @@ gw2object[type=specialization] [type=trait] {
   position: relative;
   width: var(--gw2-build-trait-size);
   height: var(--gw2-build-trait-size);
+}
+
+gw2object[type=specialization][data-label]::before {
+	position: absolute;
+	left: 0;
+	width: 100%;
+	content: attr(data-label);
+	transform: rotate(270deg);
+	text-transform: uppercase;
+	white-space: nowrap;
+	
+	top: 100%;
+	transform-origin: top left;
+	padding: 0.5em 1em;
+	font-weight: 600;
+	font-size: 0.88em;
+	text-shadow: -1px 1px 2px #000,1px 1px 2px #000,1px -1px 2px #000,-1px -1px 2px #000;
 }
 
 [type=trait] img {

@@ -66,7 +66,7 @@ namespace API {
 		mode?          : GameMode
 	}
 
-	
+
 	interface BasicFact<Type extends keyof FactMap> {
 		type            : Type
 		order           : number
@@ -248,7 +248,10 @@ namespace API {
 	}
 
 	interface Specialization {
-		id : number
+		id         : number
+		name       : string
+		icon       : string
+		background : string
 		//TODO
 	}
 

@@ -4,13 +4,17 @@
 
 class FakeAPI implements APIImplementation {
 	bulkRequest<T extends keyof APIResponseTypeMap>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]> {
-		return new Promise((resolve, reject) => {
-			//let response = await fetch('./output.json')
-			//let allSkills: Skill[] = await response.json()
-			const allSkills = (window as any)['DUMP_output_'+endpoint] as APIResponseTypeMap[T][];
-			if(!allSkills) reject(`'${endpoint}' doesn't exist in mock data`);
-			else resolve(allSkills.filter(data => Array.prototype.includes.call(ids, data.id)));
-		});
+		if(['specializations'].includes(endpoint)) {
+			return fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
+		}
+		else {
+			return new Promise((resolve, reject) => {
+				//NOTE(Rennorb): must be set up through other externally included files
+				const allSkills = (window as any)['DUMP_output_'+endpoint] as APIResponseTypeMap[T][];
+				if(!allSkills) reject(`'${endpoint}' doesn't exist in mock data`);
+				else resolve(allSkills.filter(data => Array.prototype.includes.call(ids, data.id)));
+			});
+		}
 	}
 }
 
