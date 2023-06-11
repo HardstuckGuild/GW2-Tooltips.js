@@ -226,13 +226,13 @@ class SkillsProcessor {
 					//TODO(Rennorb) @cleanup
 					const attribute = (context.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0
 					const value = Math.round(fact.value + attribute * fact.attribute_multiplier + context.stats.level ** fact.level_exponent * fact.level_multiplier)
-					return `<tem> ${fact.text} : ${value} </tem>`
+					return `<tem> ${fact.text || fact.target} : ${value > 0 ? '+'+value : value} </tem>`
 				},
 				BuffConversion : ({ fact }) =>{
 					//TODO(Rennorb) @cleanup
 					const attribute = (context.stats as any)[TUtilsV2.Uncapitalize(fact.source)] || 0
 					const value = Math.round(attribute * fact.percent / 100)
-					return `<tem> Converting ${fact.percent}% of ${fact.source} to ${fact.target} (+${value}) </tem>`
+					return `<tem> ${fact.text}: Converting ${fact.percent}% of ${fact.source} to +${value} ${fact.target} </tem>`
 				}
 			}
 

@@ -11,6 +11,7 @@
 //TODO(Rennorb): Figure out how to handle boon descriptions. Have a toggle between 'realistic as in game' and 'full information'
 //TODO(Rennorb) @correctness: Some of the code uses very aggressive rounding resulting in wrong numbers in some places. Look over this again.
 // In general only round right before displaying a number, calculations always happen with non rounded values.
+//TODO(Rennorb): Trait game-mode splits
 
 
 type TypeBridge<T, K extends keyof T> = [K, T[K]]
