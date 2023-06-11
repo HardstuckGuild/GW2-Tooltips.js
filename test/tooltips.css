@@ -18,18 +18,21 @@
 	display: flex;
 	flex-direction: column;
 
-	background-color: gray;
 	border: 1px solid black;
+	border-radius: 2px;
 	box-shadow: #000 4px 4px 8px;
 
 	padding: 4px;
-	border-radius: 2px;
 	max-width: min(50ch, 100%);
 	min-width: 40ch;
 	max-height: 80vh;
 	line-height: 1.2;
 	font-size: 0.88em;
-	/*TODO(Rennorb): background image*/
+
+	background-color: #373f46;
+	background-image: url(../out/tooltip-bg.jpg);
+	background-size: cover;
+	background-blend-mode: hard-light;
 }
 
 .tooltipWrapper tet {
@@ -61,6 +64,16 @@
   font-size: var(--hs-font-size-s);
   text-align: right;
   text-shadow: -1px 2px 0px var(--hs-color-black);
+}
+
+.tooltipWrapper .iconsmall {
+	width: 1.17em;
+	height: auto;
+}
+
+.tooltipWrapper ter img {
+	margin-left: .5ch;
+	vertical-align: bottom;
 }
 
 gw2object.gw2objectembed img {
