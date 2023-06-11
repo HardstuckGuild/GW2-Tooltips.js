@@ -115,3 +115,12 @@ gw2object[type=specialization] [type=trait] {
 .gw2objectembed[type="specialization"] img, .trait_minor img {
   clip-path: polygon(50% 0, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%) !important;
 }
+
+
+.color-abilitytype { color: #FFFFEC8C }
+.color-flavor { color: #FF9BE8E4 }
+.color-reminder { color: #FFB0B0B0 }
+.color-quest { color: #FF00FF00 }
+.color-task { color: #FFFFC957 }
+.color-warning { color: #FFED0002 }
+.color-event { color: #FFCC6633 }
