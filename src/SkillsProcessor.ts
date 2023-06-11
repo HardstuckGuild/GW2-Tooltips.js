@@ -162,7 +162,7 @@ class SkillsProcessor {
 
 							if(
 								modifier.flags.includes('MulByDuration') &&
-								!modifier.flags.includes('FormatPercent')
+								!modifier.flags.includes('FormatPercent') //TODO(Rennorb) @cleanup: move to api side
 							) {
 								modifierValue *= TUtilsV2.DurationToSeconds(fact.duration)
 							}
@@ -180,7 +180,7 @@ class SkillsProcessor {
 					}
 
 					//TORO(Rennorb) @cleanup @correctness: look at this again
-					const description = buff.description_brief || TUtilsV2.GW2Text2HTML(buff.description) || modifiers
+					const description = TUtilsV2.GW2Text2HTML(buff.description_brief || buff.description || modifiers)
 					const seconds = TUtilsV2.DurationToSeconds(fact.duration)
 					const durationText =  seconds ? `(${seconds}s)` : ''
 

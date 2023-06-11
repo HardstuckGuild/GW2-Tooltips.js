@@ -146,7 +146,7 @@ class SkillsProcessor {
                             }
                         }
                     }
-                    const description = buff.description_brief || TUtilsV2.GW2Text2HTML(buff.description) || modifiers;
+                    const description = TUtilsV2.GW2Text2HTML(buff.description_brief || buff.description || modifiers);
                     const seconds = TUtilsV2.DurationToSeconds(fact.duration);
                     const durationText = seconds ? `(${seconds}s)` : '';
                     let htmlContent = `<tem> ${buff.name_brief || buff.name} ${durationText} ${description} </tem>`;
