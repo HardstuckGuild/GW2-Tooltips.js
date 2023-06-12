@@ -1,16 +1,35 @@
 "use strict";
 class FakeAPI {
     bulkRequest(endpoint, ids) {
-        if (['specializations'].includes(endpoint)) {
+        if (['specializations', 'pvp/amulets'].includes(endpoint)) {
             return fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
         }
         else {
             return new Promise((resolve, reject) => {
                 const allSkills = window['DUMP_output_' + endpoint];
-                if (!allSkills)
-                    reject(`'${endpoint}' doesn't exist in mock data`);
-                else
+                if (allSkills) {
                     resolve(allSkills.filter(data => Array.prototype.includes.call(ids, data.id)));
+                }
+                else {
+                    console.error(`'${endpoint}' doesn't exist in mock data, synthesizing`);
+                    if (endpoint == 'items') {
+                        resolve(ids.map(id => ({
+                            id,
+                            name: 'item #' + id,
+                            icon: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEkAAABJCAIAAAD+EZyLAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFhSURBVGhD7ZoxkoIwFIYfexa0cDwBnkArT4ElNnuDPQC2dtvaqyeQE1gt3CWSEAOoszuzJoy/838N/CSZ4Zu8FxoipZS8KR/2+o7QDRO6YUI3TOiGCd0woRsmdMOEbpjQDRO6YUI3TOiGCd0eUG1mUTTbVDa+Iv727bh6NVfW5B+Y+lxsRYr1KNKsjnZEb+YV99DtsVnX0Ay66X4KQP2TMk9Ekry0UalD2s/NE0kP5r4/3Yy0g9fYy/b+CcK5mQmdF+zm25c3ubPYj1ywfqv2u0LS5dxGkXg8FTn/PKy10aT2no5jG5v8NGHPku3C9o9GN+SghHW7K6tT5vYmPMHcfivBgfDnpnuk2O2dzPwzT+pvQnvy1wf8sN92f25x9m1kdGsZoTg71Qde23Jfk3LQkhT+g4EJ3TChGyZ0w4RumNANE7phQjdM6IYJ3TChGyZ0w4RumNANE7phQjdM6IaIyAXGxL3ck02bowAAAABJRU5ErkJggg==',
+                        })));
+                    }
+                    else if (endpoint == 'pets') {
+                        resolve(ids.map(id => ({
+                            id,
+                            name: 'pet #' + id,
+                            icon: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEkAAABJCAIAAAD+EZyLAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFqSURBVGhD7dkxcoJAFMbxtzmLpMjkBHgCrHIKLLXJPbAMR7BKI54gnCBV5C5kFxYEmdHMwCPzMd+vcUCc8e8+lkJTlqUs1JN/XSK2YWIbJrZhYhsmtmFiGya2YWIbJrZhmqjtvDV960Ph3/o/E65bmFxKL4vzfWC2Z//OHe5H0foddGYy+shikfTzD3GKtO634CUU+f5pF6Q7tH49i8PamE0q4ta4c346fopGcsvUmcn6hMTZ8OCS2OjrpYMPTkilrfr+7XF11GRavWPNtglnshktY4K92K/7tVu508XpmEv8FlXXOKvn1964qtHZJ5uuVrrx2Y67x+agtZfc6Ixk7TZeg37bbCM4MMO6Re9JaO/F6w5vnwft49o9K/LjSafcz8hID7e76jHg9S+sN1VnMLgj8f83TGzDxDZMbMPENkxsw8Q2TGzDxDZMbMPENkxsw8Q2TGzDxDZMbMPENkxsw8Q2TGzDtNw2kV87CKi1eKVduQAAAABJRU5ErkJggg==',
+                        })));
+                    }
+                    else {
+                        reject(`'${endpoint}' doesn't exist in mock data, and i don't know how to synthesize it`);
+                    }
+                }
             });
         }
     }
@@ -366,7 +385,7 @@ class TUtilsV2 {
     }
     static newImg(src, className, alt) {
         const img = document.createElement('img');
-        img.src = src ? (src.startsWith('data:image') ? src : this.iconSource + src) : this.missingImage;
+        img.src = src ? (src.includes(':') ? src : this.iconSource + src) : this.missingImage;
         if (className)
             img.classList.add(className);
         img.alt = alt ? alt + ' icon' : 'icon';
@@ -393,8 +412,8 @@ class GW2TooltipsV2 {
         this.cycling = false;
         this.context = [];
         this.inflators = (function () {
-            const genericIconInflater = (clazz = '', icon) => (gw2Object, data) => {
-                const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(icon || data.icon, clazz, data.name));
+            const genericIconInflater = (clazz = '') => (gw2Object, data) => {
+                const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, clazz, data.name));
                 wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + data.name;
                 wikiLink.target = '_blank';
                 gw2Object.append(wikiLink);
@@ -402,13 +421,13 @@ class GW2TooltipsV2 {
             return {
                 skills: genericIconInflater('iconlarge'),
                 traits: genericIconInflater(),
-                items: genericIconInflater('', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEkAAABJCAIAAAD+EZyLAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFhSURBVGhD7ZoxkoIwFIYfexa0cDwBnkArT4ElNnuDPQC2dtvaqyeQE1gt3CWSEAOoszuzJoy/838N/CSZ4Zu8FxoipZS8KR/2+o7QDRO6YUI3TOiGCd0woRsmdMOEbpjQDRO6YUI3TOiGCd0eUG1mUTTbVDa+Iv727bh6NVfW5B+Y+lxsRYr1KNKsjnZEb+YV99DtsVnX0Ay66X4KQP2TMk9Ekry0UalD2s/NE0kP5r4/3Yy0g9fYy/b+CcK5mQmdF+zm25c3ubPYj1ywfqv2u0LS5dxGkXg8FTn/PKy10aT2no5jG5v8NGHPku3C9o9GN+SghHW7K6tT5vYmPMHcfivBgfDnpnuk2O2dzPwzT+pvQnvy1wf8sN92f25x9m1kdGsZoTg71Qde23Jfk3LQkhT+g4EJ3TChGyZ0w4RumNANE7phQjdM6IYJ3TChGyZ0w4RumNANE7phQjdM6IaIyAXGxL3ck02bowAAAABJRU5ErkJggg=='),
+                items: genericIconInflater('iconlarge'),
                 specializations: function (gw2Object, spec) {
                     gw2Object.style.backgroundImage = `url(${spec.background})`;
                     gw2Object.dataset.label = spec.name;
                 },
-                pets: genericIconInflater('', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEkAAABJCAIAAAD+EZyLAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFqSURBVGhD7dkxcoJAFMbxtzmLpMjkBHgCrHIKLLXJPbAMR7BKI54gnCBV5C5kFxYEmdHMwCPzMd+vcUCc8e8+lkJTlqUs1JN/XSK2YWIbJrZhYhsmtmFiGya2YWIbJrZhmqjtvDV960Ph3/o/E65bmFxKL4vzfWC2Z//OHe5H0foddGYy+shikfTzD3GKtO634CUU+f5pF6Q7tH49i8PamE0q4ta4c346fopGcsvUmcn6hMTZ8OCS2OjrpYMPTkilrfr+7XF11GRavWPNtglnshktY4K92K/7tVu508XpmEv8FlXXOKvn1964qtHZJ5uuVrrx2Y67x+agtZfc6Ixk7TZeg37bbCM4MMO6Re9JaO/F6w5vnwft49o9K/LjSafcz8hID7e76jHg9S+sN1VnMLgj8f83TGzDxDZMbMPENkxsw8Q2TGzDxDZMbMPENkxsw8Q2TGzDxDZMbMPENkxsw8Q2TGzDtNw2kV87CKi1eKVduQAAAABJRU5ErkJggg=='),
-                "pvp/amulets": genericIconInflater('iconlarge', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEkAAABJCAIAAAD+EZyLAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAILSURBVGhD7Zo7csIwEEDlnMWmYDiBOQHQUHEEU0KTjpKOBsq4o6WiAZ8An4BJAb6LI602tvzBv2ESltnXoI/1efJKcoEVx7F4Uz7w9x1hN5qwG03YjSbsRhN2owm70YTdaMJuNGE3mrAbTdiNJuxGE3ajyYu4RbuhZQ13EWafQyO3YG4p5gHmidDELTj6wnVd4R//X04tc9P328BNqXmr/ew15NoQ13DfukJ4ZyORcvaEcLd3qNHoelUOyEp4UAGFZntsDWnoovA0go2MYTTZyRSpczOMCuMnE8BBkvmY+WQC2ZxEFZS7mY/mRjUb1VETk9HpEApvOlJpeyLDMjyccsEu5/AF9WI0VXOSI5v59nEc7dZyE5yxE3ux37rhctNhN1S7gZrbd3TO7g1EiVyK05drPOjZmNX5tpjLCcCw11v7+6HSTavNJr+ThRdRJfc0/DHcOpqxj6UtqXIDNREuHRwDR/kLOXNfApdFEg2NqXDTby23b9XW7iaXD9DodsVUls4hWOCxW7BZyrhf5dZLHyhdtja09Nf63pXfWI7svpTRpzo8nPQrSN7XyXWtVqjp2j50Uzd2ZksjMMVOtzieeBDhzvdKn+5l2IuLPOvTLbfu35OQNDup+wbk/87QhN1owm40YTeasBtN2I0m7EYTdqMJu9GE3WjCbjRhN5qwG03YjSbsRhN2o4gQPxqF5ksm6ZNyAAAAAElFTkSuQmCC'),
+                pets: genericIconInflater(),
+                "pvp/amulets": genericIconInflater('iconlarge'),
             };
         })();
         if (window.GW2TooltipsContext instanceof Array) {

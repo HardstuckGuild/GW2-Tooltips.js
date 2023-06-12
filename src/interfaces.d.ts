@@ -263,10 +263,12 @@ namespace API {
 	}
 
 	interface Amulet {
-		id : number
-		icon : string
-		name : string
-		//TODO
+		id         : number
+		icon       : string
+		name       : string
+		attributes : {
+			[k in Exclude<Attributes, 'None'>] : number | undefined
+		}
 	}
 }
 
