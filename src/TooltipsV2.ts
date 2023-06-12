@@ -153,7 +153,7 @@ class GW2TooltipsV2 {
 				const type = (gw2Object.getAttribute('type') || 'skill') + 's' as ObjectDataStorageKeys;
 				const objId = +String(gw2Object.getAttribute('objId'))
 
-				if(type != 'skills' && type != 'traits') return; //TODO(Rennorb): others disabled for now
+				if(type != 'skills' && type != 'traits' && type != 'pvp/amulets') return; //TODO(Rennorb): others disabled for now
 
 				const data = APICache.storage[type].get(objId)
 				if(data) {
@@ -257,8 +257,8 @@ class GW2TooltipsV2 {
 		return skillSlot
 	}
 
-	// TODO(Rennorb): expand apiObject type
-	generateToolTip(apiObject : API.Skill | API.Trait, context : Context) : HTMLElement {
+	// TODO(Rennorb) @cleanup: split this into the inflator system aswell. its getting to convoluted already
+	generateToolTip(apiObject : SupportedTTTypes, context : Context) : HTMLElement {
 		let recharge : HTMLElement | '' = ''
 		if('recharge_override' in apiObject && apiObject.recharge_override.length) {
 			const override = apiObject.recharge_override.find(override =>  override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge));
@@ -276,10 +276,12 @@ class GW2TooltipsV2 {
 		}
 
 		const isSkill = 'recharge_override' in apiObject;
-		const headerElements = [
-			TUtilsV2.newElm('teb', apiObject.name),
-			TUtilsV2.newElm('tes', `( ${isSkill ? this.getSlotName(apiObject) : apiObject.slot} )`), //TODO(Rennorb): do the slot stuff serverside
-		];
+		const headerElements = [TUtilsV2.newElm('teb', apiObject.name)];
+		
+		//TODO(Rennorb): do the slot stuff serverside
+		if(isSkill) headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
+		else if('slot' in apiObject) headerElements.push(TUtilsV2.newElm('tes', `( ${apiObject.slot} )`));
+
 		if(isSkill && apiObject.facts_override) {
 			//TODO(Rennorb) @cleanup: this section
 			const remainder = new Set<GameMode>(['Pve', 'Pvp', 'Wvw']);
@@ -315,30 +317,41 @@ class GW2TooltipsV2 {
 
 			headerElements.push(TUtilsV2.newElm('tes', '( ', TUtilsV2.fromHTML(splits.join(' | ')), ' )'));
 		}
-		const header = TUtilsV2.newElm('tet',
-			...headerElements,
-			TUtilsV2.newElm('div.flexbox-fill'),
-			recharge
-		)
+		
+		const parts : HTMLElement[] = [
+			TUtilsV2.newElm('tet',
+				...headerElements,
+				TUtilsV2.newElm('div.flexbox-fill'),
+				recharge
+			)
+		];
+		
+		if('description' in apiObject && apiObject.description) {
+			const description = document.createElement('ted')
+			description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`
+			parts.push(description)
+		}
 
-		const description = document.createElement('ted')
-		if(apiObject.description) description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`
+		if('facts' in apiObject) {
+			parts.push(...SkillsProcessor.generateFacts(apiObject, context))
+		}
 
-		const tooltip = TUtilsV2.newElm('div.tooltip', 
-			header, description,
-			...SkillsProcessor.generateFacts(apiObject, context)
-		)
+		if('attributes' in apiObject) {
+			parts.push(...Object.entries(apiObject.attributes).map(([attrib, value]) => TUtilsV2.newElm('teh', `+${value} ${attrib}`)))
+		}
+
+		const tooltip = TUtilsV2.newElm('div.tooltip', ...parts)
 		tooltip.dataset.id = String(apiObject.id)
-		tooltip.style.marginTop = '5px'
+		tooltip.style.marginTop = '5px' //TODO(Rennorb) @cleanup
 
 		return tooltip;
 	}
 
-	generateToolTipList(initialSkill: API.Skill | API.Trait, gw2Object: HTMLElement) : HTMLElement[] {
+	generateToolTipList(initialSkill : SupportedTTTypes, gw2Object: HTMLElement) : HTMLElement[] {
 		const skillChain : (typeof initialSkill)[] = []
 		const validTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard']
 
-		const addSkillToChain = (currentSkill : API.Skill | API.Trait) => {
+		const addSkillToChain = (currentSkill : SupportedTTTypes) => {
 			skillChain.push(currentSkill)
 
 			if('palettes' in currentSkill) {
@@ -391,6 +404,8 @@ class GW2TooltipsV2 {
 		return chainTooltips
 	}
 }
+
+type SupportedTTTypes = API.Skill | API.Trait | API.Amulet; //TODO(Rennorb) @cleanup: once its finished
 
 
 const gw2tooltips = new GW2TooltipsV2()

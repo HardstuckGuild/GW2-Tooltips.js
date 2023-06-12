@@ -510,7 +510,7 @@ class GW2TooltipsV2 {
                 const gw2Object = e.target;
                 const type = (gw2Object.getAttribute('type') || 'skill') + 's';
                 const objId = +String(gw2Object.getAttribute('objId'));
-                if (type != 'skills' && type != 'traits')
+                if (type != 'skills' && type != 'traits' && type != 'pvp/amulets')
                     return;
                 const data = APICache.storage[type].get(objId);
                 if (data) {
@@ -596,10 +596,11 @@ class GW2TooltipsV2 {
             recharge = TUtilsV2.newElm('ter', TUtilsV2.DurationToSeconds(apiObject.recharge) + 's', TUtilsV2.newImg('156651.png', 'iconsmall'));
         }
         const isSkill = 'recharge_override' in apiObject;
-        const headerElements = [
-            TUtilsV2.newElm('teb', apiObject.name),
-            TUtilsV2.newElm('tes', `( ${isSkill ? this.getSlotName(apiObject) : apiObject.slot} )`),
-        ];
+        const headerElements = [TUtilsV2.newElm('teb', apiObject.name)];
+        if (isSkill)
+            headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
+        else if ('slot' in apiObject)
+            headerElements.push(TUtilsV2.newElm('tes', `( ${apiObject.slot} )`));
         if (isSkill && apiObject.facts_override) {
             const remainder = new Set(['Pve', 'Pvp', 'Wvw']);
             const allModes = ['Pve', 'Pvp', 'Wvw'];
@@ -632,11 +633,21 @@ class GW2TooltipsV2 {
             }
             headerElements.push(TUtilsV2.newElm('tes', '( ', TUtilsV2.fromHTML(splits.join(' | ')), ' )'));
         }
-        const header = TUtilsV2.newElm('tet', ...headerElements, TUtilsV2.newElm('div.flexbox-fill'), recharge);
-        const description = document.createElement('ted');
-        if (apiObject.description)
+        const parts = [
+            TUtilsV2.newElm('tet', ...headerElements, TUtilsV2.newElm('div.flexbox-fill'), recharge)
+        ];
+        if ('description' in apiObject && apiObject.description) {
+            const description = document.createElement('ted');
             description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`;
-        const tooltip = TUtilsV2.newElm('div.tooltip', header, description, ...SkillsProcessor.generateFacts(apiObject, context));
+            parts.push(description);
+        }
+        if ('facts' in apiObject) {
+            parts.push(...SkillsProcessor.generateFacts(apiObject, context));
+        }
+        if ('attributes' in apiObject) {
+            parts.push(...Object.entries(apiObject.attributes).map(([attrib, value]) => TUtilsV2.newElm('teh', `+${value} ${attrib}`)));
+        }
+        const tooltip = TUtilsV2.newElm('div.tooltip', ...parts);
         tooltip.dataset.id = String(apiObject.id);
         tooltip.style.marginTop = '5px';
         return tooltip;
