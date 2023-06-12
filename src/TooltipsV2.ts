@@ -93,7 +93,7 @@ class GW2TooltipsV2 {
 
 	displayCorrectChainTooltip(tooltips: HTMLElement[], tooltipIndex: number) {
 		for(let index = 0; index < tooltips.length; index++) {
-			tooltips[index].style.display = index === tooltipIndex ? '' : 'none'
+			tooltips[index].classList.toggle('active', index === tooltipIndex);
 		}
 	}
 	cycleTooltips() {
