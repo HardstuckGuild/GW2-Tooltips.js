@@ -385,6 +385,10 @@ class GW2TooltipsV2 {
 				this.positionTooltip()
 			};
 		}
+		else {
+			chainTooltips[0].classList.add('active'); // single tooltip is always expanded
+		}
+
 		return chainTooltips
 	}
 }
