@@ -276,10 +276,49 @@ class GW2TooltipsV2 {
 			);
 		}
 
-		const isSkill = 'recharge_override' in apiObject; //TODO(Rennorb): do the slot stuff serverside
-		const basic = TUtilsV2.newElm('tet',
+		const isSkill = 'recharge_override' in apiObject;
+		const headerElements = [
 			TUtilsV2.newElm('teb', apiObject.name),
-			TUtilsV2.newElm('tes', `( ${isSkill ? this.getSlotName(apiObject) : apiObject.slot} )`), TUtilsV2.newElm('div.flexbox-fill'),
+			TUtilsV2.newElm('tes', `( ${isSkill ? this.getSlotName(apiObject) : apiObject.slot} )`), //TODO(Rennorb): do the slot stuff serverside
+		];
+		if(isSkill && apiObject.facts_override) {
+			//TODO(Rennorb) @cleanup: this section
+			const remainder = new Set<GameMode>(['Pve', 'Pvp', 'Wvw']);
+			const allModes = ['Pve', 'Pvp', 'Wvw'] as GameMode[];
+			for(const mode of allModes) { //better not iterate the set here while removing elements
+				for(const override of apiObject.facts_override) {
+					if(mode == override.mode) {
+						remainder.delete(mode);
+					}
+				}
+			}
+
+			const splits : string[] = [];
+			let pushedRemainder = false;
+			for(const mode of allModes) { //loop to keep sorting vaguely correct
+				if(remainder.has(mode)) {
+					if(pushedRemainder) continue;
+
+					const text = Array.from(remainder).join('/');
+					if(remainder.has(context.gameMode))
+						splits.push(`<span style="color: hsl(var(--hs-color-tooltip-title)) !important;">${text}</span>`);
+					else
+						splits.push(text);
+					pushedRemainder = true;
+				}
+				else {
+					if(mode == context.gameMode)
+						splits.push(`<span style="color: hsl(var(--hs-color-tooltip-title)) !important;">${mode}</span>`);
+					else
+						splits.push(mode);
+				}
+			}
+
+			headerElements.push(TUtilsV2.newElm('tes', '( ', TUtilsV2.fromHTML(splits.join(' | ')), ' )'));
+		}
+		const header = TUtilsV2.newElm('tet',
+			...headerElements,
+			TUtilsV2.newElm('div.flexbox-fill'),
 			recharge
 		)
 
@@ -287,7 +326,7 @@ class GW2TooltipsV2 {
 		if(apiObject.description) description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`
 
 		const tooltip = TUtilsV2.newElm('div.tooltip', 
-			basic, description,
+			header, description,
 			...SkillsProcessor.generateFacts(apiObject, context)
 		)
 		tooltip.dataset.id = String(apiObject.id)

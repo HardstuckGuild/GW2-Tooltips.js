@@ -577,11 +577,47 @@ class GW2TooltipsV2 {
             recharge = TUtilsV2.newElm('ter', TUtilsV2.DurationToSeconds(apiObject.recharge) + 's', TUtilsV2.newImg('156651.png', 'iconsmall'));
         }
         const isSkill = 'recharge_override' in apiObject;
-        const basic = TUtilsV2.newElm('tet', TUtilsV2.newElm('teb', apiObject.name), TUtilsV2.newElm('tes', `( ${isSkill ? this.getSlotName(apiObject) : apiObject.slot} )`), TUtilsV2.newElm('div.flexbox-fill'), recharge);
+        const headerElements = [
+            TUtilsV2.newElm('teb', apiObject.name),
+            TUtilsV2.newElm('tes', `( ${isSkill ? this.getSlotName(apiObject) : apiObject.slot} )`),
+        ];
+        if (isSkill && apiObject.facts_override) {
+            const remainder = new Set(['Pve', 'Pvp', 'Wvw']);
+            const allModes = ['Pve', 'Pvp', 'Wvw'];
+            for (const mode of allModes) {
+                for (const override of apiObject.facts_override) {
+                    if (mode == override.mode) {
+                        remainder.delete(mode);
+                    }
+                }
+            }
+            const splits = [];
+            let pushedRemainder = false;
+            for (const mode of allModes) {
+                if (remainder.has(mode)) {
+                    if (pushedRemainder)
+                        continue;
+                    const text = Array.from(remainder).join('/');
+                    if (remainder.has(context.gameMode))
+                        splits.push(`<span style="color: hsl(var(--hs-color-tooltip-title)) !important;">${text}</span>`);
+                    else
+                        splits.push(text);
+                    pushedRemainder = true;
+                }
+                else {
+                    if (mode == context.gameMode)
+                        splits.push(`<span style="color: hsl(var(--hs-color-tooltip-title)) !important;">${mode}</span>`);
+                    else
+                        splits.push(mode);
+                }
+            }
+            headerElements.push(TUtilsV2.newElm('tes', '( ', TUtilsV2.fromHTML(splits.join(' | ')), ' )'));
+        }
+        const header = TUtilsV2.newElm('tet', ...headerElements, TUtilsV2.newElm('div.flexbox-fill'), recharge);
         const description = document.createElement('ted');
         if (apiObject.description)
             description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`;
-        const tooltip = TUtilsV2.newElm('div.tooltip', basic, description, ...SkillsProcessor.generateFacts(apiObject, context));
+        const tooltip = TUtilsV2.newElm('div.tooltip', header, description, ...SkillsProcessor.generateFacts(apiObject, context));
         tooltip.dataset.id = String(apiObject.id);
         tooltip.style.marginTop = '5px';
         return tooltip;
