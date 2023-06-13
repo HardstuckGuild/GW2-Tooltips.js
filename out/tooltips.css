@@ -3,7 +3,7 @@
 	--gw2-tt-build-trait-size: 2.25rem;
 	--gw2-tt-build-item-size: 4rem;
 	--gw2-tt-build-spec-height: calc(var(--gw2-tt-build-trait-size) * 3 + 1em * 5);
-	--gw2-tt-build-spec-width: calc(var(--gw2-tt-build-spec-padding) + var(--gw2-tt-build-spec-gap) * 8 + var(--gw2-tt-build-trait-size) * 6);
+	--gw2-tt-build-spec-width: calc(1em + var(--gw2-tt-build-spec-gap) * 8 + var(--gw2-tt-build-trait-size) * 6);
 	--gw2-tt-build-spec-aspect-ratio: 3.155;
 
 	--gw2-tt-color-text-accent: hsl(40deg 96% 70%);
@@ -150,22 +150,25 @@ gw2object:empty {
 	height: 64px;
 }
 
-.weapon {
+.weapon, .armor, .trinket {
 	display: inline-block;
 	position: relative;
 	width: 64px;
 	height: 64px;
 }
-.weapon gw2object:first-of-type {
+.weapon gw2object:first-of-type,
+.armor gw2object:first-of-type {
 	width: 100%;
 	height: 100%;
 }
-.weapon gw2object:nth-child(n+2) {
+.weapon gw2object:nth-of-type(n+2),
+.armor gw2object:nth-of-type(n+2) {
 	position: absolute;
 	width: 50%;
 	height: 50%;
 }
-.weapon gw2object:nth-of-type(2) {
+.weapon gw2object:nth-of-type(2),
+.armor gw2object:nth-of-type(2) {
 	top: 0;
 	right: 0;
 }
