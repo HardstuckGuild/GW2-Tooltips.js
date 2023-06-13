@@ -12,6 +12,8 @@
 //TODO(Rennorb) @correctness: Some of the code uses very aggressive rounding resulting in wrong numbers in some places. Look over this again.
 // In general only round right before displaying a number, calculations always happen with non rounded values.
 //TODO(Rennorb): Trait game-mode splits
+//TODO(Rennorb): link minion skills to minion summon skill
+//TODO(Rennorb) @cleanup: go over gamemode splitting again, currently ist a huge mess. 
 
 
 type TypeBridge<T, K extends keyof T> = [K, T[K]]
@@ -302,14 +304,14 @@ class GW2TooltipsV2 {
 
 					const text = Array.from(remainder).join('/');
 					if(remainder.has(context.gameMode))
-						splits.push(`<span style="color: hsl(var(--hs-color-tooltip-title)) !important;">${text}</span>`);
+						splits.push(`<span style="color: var(--gw2-tt-color-text-accent) !important;">${text}</span>`);
 					else
 						splits.push(text);
 					pushedRemainder = true;
 				}
 				else {
 					if(mode == context.gameMode)
-						splits.push(`<span style="color: hsl(var(--hs-color-tooltip-title)) !important;">${mode}</span>`);
+						splits.push(`<span style="color: var(--gw2-tt-color-text-accent) !important;">${mode}</span>`);
 					else
 						splits.push(mode);
 				}

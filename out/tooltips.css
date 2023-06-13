@@ -1,3 +1,31 @@
+:root {
+	--gw2-tt-build-spec-gap: 1em;
+	--gw2-tt-build-trait-size: 2.25rem;
+	--gw2-tt-build-item-size: 4rem;
+	--gw2-tt-build-spec-height: calc(var(--gw2-tt-build-trait-size) * 3 + 1em * 5);
+	--gw2-tt-build-spec-width: calc(var(--gw2-tt-build-spec-padding) + var(--gw2-tt-build-spec-gap) * 8 + var(--gw2-tt-build-trait-size) * 6);
+	--gw2-tt-build-spec-aspect-ratio: 3.155;
+
+	--gw2-tt-color-text-accent: hsl(40deg 96% 70%);
+	--gw2-tt-color-tt-title: hsl(40deg 96% 70%);
+	--gw2-tt-color-tt-desc: hsl(40deg 96% 70%);
+  --gw2-tt-font-weight-thick: 600;
+	--gw2-tt-font-size-s: .88em;
+	--gw2-tt-font-size-m: 1.17em;
+	--gw2-tt-color-shadow: black;
+}
+
+.color-abilitytype { color: #FFFFEC8C }
+.color-flavor { color: #FF9BE8E4 }
+.color-reminder { color: #FFB0B0B0 }
+.color-quest { color: #FF00FF00 }
+.color-task { color: #FFFFC957 }
+.color-warning { color: #FFED0002 }
+.color-event { color: #FFCC6633 }
+
+
+
+
 .flexbox-fill {
   flex: 1;
 }
@@ -27,7 +55,7 @@
 	min-width: 40ch;
 	max-height: 80vh;
 	line-height: 1.2;
-	font-size: 0.88em;
+	font-size: var(--gw2-tt-font-size-s);
 
 	background-color: #373f46;
 	background-image: url(../out/tooltip-bg.jpg);
@@ -45,6 +73,9 @@
   gap: 0 1ch;
   white-space: nowrap;
 }
+.tooltipWrapper tet teb {
+	color: var(--gw2-tt-color-tt-title);
+}
 
 .tooltipWrapper teb, .tooltipWrapper te {
   display: flex;
@@ -53,7 +84,11 @@
 }
 
 .tooltipWrapper teb {
-	font-size: 1.17em;
+	font-size: var(--gw2-tt-font-size-m);
+}
+
+.tooltipWrapper ted {
+	color: var(--gw2-tt-color-tt-desc);
 }
 
 .tooltipWrapper .buffcount {
@@ -62,15 +97,15 @@
   transform: translateY(-50%);
   z-index: 1;
   width: 1.8rem;
-  color: hsl(var(--hs-color-text-accent));
-  font-weight: var(--hs-font-weight-thick);
-  font-size: var(--hs-font-size-s);
+  color: var(--gw2-tt-color-text-accent);
+  font-weight: var(--gw2-tt-font-weight-thick);
+  font-size: var(--gw2-tt-font-size-s);
   text-align: right;
-  text-shadow: -1px 2px 0px var(--hs-color-black);
+  text-shadow: -1px 2px 0px var(--gw2-tt-color-shadow);
 }
 
 .tooltipWrapper .iconsmall {
-	width: 1.17em;
+	width: var(--gw2-tt-font-size-m);
 	height: auto;
 }
 
@@ -83,18 +118,11 @@ gw2object.gw2objectembed img {
 	transform: scale(1.2);
 	clip-path: inset(8%);
 	margin-right: 0.25ch;
-	height: 1.25em;
+	height: 1.25em; /* todo use text size */
 	width: auto;
 }
 
 gw2object[type=specialization] {
-	--gw2-build-spec-gap: 1em;
-	--gw2-build-trait-size: 2.25rem;
-	--gw2-build-item-size: 4rem;
-	--gw2-build-spec-height: calc(var(--gw2-build-trait-size) * 3 + 1em * 5);
-	--gw2-build-spec-width: calc(var(--gw2-build-spec-padding) + var(--gw2-build-spec-gap) * 8 + var(--gw2-build-trait-size) * 6);
-	--gw2-build-spec-aspect-ratio: 3.155;
-
 	position: relative;
 	display: flex;
 	flex-flow: row nowrap;
@@ -103,23 +131,23 @@ gw2object[type=specialization] {
 	gap: 0;
 	margin: 1em 0;
 	background-position: 10% bottom;
-	background-size: calc(var(--gw2-build-spec-height) * var(--gw2-build-spec-aspect-ratio) + 1024px);
+	background-size: calc(var(--gw2-tt-build-spec-height) * var(--gw2-tt-build-spec-aspect-ratio) + 1024px);
 	background-repeat: no-repeat;
 	padding: 1em 2em;
-	height: var(--gw2-build-spec-height);
+	height: var(--gw2-tt-build-spec-height);
 	overflow: hidden;
 }
 
 gw2object[type=specialization] .traitwrapper {
 	display: flex;
 	flex-direction: column;
-	gap: var(--gw2-build-spec-gap);
+	gap: var(--gw2-tt-build-spec-gap);
 }
 
 gw2object[type=specialization] [type=trait] {
   position: relative;
-  width: var(--gw2-build-trait-size);
-  height: var(--gw2-build-trait-size);
+  width: var(--gw2-tt-build-trait-size);
+  height: var(--gw2-tt-build-trait-size);
 }
 
 gw2object[type=specialization][data-label]::before {
@@ -134,9 +162,9 @@ gw2object[type=specialization][data-label]::before {
 	top: 100%;
 	transform-origin: top left;
 	padding: 0.5em 1em;
-	font-weight: 600;
-	font-size: 0.88em;
-	text-shadow: -1px 1px 2px #000,1px 1px 2px #000,1px -1px 2px #000,-1px -1px 2px #000;
+	font-weight: var(--gw2-tt-font-weight-thick);
+	font-size: var(--gw2-tt-font-size-s);
+	text-shadow: -1px 1px 2px var(--gw2-tt-color-shadow), 1px 1px 2px var(--gw2-tt-color-shadow), 1px -1px 2px var(--gw2-tt-color-shadow), -1px -1px 2px var(--gw2-tt-color-shadow);
 }
 
 [type=trait] img {
@@ -149,12 +177,3 @@ gw2object[type=specialization][data-label]::before {
 .gw2objectembed[type="specialization"] img, .trait_minor img {
   clip-path: polygon(50% 0, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%) !important;
 }
-
-
-.color-abilitytype { color: #FFFFEC8C }
-.color-flavor { color: #FF9BE8E4 }
-.color-reminder { color: #FFB0B0B0 }
-.color-quest { color: #FF00FF00 }
-.color-task { color: #FFFFC957 }
-.color-warning { color: #FFED0002 }
-.color-event { color: #FFCC6633 }
