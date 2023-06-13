@@ -155,12 +155,14 @@ gw2object.gw2objectembed {
 	background-color: unset;
 }
 gw2object.gw2objectembed img {
+	width: 1.25em;
 	margin-right: 0.25ch;
 	vertical-align: bottom;
 }
 
 .pvp gw2object[type=item],
-.pvp gw2object[type="pvp/amulet"] {
+.pvp gw2object[type="pvp/amulet"],
+.trinket gw2object {
 	width: 64px;
 	height: 64px;
 }
