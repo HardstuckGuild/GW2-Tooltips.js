@@ -15,7 +15,7 @@ class FakeAPI implements APIImplementation {
 					resolve(allSkills.filter(data => Array.prototype.includes.call(ids, data.id)));
 				}
 				else {
-					console.error(`'${endpoint}' doesn't exist in mock data, synthesizing`);
+					console.info(`'${endpoint}' doesn't exist in mock data, synthesizing`);
 					if(endpoint == 'items') {
 						resolve(ids.map(id => ({
 							id,

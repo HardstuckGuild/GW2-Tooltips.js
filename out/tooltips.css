@@ -13,6 +13,7 @@
 	--gw2-tt-font-size-s: .88em;
 	--gw2-tt-font-size-m: 1.17em;
 	--gw2-tt-color-shadow: black;
+	--gw2-tt-color-loading: #393827;
 }
 
 .color-abilitytype { color: #FFFFEC8C }
@@ -82,6 +83,10 @@
   gap: 0 .5ch;
 	position: relative;
 }
+.tooltipWrapper te img {
+	width: 32px;
+	height: auto;
+}
 
 .tooltipWrapper teb {
 	font-size: var(--gw2-tt-font-size-m);
@@ -114,12 +119,71 @@
 	vertical-align: bottom;
 }
 
+
+gw2object {
+	display: inline-block;
+	background-color: var(--gw2-tt-color-shadow);
+}
+gw2object img {
+	display: inline-block;
+	width: 100%;
+	height: 100%;
+}
+gw2object[type=skill] img,
 gw2object.gw2objectembed img {
-	transform: scale(1.2);
 	clip-path: inset(8%);
+	scale: 1.2;
+}
+
+gw2object:empty {
+	background-image: linear-gradient(to right, transparent 8%, var(--gw2-tt-color-loading) 30%, transparent 45%);
+	background-size: 50px 100%;
+	animation: 3s forwards infinite glint;
+}
+@keyframes glint {
+	0% { background-position: -50px; }
+	100% { background-position: 50px; }
+}
+
+.pvp gw2object[type=item] {
+	width: 64px;
+	height: 64px;
+}
+
+.weapon {
+	display: inline-block;
+	position: relative;
+	width: 64px;
+	height: 64px;
+}
+.weapon gw2object:first-of-type {
+	width: 100%;
+	height: 100%;
+}
+.weapon gw2object:nth-child(n+2) {
+	position: absolute;
+	width: 50%;
+	height: 50%;
+}
+.weapon gw2object:nth-of-type(2) {
+	top: 0;
+	right: 0;
+}
+.weapon gw2object:nth-of-type(3) {
+	bottom: 0;
+	right: 0;
+}
+
+.skills gw2object {
+	width: 64px;
+	height: 64px;
+}
+
+gw2object.gw2objectembed {
 	margin-right: 0.25ch;
 	height: 1.25em; /* todo use text size */
-	width: auto;
+	width: 1.25em; /* todo use text size */
+	vertical-align: bottom;
 }
 
 gw2object[type=specialization] {
@@ -135,6 +199,7 @@ gw2object[type=specialization] {
 	background-repeat: no-repeat;
 	padding: 1em 2em;
 	height: var(--gw2-tt-build-spec-height);
+	max-width: calc(var(--gw2-tt-build-spec-height) * var(--gw2-tt-build-spec-aspect-ratio));
 	overflow: hidden;
 }
 
@@ -153,7 +218,6 @@ gw2object[type=specialization] [type=trait] {
 gw2object[type=specialization][data-label]::before {
 	position: absolute;
 	left: 0;
-	width: 100%;
 	content: attr(data-label);
 	transform: rotate(270deg);
 	text-transform: uppercase;
@@ -168,12 +232,13 @@ gw2object[type=specialization][data-label]::before {
 }
 
 [type=trait] img {
-  width: 100%;
-	height: auto;
 	transform: scale(1.05);
 	background: #000;
 }
 
+.gw2objectembed[type="specialization"], .trait_minor {
+	background-color: transparent;
+}
 .gw2objectembed[type="specialization"] img, .trait_minor img {
   clip-path: polygon(50% 0, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%) !important;
 }

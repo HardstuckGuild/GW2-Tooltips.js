@@ -46,6 +46,8 @@ class APICache {
 
 			try {
 				const response = await this.apiImpl.bulkRequest(currentEndpoint, request)
+				const unobtainable = request.filter(id => !response.some(obj => obj.id == id))
+				if(unobtainable.length) console.warn(`Did not receive all requested ${currentEndpoint} ids. missing: `, unobtainable);
 
 				for(const datum of response) {
 					if(storageSet.has(datum.id)) continue

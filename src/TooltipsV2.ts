@@ -188,23 +188,23 @@ class GW2TooltipsV2 {
 	}
 
 	inflators : InflatorMap = (function() {
-		const genericIconInflater = (clazz : string = '') => (gw2Object : HTMLElement, data : { name : string, icon? : string }) => {
-			const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, clazz, data.name));
+		const genericIconInflater = () => (gw2Object : HTMLElement, data : { name : string, icon? : string }) => {
+			const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, undefined, data.name));
 			wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + data.name;
 			wikiLink.target = '_blank';
 			gw2Object.append(wikiLink);
 		}
 
 		return {
-			skills: genericIconInflater('iconlarge'),
+			skills: genericIconInflater(),
 			traits: genericIconInflater(),
-			items: genericIconInflater('iconlarge'),
+			items: genericIconInflater(),
 			specializations: function (gw2Object: HTMLElement, spec: API.Specialization): void {
 				gw2Object.style.backgroundImage = `url(${spec.background})`;
 				gw2Object.dataset.label = spec.name;
 			},
 			pets: genericIconInflater(),
-			"pvp/amulets": genericIconInflater('iconlarge'),
+			"pvp/amulets": genericIconInflater(),
 		}
 	})()
 

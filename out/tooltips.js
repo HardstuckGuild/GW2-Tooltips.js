@@ -11,7 +11,7 @@ class FakeAPI {
                     resolve(allSkills.filter(data => Array.prototype.includes.call(ids, data.id)));
                 }
                 else {
-                    console.error(`'${endpoint}' doesn't exist in mock data, synthesizing`);
+                    console.info(`'${endpoint}' doesn't exist in mock data, synthesizing`);
                     if (endpoint == 'items') {
                         resolve(ids.map(id => ({
                             id,
@@ -67,6 +67,9 @@ class APICache {
             console.info(`[gw2-tooltips API cache] round #${i++} for a ${endpoint} request, currently fetching ${currentEndpoint}. Ids: `, request);
             try {
                 const response = await this.apiImpl.bulkRequest(currentEndpoint, request);
+                const unobtainable = request.filter(id => !response.some(obj => obj.id == id));
+                if (unobtainable.length)
+                    console.warn(`Did not receive all requested ${currentEndpoint} ids. missing: `, unobtainable);
                 for (const datum of response) {
                     if (storageSet.has(datum.id))
                         continue;
@@ -389,7 +392,6 @@ class TUtilsV2 {
         if (className)
             img.classList.add(className);
         img.alt = alt ? alt + ' icon' : 'icon';
-        img.width = img.height = className === 'iconlarge' ? 64 : 32;
         return img;
     }
     static fromHTML(html) {
@@ -412,22 +414,22 @@ class GW2TooltipsV2 {
         this.cycling = false;
         this.context = [];
         this.inflators = (function () {
-            const genericIconInflater = (clazz = '') => (gw2Object, data) => {
-                const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, clazz, data.name));
+            const genericIconInflater = () => (gw2Object, data) => {
+                const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, undefined, data.name));
                 wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + data.name;
                 wikiLink.target = '_blank';
                 gw2Object.append(wikiLink);
             };
             return {
-                skills: genericIconInflater('iconlarge'),
+                skills: genericIconInflater(),
                 traits: genericIconInflater(),
-                items: genericIconInflater('iconlarge'),
+                items: genericIconInflater(),
                 specializations: function (gw2Object, spec) {
                     gw2Object.style.backgroundImage = `url(${spec.background})`;
                     gw2Object.dataset.label = spec.name;
                 },
                 pets: genericIconInflater(),
-                "pvp/amulets": genericIconInflater('iconlarge'),
+                "pvp/amulets": genericIconInflater(),
             };
         })();
         if (window.GW2TooltipsContext instanceof Array) {

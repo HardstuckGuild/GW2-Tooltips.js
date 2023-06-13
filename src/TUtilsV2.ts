@@ -20,7 +20,6 @@ class TUtilsV2 {
 		img.src = src ? (src.includes(':') ? src : this.iconSource + src) : this.missingImage;
 		if(className) img.classList.add(className)
 		img.alt = alt ? alt+' icon' : 'icon';
-		img.width = img.height = className === 'iconlarge' ? 64 : 32;
 		return img;
 	}
 
