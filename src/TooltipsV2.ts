@@ -192,6 +192,7 @@ class GW2TooltipsV2 {
 			const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, undefined, data.name));
 			wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + data.name;
 			wikiLink.target = '_blank';
+			if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(data.name);
 			gw2Object.append(wikiLink);
 		}
 

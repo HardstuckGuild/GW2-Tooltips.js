@@ -126,8 +126,8 @@ gw2object {
 }
 gw2object img {
 	display: inline-block;
-	width: 100%;
 	height: 100%;
+	width: auto;
 }
 gw2object[type=skill] img,
 gw2object.gw2objectembed img {
@@ -136,16 +136,31 @@ gw2object.gw2objectembed img {
 }
 
 gw2object:empty {
-	background-image: linear-gradient(to right, transparent 8%, var(--gw2-tt-color-loading) 30%, transparent 45%);
-	background-size: 50px 100%;
-	animation: 3s forwards infinite glint;
+	background-image: linear-gradient(to right, transparent 40%, var(--gw2-tt-color-loading) 50%, transparent 60%);
+	background-size: 200px 100%;
+	animation: 4s forwards infinite cubic-bezier(.46,.03,.52,.96) glint;
+}
+gw2object.gw2objectembed:empty {
+	vertical-align: bottom;
 }
 @keyframes glint {
-	0% { background-position: -50px; }
-	100% { background-position: 50px; }
+	0% { background-position: -200px; }
+	100% { background-position: 200px; }
 }
 
-.pvp gw2object[type=item] {
+gw2object.gw2objectembed {
+	height: 1.25em; /* todo use text size */
+	min-width: 10ch;
+	vertical-align: baseline;
+	background-color: unset;
+}
+gw2object.gw2objectembed img {
+	margin-right: 0.25ch;
+	vertical-align: bottom;
+}
+
+.pvp gw2object[type=item],
+.pvp gw2object[type="pvp/amulet"] {
 	width: 64px;
 	height: 64px;
 }
@@ -180,13 +195,6 @@ gw2object:empty {
 .skills gw2object {
 	width: 64px;
 	height: 64px;
-}
-
-gw2object.gw2objectembed {
-	margin-right: 0.25ch;
-	height: 1.25em; /* todo use text size */
-	width: 1.25em; /* todo use text size */
-	vertical-align: bottom;
 }
 
 gw2object[type=specialization] {
