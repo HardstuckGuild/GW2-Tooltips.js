@@ -260,32 +260,32 @@ class GW2TooltipsV2 {
 		return skillSlot
 	}
 
+	getRecharge(apiObject : API.Skill | API.Trait, gameMode : GameMode) : API.Duration | undefined {
+		let recharge = apiObject.facts.find(f => f.type === 'Recharge');
+		let override = apiObject.facts_override?.find(f => f.mode === gameMode)?.facts.find(f => f.type === 'Recharge');
+		return (override || recharge)?.duration;
+	}
+
 	// TODO(Rennorb) @cleanup: split this into the inflator system aswell. its getting to convoluted already
 	generateToolTip(apiObject : SupportedTTTypes, context : Context) : HTMLElement {
 		let recharge : HTMLElement | '' = ''
-		if('recharge_override' in apiObject && apiObject.recharge_override.length) {
-			const override = apiObject.recharge_override.find(override =>  override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge));
-			if(override && override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge)) {
+		if('facts' in apiObject) {
+			const _recharge = this.getRecharge(apiObject, context.gameMode);
+			if(_recharge) {
 				recharge = TUtilsV2.newElm('ter', 
-					TUtilsV2.DurationToSeconds(override.recharge)+'s', 
+					TUtilsV2.DurationToSeconds(_recharge)+'s', 
 					TUtilsV2.newImg('156651.png', 'iconsmall')
 				);
 			}
-		} else if('recharge' in apiObject && apiObject.recharge && TUtilsV2.DurationToSeconds(apiObject.recharge)) {
-			recharge = TUtilsV2.newElm('ter', 
-				TUtilsV2.DurationToSeconds(apiObject.recharge)+'s', 
-				TUtilsV2.newImg('156651.png', 'iconsmall')
-			);
 		}
 
-		const isSkill = 'recharge_override' in apiObject;
 		const headerElements = [TUtilsV2.newElm('teb', apiObject.name)];
 		
 		//TODO(Rennorb): do the slot stuff serverside
-		if(isSkill) headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
+		if('palettes' in apiObject) headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
 		else if('slot' in apiObject) headerElements.push(TUtilsV2.newElm('tes', `( ${apiObject.slot} )`));
 
-		if(isSkill && apiObject.facts_override) {
+		if('facts_override' in apiObject && apiObject.facts_override) {
 			//TODO(Rennorb) @cleanup: this section
 			const remainder = new Set<GameMode>(['Pve', 'Pvp', 'Wvw']);
 			const allModes = ['Pve', 'Pvp', 'Wvw'] as GameMode[];

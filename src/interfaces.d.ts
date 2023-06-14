@@ -10,17 +10,10 @@ namespace API {
 		description?       : string
 		description_brief? : string
 		icon?              : string
-		chat_link          : string //TODO(Rennorb) who cares
 		facts              : Fact[]
 		facts_override?    : FactsOverride[]
 		categories         : any[]
-		range              : number
-		recharge           : Duration
-		recharge_override  : RechargeOverride[]
-		activation?        : Duration
-		evade_duration?    : Duration
 		palettes           : Palette[]
-		cost?              : number
 		sub_skills?        : number[]
 		modifiers?         : Modifier[]
 	}
@@ -134,6 +127,11 @@ namespace API {
 		icon     : string
 		distance : number
 	}
+	interface DurationFact extends BasicFact<'Duration'> {
+		text?    : string
+		icon     : string
+		duration : Duration
+	}
 	interface NumberFact extends BasicFact<'Number'> {
 		text  : string
 		icon  : string
@@ -198,8 +196,8 @@ namespace API {
 		ComboFinisher     : ComboFinisherFact
 		Damage            : DamageFact
 		Distance          : DistanceFact
-		Duration          : never
-		Heal              : never
+		Duration          : DurationFact
+		Heal              : BasicFact<'Heal'>
 		HealingAdjust     : HealingAdjustFact
 		NoData            : NoDataFact
 		Number            : NumberFact
@@ -211,7 +209,7 @@ namespace API {
 		Recharge          : RechargeFact
 		StunBreak         : StunBreakFact
 		Time              : TimeFact
-		Unblockable       : never
+		Unblockable       : BasicFact<'Unblockable'>
 	}
 
 	type FactType = keyof FactMap;
@@ -235,7 +233,6 @@ namespace API {
 		description_brief? : string
 		facts              : Fact[]
 		slot               : 'Minor' | 'Major' | 'MadLib' | 'Automatic'; //TODO(Rennorb): fix this on the api side lol
-		recharge?          : Duration
 		facts_override     : undefined //TODO(Rennorb): not exported yet
 		provides_weapon_access? : WeaponAccess []
 	}

@@ -201,6 +201,9 @@ class SkillsProcessor {
             return [];
         let totalDefianceBreak = 0;
         const processFactData = (fact) => {
+            if (fact.type === 'Recharge') {
+                return null;
+            }
             if (fact.requires_trait && (!context.traits || !fact.requires_trait.some(reqTrait => context.traits.includes(reqTrait)))) {
                 return null;
             }
@@ -218,7 +221,6 @@ class SkillsProcessor {
                 Percent: ({ fact }) => `<tem> ${TUtilsV2.GW2Text2HTML(fact.text)}: ${fact.percent}% </tem>`,
                 Radius: ({ fact }) => `<tem> ${fact.text} </tem>`,
                 Range: ({ fact }) => `<tem> ${fact.text} </tem>`,
-                Recharge: ({ fact }) => `<tem> ${fact.text} </tem>`,
                 HealingAdjust: ({ fact }) => `<tem> ${fact.text} </tem>`,
                 Heal: () => `<tem> !!Heal </tem>`,
                 Duration: () => `<tem> !!Duration </tem>`,
@@ -366,13 +368,8 @@ SkillsProcessor.MissingBuff = {
     id: 0,
     name: 'Missing Buff',
     description: 'This Buff failed to load',
-    chat_link: '',
     facts: [],
     categories: [],
-    range: 0,
-    recharge: { secs: 0, nanos: 0 },
-    recharge_override: [],
-    activation: { secs: 0, nanos: 0 },
     palettes: [],
     modifiers: [],
 };
@@ -588,24 +585,26 @@ class GW2TooltipsV2 {
         }
         return skillSlot;
     }
+    getRecharge(apiObject, gameMode) {
+        var _a, _b, _c;
+        let recharge = apiObject.facts.find(f => f.type === 'Recharge');
+        let override = (_b = (_a = apiObject.facts_override) === null || _a === void 0 ? void 0 : _a.find(f => f.mode === gameMode)) === null || _b === void 0 ? void 0 : _b.facts.find(f => f.type === 'Recharge');
+        return (_c = (override || recharge)) === null || _c === void 0 ? void 0 : _c.duration;
+    }
     generateToolTip(apiObject, context) {
         let recharge = '';
-        if ('recharge_override' in apiObject && apiObject.recharge_override.length) {
-            const override = apiObject.recharge_override.find(override => override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge));
-            if (override && override.mode === context.gameMode && TUtilsV2.DurationToSeconds(override.recharge)) {
-                recharge = TUtilsV2.newElm('ter', TUtilsV2.DurationToSeconds(override.recharge) + 's', TUtilsV2.newImg('156651.png', 'iconsmall'));
+        if ('facts' in apiObject) {
+            const _recharge = this.getRecharge(apiObject, context.gameMode);
+            if (_recharge) {
+                recharge = TUtilsV2.newElm('ter', TUtilsV2.DurationToSeconds(_recharge) + 's', TUtilsV2.newImg('156651.png', 'iconsmall'));
             }
         }
-        else if ('recharge' in apiObject && apiObject.recharge && TUtilsV2.DurationToSeconds(apiObject.recharge)) {
-            recharge = TUtilsV2.newElm('ter', TUtilsV2.DurationToSeconds(apiObject.recharge) + 's', TUtilsV2.newImg('156651.png', 'iconsmall'));
-        }
-        const isSkill = 'recharge_override' in apiObject;
         const headerElements = [TUtilsV2.newElm('teb', apiObject.name)];
-        if (isSkill)
+        if ('palettes' in apiObject)
             headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
         else if ('slot' in apiObject)
             headerElements.push(TUtilsV2.newElm('tes', `( ${apiObject.slot} )`));
-        if (isSkill && apiObject.facts_override) {
+        if ('facts_override' in apiObject && apiObject.facts_override) {
             const remainder = new Set(['Pve', 'Pvp', 'Wvw']);
             const allModes = ['Pve', 'Pvp', 'Wvw'];
             for (const mode of allModes) {

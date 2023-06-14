@@ -3,13 +3,8 @@ class SkillsProcessor {
 		id               : 0,
 		name             : 'Missing Buff',
 		description      : 'This Buff failed to load',
-		chat_link        : '',
 		facts            : [],
 		categories       : [],
-		range            : 0,
-		recharge         : { secs: 0, nanos: 0 },
-		recharge_override: [],
-		activation       : { secs: 0, nanos: 0 },
 		palettes         : [],
 		modifiers        : [],
 	}
@@ -88,6 +83,9 @@ class SkillsProcessor {
 		let totalDefianceBreak = 0
 
 		const processFactData = (fact : API.Fact) => {
+			if(fact.type === 'Recharge') { //meta facts
+				return null;
+			}
 			if(fact.requires_trait && (!context.traits || !fact.requires_trait.some(reqTrait => context.traits.includes(reqTrait)))) {
 				return null
 			}
@@ -98,7 +96,7 @@ class SkillsProcessor {
 				totalDefianceBreak += fact.defiance_break
 			}
 
-			const factInflators : FactInflatorMap = {
+			const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => string } = {
 				Time         : ({ fact }) => `<tem> ${fact.text}: ${TUtilsV2.DurationToSeconds(fact.duration)}s </tem>`,
 				Distance     : ({ fact }) => `<tem> ${fact.text}: ${fact.distance} </tem>`,
 				Number       : ({ fact }) => `<tem> ${fact.text}: ${fact.value} </tem>`,
@@ -108,7 +106,6 @@ class SkillsProcessor {
 				Percent      : ({ fact }) => `<tem> ${TUtilsV2.GW2Text2HTML(fact.text)}: ${fact.percent}% </tem>`,
 				Radius       : ({ fact }) => `<tem> ${fact.text} </tem>`, //TODO(Rennorb) @completeness
 				Range        : ({ fact }) => `<tem> ${fact.text} </tem>`, //TODO(Rennorb) @completeness
-				Recharge     : ({ fact }) => `<tem> ${fact.text} </tem>`, //TODO(Rennorb) @completeness
 				HealingAdjust: ({ fact }) => `<tem> ${fact.text} </tem>`, //TODO(Rennorb) @completeness
 				Heal         : () => `<tem> !!Heal </tem>`, //TODO(Rennorb) @completeness
 				Duration     : () => `<tem> !!Duration </tem>`, //TODO(Rennorb) @completeness
@@ -248,8 +245,9 @@ class SkillsProcessor {
 				.sort((a, b) => a.order - b.order)
 				.map(processFactData)
 				.filter(d => d) as HTMLElement[] // ts doesn't understand what the predicate does
+				
 
-		if((skill.facts.length == 0 || context.gameMode !== 'Pve') && skill.facts_override) {
+		if((skill.facts.length == 0 || context.gameMode !== 'Pve') && skill.facts_override) { //TODO(Rennorb) @cleanup
 			for(const override of skill.facts_override) {
 				if(override.mode === context.gameMode) {
 					const sortedOverrideFacts = [...override.facts].sort((a, b) => a.order - b.order)
@@ -281,8 +279,4 @@ class SkillsProcessor {
 
 		return factWraps
 	}
-}
-
-type FactInflatorMap = {
-	[k in API.FactType] : (params : HandlerParams<API.FactMap[k]>) => string
 }

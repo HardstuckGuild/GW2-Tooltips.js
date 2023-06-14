@@ -8,6 +8,9 @@
 	var GW2TooltipsConfig = {
 		autoInitialize: false,
 	}
+	var GW2TooltipsContext = {
+		gameMode: 'Pvp',
+	}
 	window.addEventListener('load', () => {
 		APICache.apiImpl = new FakeAPI();
 		gw2tooltips.hookDocument(document)
