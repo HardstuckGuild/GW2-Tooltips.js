@@ -77,8 +77,8 @@ class SkillsProcessor {
 		return weaponStrength
 	}
 
-	static generateFacts(skill : API.Skill | API.Trait, context : Context) : HTMLElement[] {
-		if(!skill.facts.length && !skill.facts_override) return []
+	static generateFacts(apiObject : { facts : API.Fact[], facts_override? : API.FactsOverride[], range? : never }, context : Context) : HTMLElement[] {
+		if(!apiObject.facts.length && !apiObject.facts_override) return []
 
 		let totalDefianceBreak = 0
 
@@ -234,21 +234,24 @@ class SkillsProcessor {
 			}
 
 			const buff = APICache.storage.skills.get(fact.buff || 0)
-			const data : HandlerParams = { fact, buff, skill } as any //TODO(Rennorb) @hammer
-			const htmlContent = factInflators[fact.type](data as any) //TODO(Rennorb) @hammer
+			const data : HandlerParams = { fact, buff, skill: apiObject } as any //TODO(Rennorb) @hammer
+			const wrapper = TUtilsV2.newElm('te')
+			const text = TUtilsV2.fromHTML(factInflators[fact.type](data as any))
+			if(iconSlug) wrapper.append(TUtilsV2.newImg(iconSlug, 'iconmed'))
+			wrapper.append(text)
 
-			return TUtilsV2.newElm('te', TUtilsV2.newImg(iconSlug, 'iconmed'), TUtilsV2.fromHTML(htmlContent))
+			return wrapper
 		}
 
 		const factWraps = 
-			skill.facts
+			apiObject.facts
 				.sort((a, b) => a.order - b.order)
 				.map(processFactData)
 				.filter(d => d) as HTMLElement[] // ts doesn't understand what the predicate does
 				
 
-		if((skill.facts.length == 0 || context.gameMode !== 'Pve') && skill.facts_override) { //TODO(Rennorb) @cleanup
-			for(const override of skill.facts_override) {
+		if((apiObject.facts.length == 0 || context.gameMode !== 'Pve') && apiObject.facts_override) { //TODO(Rennorb) @cleanup
+			for(const override of apiObject.facts_override) {
 				if(override.mode === context.gameMode) {
 					const sortedOverrideFacts = [...override.facts].sort((a, b) => a.order - b.order)
 					sortedOverrideFacts.forEach(fact => {
@@ -269,10 +272,11 @@ class SkillsProcessor {
 			factWraps.push(defianceWrap)
 		}
 
-		if('range' in skill && skill.range) {
+		//TODO(Rennorb) @cleanup: this is now also in facts
+		if('range' in apiObject && apiObject.range) {
 			const rangeWrap = TUtilsV2.newElm('te',
 				TUtilsV2.newImg('156666.png', 'iconmed'),
-				TUtilsV2.newElm('tem', `Range: ${skill.range}`)
+				TUtilsV2.newElm('tem', `Range: ${apiObject.range}`)
 			)
 			factWraps.push(rangeWrap)
 		}

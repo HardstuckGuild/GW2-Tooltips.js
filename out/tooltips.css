@@ -135,17 +135,18 @@ gw2object.gw2objectembed img {
 	scale: 1.2;
 }
 
-gw2object:empty {
+gw2object:empty,
+gw2object[type=specialization]:not(.gw2objectembed):not([data-label]) {
 	background-image: linear-gradient(to right, transparent 40%, var(--gw2-tt-color-loading) 50%, transparent 60%);
-	background-size: 200px 100%;
+	background-size: 100vw 100%;
 	animation: 4s forwards infinite cubic-bezier(.46,.03,.52,.96) glint;
 }
 gw2object.gw2objectembed:empty {
 	vertical-align: bottom;
 }
 @keyframes glint {
-	0% { background-position: -200px; }
-	100% { background-position: 200px; }
+	0% { background-position: -100vw; }
+	100% { background-position: 100vw; }
 }
 
 gw2object.gw2objectembed {

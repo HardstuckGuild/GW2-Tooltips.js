@@ -78,33 +78,31 @@ class APICache {
 			}
 		}
 
-		switch(endpoint) {
-			case 'skills': {
-				for(const palette of datum.palettes) {
-					for(const slot of palette.slots) {
-						if(slot.profession !== 'None' && slot.next_chain && !this.storage.items.has(slot.next_chain)) {
-							connectedIdsStorage.skills.add(slot.next_chain)
-						}
+		if('palettes' in datum) {
+			for(const palette of datum.palettes) {
+				for(const slot of palette.slots) {
+					if(slot.profession !== 'None' && slot.next_chain && !this.storage.items.has(slot.next_chain)) {
+						connectedIdsStorage.skills.add(slot.next_chain)
 					}
 				}
+			}
+		}
 
-				if(datum.sub_skills) {
-					for(const subSkill of datum.sub_skills)
-						if(!this.storage.skills.has(subSkill))
-							connectedIdsStorage.skills.add(subSkill);
-				}
+		if('sub_skills' in datum) {
+			if(datum.sub_skills) {
+				for(const subSkill of datum.sub_skills)
+					if(!this.storage.skills.has(subSkill))
+						connectedIdsStorage.skills.add(subSkill);
+			}
+		}
 
-				addFacts(datum.facts);
+		if('facts' in datum) {
+			addFacts(datum.facts);
+		}
 
-				if(datum.facts_override) {
-					for(const { facts } of datum.facts_override)
-						addFacts(facts);
-				}
-			} break
-
-			case 'traits': {
-				addFacts(datum.facts)
-			} break
+		if('facts_override' in datum && datum.facts_override) {
+			for(const { facts } of datum.facts_override)
+				addFacts(facts);
 		}
 	}
 }

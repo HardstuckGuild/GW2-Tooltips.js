@@ -3,9 +3,27 @@
 // This is only possible to do if you manually set up the GW2TooltipsV2 window-scoped object.
 
 class FakeAPI implements APIImplementation {
-	bulkRequest<T extends keyof APIResponseTypeMap>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]> {
-		if(['specializations', 'pvp/amulets'].includes(endpoint)) {
-			return fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
+	async bulkRequest<T extends keyof APIResponseTypeMap>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]> {
+		if(['specializations', 'pvp/amulets', 'items'].includes(endpoint)) {
+			const response = await fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
+			if(endpoint == 'items') {
+				for(const obj of response) {
+					obj.facts = [];
+					//hackedy hack hack
+					const buff = obj.details?.infix_upgrade?.buff;
+					if(buff) {
+						obj.facts.push({
+							type       : 'Buff',
+							buff       : buff.skill_id,
+							icon       : '',
+							order      : -1,
+							apply_count: 0,
+							duration   : { secs: 0, nanos: 0 }
+						} as API.Fact)
+					}
+				}
+			}
+			return response;
 		}
 		else {
 			return new Promise((resolve, reject) => {
@@ -16,14 +34,7 @@ class FakeAPI implements APIImplementation {
 				}
 				else {
 					console.info(`'${endpoint}' doesn't exist in mock data, synthesizing`);
-					if(endpoint == 'items') {
-						resolve(ids.map(id => ({
-							id,
-							name: 'item #'+id,
-							icon: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEkAAABJCAIAAAD+EZyLAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFhSURBVGhD7ZoxkoIwFIYfexa0cDwBnkArT4ElNnuDPQC2dtvaqyeQE1gt3CWSEAOoszuzJoy/838N/CSZ4Zu8FxoipZS8KR/2+o7QDRO6YUI3TOiGCd0woRsmdMOEbpjQDRO6YUI3TOiGCd0eUG1mUTTbVDa+Iv727bh6NVfW5B+Y+lxsRYr1KNKsjnZEb+YV99DtsVnX0Ay66X4KQP2TMk9Ekry0UalD2s/NE0kP5r4/3Yy0g9fYy/b+CcK5mQmdF+zm25c3ubPYj1ywfqv2u0LS5dxGkXg8FTn/PKy10aT2no5jG5v8NGHPku3C9o9GN+SghHW7K6tT5vYmPMHcfivBgfDnpnuk2O2dzPwzT+pvQnvy1wf8sN92f25x9m1kdGsZoTg71Qde23Jfk3LQkhT+g4EJ3TChGyZ0w4RumNANE7phQjdM6IYJ3TChGyZ0w4RumNANE7phQjdM6IaIyAXGxL3ck02bowAAAABJRU5ErkJggg==',
-						})) as APIResponseTypeMap[typeof endpoint][]);
-					}
-					else if(endpoint == 'pets') {
+					if(endpoint == 'pets') {
 						resolve(ids.map(id => ({
 							id,
 							name: 'pet #'+id,

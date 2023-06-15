@@ -238,9 +238,12 @@ namespace API {
 	}
 
 	interface Item {
-		id : number
-		icon : string
-		name : string
+		id          : number
+		icon        : string
+		name        : string
+		rarity      : 'Legendary' | 'Ascended' | 'Exotic' | 'Rare' | 'Fine' | 'Uncommon' | 'Common' | 'Trash'
+		description : string
+		facts       : Fact[]
 		//TODO
 	}
 
@@ -285,7 +288,6 @@ interface HandlerParams<TFact = API.Fact> {
 	skill   : API.Skill | API.Trait & { [k : string] : undefined  } //to allow for conditional chaining for unknown props. 
 }
 
-//TODO(Rennorb): some of these don't exist yet
 type APIResponseTypeMap = {
 	skills         : API.Skill;
 	traits         : API.Trait;

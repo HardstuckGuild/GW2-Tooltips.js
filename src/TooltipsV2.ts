@@ -2,8 +2,8 @@
 // The way that affecting traits are captures also seems wrong, but i haven't looked into that yet. 
 // The user needs to specify what traits should be used or we may provide a capture function for them that can be called on a trait object, but we should never to it automagically.
 //TODO(Rennorb): Provide a clean way to construct custom tooltips. Currently with the old version we manipulate the cache before the hook function gets called, which really isn't the the best.
-//TODO(Rennorb): This should also compile to a single file for ease of use, either we want to actually put everything back in one file or get tsc to merge the files in a simple way. Another option would be to bundle everything with something like rollup. That way we can also easily produce minified versions, although we will have to introduce node-modules for that which i strongly dislike.
-//TODO(Rennorb): Multi skill tooltips (multiple boxes)
+//TODO(Rennorb): Think about bundling everything with something like rollup so way we can also easily produce minified versions, although we will have to introduce node-modules for that which i strongly dislike.
+//TODO(Rennorb): Multi skill tooltips (multiple boxes) (kindof works nit not complete)
 //TODO(Rennorb): Option to show whole skill-chain (maybe on button hold)?
 //TODO(Rennorb): Stop using these jank custom tags. There is no reason to do so and its technically not legal per html spec.
 //TODO(Rennorb): The positioning code seems a bit wired, it tends to 'stick' to the borders more than it should.
@@ -12,8 +12,11 @@
 //TODO(Rennorb) @correctness: Some of the code uses very aggressive rounding resulting in wrong numbers in some places. Look over this again.
 // In general only round right before displaying a number, calculations always happen with non rounded values.
 //TODO(Rennorb): Trait game-mode splits
-//TODO(Rennorb): link minion skills to minion summon skill
+//TODO(Rennorb): Link minion skills to minion summon skill.
 //TODO(Rennorb) @cleanup: go over gamemode splitting again, currently ist a huge mess. 
+//TODO(Rennorb): Add item stats to tooltips.
+//TODO(Rennorb): specs, items, pets, itemstats and amulets endpoints.
+
 
 
 type TypeBridge<T, K extends keyof T> = [K, T[K]]
@@ -155,7 +158,7 @@ class GW2TooltipsV2 {
 				const type = (gw2Object.getAttribute('type') || 'skill') + 's' as ObjectDataStorageKeys;
 				const objId = +String(gw2Object.getAttribute('objId'))
 
-				if(type != 'skills' && type != 'traits' && type != 'pvp/amulets') return; //TODO(Rennorb): others disabled for now
+				if(type != 'skills' && type != 'traits' && type != 'pvp/amulets' && type != "items") return; //TODO(Rennorb): others disabled for now
 
 				const data = APICache.storage[type].get(objId)
 				if(data) {
@@ -187,6 +190,9 @@ class GW2TooltipsV2 {
 		})
 	}
 
+	//TODO(Rennorb) @cleanup: as it turns out they cal all be treated the same if you do the styling in the css. so this can probably be reduced to 
+	// if(spec) special tereatment
+	// else generic
 	inflators : InflatorMap = (function() {
 		const genericIconInflater = () => (gw2Object : HTMLElement, data : { name : string, icon? : string }) => {
 			const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, undefined, data.name));
@@ -260,7 +266,7 @@ class GW2TooltipsV2 {
 		return skillSlot
 	}
 
-	getRecharge(apiObject : API.Skill | API.Trait, gameMode : GameMode) : API.Duration | undefined {
+	getRecharge(apiObject : { facts : API.Fact[], facts_override? : API.FactsOverride[] }, gameMode : GameMode) : API.Duration | undefined {
 		let recharge = apiObject.facts.find(f => f.type === 'Recharge');
 		let override = apiObject.facts_override?.find(f => f.mode === gameMode)?.facts.find(f => f.type === 'Recharge');
 		return (override || recharge)?.duration;
@@ -281,7 +287,7 @@ class GW2TooltipsV2 {
 
 		const headerElements = [TUtilsV2.newElm('teb', apiObject.name)];
 		
-		//TODO(Rennorb): do the slot stuff serverside
+		//TODO(Rennorb): slots stuff might not be doable serverside since the server is missing context. this is at least a case of @cleanup
 		if('palettes' in apiObject) headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
 		else if('slot' in apiObject) headerElements.push(TUtilsV2.newElm('tes', `( ${apiObject.slot} )`));
 
@@ -334,6 +340,7 @@ class GW2TooltipsV2 {
 			description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`
 			parts.push(description)
 		}
+		//TODO(Rennorb): implement itemstats
 
 		if('facts' in apiObject) {
 			parts.push(...SkillsProcessor.generateFacts(apiObject, context))
@@ -408,7 +415,7 @@ class GW2TooltipsV2 {
 	}
 }
 
-type SupportedTTTypes = API.Skill | API.Trait | API.Amulet; //TODO(Rennorb) @cleanup: once its finished
+type SupportedTTTypes = API.Skill | API.Trait | API.Amulet | API.Item; //TODO(Rennorb) @cleanup: once its finished
 
 
 const gw2tooltips = new GW2TooltipsV2()

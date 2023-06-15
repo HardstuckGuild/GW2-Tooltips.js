@@ -1,8 +1,26 @@
 "use strict";
 class FakeAPI {
-    bulkRequest(endpoint, ids) {
-        if (['specializations', 'pvp/amulets'].includes(endpoint)) {
-            return fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
+    async bulkRequest(endpoint, ids) {
+        var _a, _b;
+        if (['specializations', 'pvp/amulets', 'items'].includes(endpoint)) {
+            const response = await fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
+            if (endpoint == 'items') {
+                for (const obj of response) {
+                    obj.facts = [];
+                    const buff = (_b = (_a = obj.details) === null || _a === void 0 ? void 0 : _a.infix_upgrade) === null || _b === void 0 ? void 0 : _b.buff;
+                    if (buff) {
+                        obj.facts.push({
+                            type: 'Buff',
+                            buff: buff.skill_id,
+                            icon: '',
+                            order: -1,
+                            apply_count: 0,
+                            duration: { secs: 0, nanos: 0 }
+                        });
+                    }
+                }
+            }
+            return response;
         }
         else {
             return new Promise((resolve, reject) => {
@@ -12,14 +30,7 @@ class FakeAPI {
                 }
                 else {
                     console.info(`'${endpoint}' doesn't exist in mock data, synthesizing`);
-                    if (endpoint == 'items') {
-                        resolve(ids.map(id => ({
-                            id,
-                            name: 'item #' + id,
-                            icon: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEkAAABJCAIAAAD+EZyLAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFhSURBVGhD7ZoxkoIwFIYfexa0cDwBnkArT4ElNnuDPQC2dtvaqyeQE1gt3CWSEAOoszuzJoy/838N/CSZ4Zu8FxoipZS8KR/2+o7QDRO6YUI3TOiGCd0woRsmdMOEbpjQDRO6YUI3TOiGCd0eUG1mUTTbVDa+Iv727bh6NVfW5B+Y+lxsRYr1KNKsjnZEb+YV99DtsVnX0Ay66X4KQP2TMk9Ekry0UalD2s/NE0kP5r4/3Yy0g9fYy/b+CcK5mQmdF+zm25c3ubPYj1ywfqv2u0LS5dxGkXg8FTn/PKy10aT2no5jG5v8NGHPku3C9o9GN+SghHW7K6tT5vYmPMHcfivBgfDnpnuk2O2dzPwzT+pvQnvy1wf8sN92f25x9m1kdGsZoTg71Qde23Jfk3LQkhT+g4EJ3TChGyZ0w4RumNANE7phQjdM6IYJ3TChGyZ0w4RumNANE7phQjdM6IaIyAXGxL3ck02bowAAAABJRU5ErkJggg==',
-                        })));
-                    }
-                    else if (endpoint == 'pets') {
+                    if (endpoint == 'pets') {
                         resolve(ids.map(id => ({
                             id,
                             name: 'pet #' + id,
@@ -97,33 +108,28 @@ class APICache {
                 }
             }
         };
-        switch (endpoint) {
-            case 'skills':
-                {
-                    for (const palette of datum.palettes) {
-                        for (const slot of palette.slots) {
-                            if (slot.profession !== 'None' && slot.next_chain && !this.storage.items.has(slot.next_chain)) {
-                                connectedIdsStorage.skills.add(slot.next_chain);
-                            }
-                        }
-                    }
-                    if (datum.sub_skills) {
-                        for (const subSkill of datum.sub_skills)
-                            if (!this.storage.skills.has(subSkill))
-                                connectedIdsStorage.skills.add(subSkill);
-                    }
-                    addFacts(datum.facts);
-                    if (datum.facts_override) {
-                        for (const { facts } of datum.facts_override)
-                            addFacts(facts);
+        if ('palettes' in datum) {
+            for (const palette of datum.palettes) {
+                for (const slot of palette.slots) {
+                    if (slot.profession !== 'None' && slot.next_chain && !this.storage.items.has(slot.next_chain)) {
+                        connectedIdsStorage.skills.add(slot.next_chain);
                     }
                 }
-                break;
-            case 'traits':
-                {
-                    addFacts(datum.facts);
-                }
-                break;
+            }
+        }
+        if ('sub_skills' in datum) {
+            if (datum.sub_skills) {
+                for (const subSkill of datum.sub_skills)
+                    if (!this.storage.skills.has(subSkill))
+                        connectedIdsStorage.skills.add(subSkill);
+            }
+        }
+        if ('facts' in datum) {
+            addFacts(datum.facts);
+        }
+        if ('facts_override' in datum && datum.facts_override) {
+            for (const { facts } of datum.facts_override)
+                addFacts(facts);
         }
     }
 }
@@ -196,8 +202,8 @@ class SkillsProcessor {
         }
         return weaponStrength;
     }
-    static generateFacts(skill, context) {
-        if (!skill.facts.length && !skill.facts_override)
+    static generateFacts(apiObject, context) {
+        if (!apiObject.facts.length && !apiObject.facts_override)
             return [];
         let totalDefianceBreak = 0;
         const processFactData = (fact) => {
@@ -332,16 +338,20 @@ class SkillsProcessor {
                 }
             };
             const buff = APICache.storage.skills.get(fact.buff || 0);
-            const data = { fact, buff, skill };
-            const htmlContent = factInflators[fact.type](data);
-            return TUtilsV2.newElm('te', TUtilsV2.newImg(iconSlug, 'iconmed'), TUtilsV2.fromHTML(htmlContent));
+            const data = { fact, buff, skill: apiObject };
+            const wrapper = TUtilsV2.newElm('te');
+            const text = TUtilsV2.fromHTML(factInflators[fact.type](data));
+            if (iconSlug)
+                wrapper.append(TUtilsV2.newImg(iconSlug, 'iconmed'));
+            wrapper.append(text);
+            return wrapper;
         };
-        const factWraps = skill.facts
+        const factWraps = apiObject.facts
             .sort((a, b) => a.order - b.order)
             .map(processFactData)
             .filter(d => d);
-        if ((skill.facts.length == 0 || context.gameMode !== 'Pve') && skill.facts_override) {
-            for (const override of skill.facts_override) {
+        if ((apiObject.facts.length == 0 || context.gameMode !== 'Pve') && apiObject.facts_override) {
+            for (const override of apiObject.facts_override) {
                 if (override.mode === context.gameMode) {
                     const sortedOverrideFacts = [...override.facts].sort((a, b) => a.order - b.order);
                     sortedOverrideFacts.forEach(fact => {
@@ -357,8 +367,8 @@ class SkillsProcessor {
             const defianceWrap = TUtilsV2.newElm('te.defiance', TUtilsV2.newImg('1938788.png', 'iconmed'), TUtilsV2.newElm('tem', `Defiance Break: ${totalDefianceBreak}`));
             factWraps.push(defianceWrap);
         }
-        if ('range' in skill && skill.range) {
-            const rangeWrap = TUtilsV2.newElm('te', TUtilsV2.newImg('156666.png', 'iconmed'), TUtilsV2.newElm('tem', `Range: ${skill.range}`));
+        if ('range' in apiObject && apiObject.range) {
+            const rangeWrap = TUtilsV2.newElm('te', TUtilsV2.newImg('156666.png', 'iconmed'), TUtilsV2.newElm('tem', `Range: ${apiObject.range}`));
             factWraps.push(rangeWrap);
         }
         return factWraps;
@@ -511,7 +521,7 @@ class GW2TooltipsV2 {
                 const gw2Object = e.target;
                 const type = (gw2Object.getAttribute('type') || 'skill') + 's';
                 const objId = +String(gw2Object.getAttribute('objId'));
-                if (type != 'skills' && type != 'traits' && type != 'pvp/amulets')
+                if (type != 'skills' && type != 'traits' && type != 'pvp/amulets' && type != "items")
                     return;
                 const data = APICache.storage[type].get(objId);
                 if (data) {
