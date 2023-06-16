@@ -4,12 +4,16 @@
 
 class FakeAPI implements APIImplementation {
 	async bulkRequest<T extends keyof APIResponseTypeMap>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]> {
-		if(['specializations', 'pvp/amulets', 'items'].includes(endpoint)) {
+		if(['specializations', 'pvp/amulets', 'items', 'itemstats'].includes(endpoint)) {
 			const response = await fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
 			if(endpoint == 'items') {
 				for(const obj of response) {
-					obj.facts = [];
 					//hackedy hack hack
+					obj.facts = [];
+
+					obj.attribute_adjustment = obj.details?.attribute_adjustment;
+
+					//sigils
 					const buff = obj.details?.infix_upgrade?.buff;
 					if(buff) {
 						obj.facts.push({
@@ -19,7 +23,39 @@ class FakeAPI implements APIImplementation {
 							order      : -1,
 							apply_count: 0,
 							duration   : { secs: 0, nanos: 0 }
-						} as API.Fact)
+						} as API.BuffFact)
+					}
+
+					//runes
+					const bonuses : string[] = obj.details?.bonuses;
+					if(bonuses) {
+						for(const [i, bonus] of bonuses.entries()) {
+							obj.facts.push({
+								type : 'NoData',
+								icon : '',
+								order: -1,
+								text : `(${i+1}): ${bonus}`, //TODO(Rennorb): introduce own fact type taht includes the icon
+							} as API.NoDataFact)
+						}
+					}
+				}
+			}
+			else if (endpoint == 'pvp/amulets') {
+				for(const obj of response) {
+					obj.facts = [];
+					//hackedy hack hack
+					for(const [attribute, adjustment] of Object.entries(obj.attributes)) {
+						obj.facts.push({
+							type  : 'AttributeAdjust',
+							icon  : '',
+							order : -1,
+							target: attribute,
+							value : adjustment,
+							attribute_multiplier : 0,
+							level_exponent       : 0,
+							hit_count            : 0,
+							level_multiplier     : 0,
+						} as API.AttributeAdjustFact)
 					}
 				}
 			}

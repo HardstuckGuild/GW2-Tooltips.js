@@ -1,4 +1,4 @@
-class SkillsProcessor {
+class FactsProcessor {
 	static MissingBuff : API.Skill = {
 		id               : 0,
 		name             : 'Missing Buff',
@@ -77,9 +77,7 @@ class SkillsProcessor {
 		return weaponStrength
 	}
 
-	static generateFacts(apiObject : { facts : API.Fact[], facts_override? : API.FactsOverride[], range? : never }, context : Context) : HTMLElement[] {
-		if(!apiObject.facts.length && !apiObject.facts_override) return []
-
+	static generateFacts(apiObject : { facts : API.Fact[], facts_override? : API.FactsOverride[], attribute_adjustment? : number }, context : Context, additional_facts? : API.Fact[]) : HTMLElement[] {
 		let totalDefianceBreak = 0
 
 		const processFactData = (fact : API.Fact) => {
@@ -221,9 +219,9 @@ class SkillsProcessor {
 				},
 				AttributeAdjust: ({ fact }) =>{
 					//TODO(Rennorb) @cleanup
-					const attribute = (context.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0
+					const attribute = apiObject.attribute_adjustment || (context.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0
 					const value = Math.round(fact.value + attribute * fact.attribute_multiplier + context.stats.level ** fact.level_exponent * fact.level_multiplier)
-					return `<tem> ${fact.text || fact.target} : ${value > 0 ? '+'+value : value} </tem>`
+					return `<tem> ${value > 0 ? '+'+value : value} ${fact.text || fact.target} </tem>`
 				},
 				BuffConversion : ({ fact }) =>{
 					//TODO(Rennorb) @cleanup
@@ -248,7 +246,12 @@ class SkillsProcessor {
 				.sort((a, b) => a.order - b.order)
 				.map(processFactData)
 				.filter(d => d) as HTMLElement[] // ts doesn't understand what the predicate does
-				
+
+		if(additional_facts) {
+			for(const fact of additional_facts.map(processFactData)) {
+				if(fact) factWraps.push(fact);
+			}
+		}
 
 		if((apiObject.facts.length == 0 || context.gameMode !== 'Pve') && apiObject.facts_override) { //TODO(Rennorb) @cleanup
 			for(const override of apiObject.facts_override) {

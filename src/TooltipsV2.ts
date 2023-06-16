@@ -141,8 +141,12 @@ class GW2TooltipsV2 {
 			pets           : new Map<number, HTMLElement[] | undefined>(),
 			'pvp/amulets'  : new Map<number, HTMLElement[] | undefined>(),
 		}
+		const statsToGet = new Set<number>();
 
 		for(const gw2Object of scope.getElementsByTagName('gw2object') as HTMLCollectionOf<HTMLElement>) {
+			const stats = +String(gw2Object.getAttribute('stats'))
+			if(!isNaN(stats)) statsToGet.add(stats);
+
 			const objId = +String(gw2Object.getAttribute('objId'))
 			//TODO(Rennorb) @cleanup @compat: this is literally just for naming convenience.
 			// Figure out if we can just get rid of the +'s' or if that poses an issue with backwards compat
@@ -155,12 +159,12 @@ class GW2TooltipsV2 {
 
 			gw2Object.addEventListener('mouseenter', (e) => {
 				const gw2Object = e.target as HTMLElement;
-				const type = (gw2Object.getAttribute('type') || 'skill') + 's' as ObjectDataStorageKeys;
+				const type = (gw2Object.getAttribute('type') || 'skill') as LegacyCompat.ObjectType + 's';
 				const objId = +String(gw2Object.getAttribute('objId'))
 
 				if(type != 'skills' && type != 'traits' && type != 'pvp/amulets' && type != "items") return; //TODO(Rennorb): others disabled for now
 
-				const data = APICache.storage[type].get(objId)
+				const data = APICache.storage[type].get(objId) //TODO(Rennorb) @cleanup: move into generateToolTipList?
 				if(data) {
 					this.tooltip.replaceChildren(...this.generateToolTipList(data, gw2Object));
 					this.tooltip.style.display = ''; //empty value resets actual value to use stylesheet
@@ -171,6 +175,8 @@ class GW2TooltipsV2 {
 				this.cycleTooltipsHandler = undefined;
 			})
 		}
+
+		if(statsToGet.size > 0) APICache.ensureExistence('itemstats', statsToGet.values());
 
 		Object.entries(objectsToGet).forEach(async ([key, values]) => {
 			if(values.size == 0) return;
@@ -273,7 +279,7 @@ class GW2TooltipsV2 {
 	}
 
 	// TODO(Rennorb) @cleanup: split this into the inflator system aswell. its getting to convoluted already
-	generateToolTip(apiObject : SupportedTTTypes, context : Context) : HTMLElement {
+	generateToolTip(apiObject : SupportedTTTypes, context : Context, stats? : API.ItemStat, additionalFacts? : API.Fact[]) : HTMLElement {
 		let recharge : HTMLElement | '' = ''
 		if('facts' in apiObject) {
 			const _recharge = this.getRecharge(apiObject, context.gameMode);
@@ -285,7 +291,8 @@ class GW2TooltipsV2 {
 			}
 		}
 
-		const headerElements = [TUtilsV2.newElm('teb', apiObject.name)];
+		const namePrefix = stats ? stats.name + ' ' : '';
+		const headerElements = [TUtilsV2.newElm('teb', namePrefix + apiObject.name)];
 		
 		//TODO(Rennorb): slots stuff might not be doable serverside since the server is missing context. this is at least a case of @cleanup
 		if('palettes' in apiObject) headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
@@ -340,14 +347,9 @@ class GW2TooltipsV2 {
 			description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`
 			parts.push(description)
 		}
-		//TODO(Rennorb): implement itemstats
 
 		if('facts' in apiObject) {
-			parts.push(...SkillsProcessor.generateFacts(apiObject, context))
-		}
-
-		if('attributes' in apiObject) {
-			parts.push(...Object.entries(apiObject.attributes).map(([attrib, value]) => TUtilsV2.newElm('teh', `+${value} ${attrib}`)))
+			parts.push(...FactsProcessor.generateFacts(apiObject, context, additionalFacts))
 		}
 
 		const tooltip = TUtilsV2.newElm('div.tooltip', ...parts)
@@ -357,12 +359,12 @@ class GW2TooltipsV2 {
 		return tooltip;
 	}
 
-	generateToolTipList(initialSkill : SupportedTTTypes, gw2Object: HTMLElement) : HTMLElement[] {
-		const skillChain : (typeof initialSkill)[] = []
-		const validTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard']
+	generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTMLElement) : HTMLElement[] {
+		const objectChain : SupportedTTTypes[] = []
+		const validPaletteTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard']
 
-		const addSkillToChain = (currentSkill : SupportedTTTypes) => {
-			skillChain.push(currentSkill)
+		const addObjectsToChain = (currentSkill : SupportedTTTypes) => {
+			objectChain.push(currentSkill)
 
 			if('palettes' in currentSkill) {
 				for(const palette of currentSkill.palettes) {
@@ -370,7 +372,7 @@ class GW2TooltipsV2 {
 						if(slot.next_chain && slot.profession !== 'None') {
 							const nextSkillInChain = APICache.storage.skills.get(slot.next_chain);
 							if(nextSkillInChain) {
-								addSkillToChain(nextSkillInChain)
+								addObjectsToChain(nextSkillInChain)
 							}
 						}
 					}
@@ -379,39 +381,62 @@ class GW2TooltipsV2 {
 				if(currentSkill.sub_skills) {
 					for(const subSkillId of currentSkill.sub_skills) {
 						const subSkillInChain = APICache.storage.skills.get(subSkillId);
-						if(subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
-							addSkillToChain(subSkillInChain)
+						if(subSkillInChain && subSkillInChain.palettes.some(palette => validPaletteTypes.includes(palette.type))) {
+							addObjectsToChain(subSkillInChain)
 						}
 					}
 				}
 			}
 		}
 
-		addSkillToChain(initialSkill)
+		addObjectsToChain(initialAPIObject)
+
+		const additionalFacts : API.Fact[] = [];
+		const statSetId = +String(gw2Object.getAttribute('stats'));
+		let statSet : API.ItemStat | undefined = undefined;
+		if(!isNaN(statSetId)) {
+			statSet = APICache.storage.itemstats.get(statSetId);
+			if(!statSet) console.error(`itemstats #${statSetId} is missing in the cache`);
+			else {
+				for(const {attribute, value, multiplier} of statSet.attributes) {
+					additionalFacts.push({
+						type  : 'AttributeAdjust',
+						icon  : '',
+						order : -1,
+						target: attribute,
+						value,
+						attribute_multiplier : multiplier,
+						level_exponent       : 0,
+						hit_count            : 0,
+						level_multiplier     : 0,
+					} as API.AttributeAdjustFact);
+				}
+			}
+		}
 
 		const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
-		const chainTooltips = skillChain.map(skill => this.generateToolTip(skill, context));
-		chainTooltips.forEach(tooltip => this.tooltip.append(tooltip))
+		const tooltipChain = objectChain.map(obj => this.generateToolTip(obj, context, statSet, additionalFacts));
+		this.tooltip.append(...tooltipChain)
 
-		if(chainTooltips.length > 1) {
+		if(tooltipChain.length > 1) {
 			gw2Object.classList.add('cycler')
 			gw2Object.title = 'Right-click to cycle through tooltips'
 
 			let currentTooltipIndex = 0
-			this.displayCorrectChainTooltip(chainTooltips, currentTooltipIndex)
+			this.displayCorrectChainTooltip(tooltipChain, currentTooltipIndex)
 
 			this.cycleTooltipsHandler = () => {
 				gw2tooltips.cycleTooltips() //TODO(Rennorb) @cleanup: why are there two functions with basically the same name
-				currentTooltipIndex = (currentTooltipIndex + 1) % chainTooltips.length
-				gw2tooltips.displayCorrectChainTooltip(chainTooltips, currentTooltipIndex)
+				currentTooltipIndex = (currentTooltipIndex + 1) % tooltipChain.length
+				gw2tooltips.displayCorrectChainTooltip(tooltipChain, currentTooltipIndex)
 				this.positionTooltip()
 			};
 		}
 		else {
-			chainTooltips[0].classList.add('active'); // single tooltip is always expanded
+			tooltipChain[0].classList.add('active'); // single tooltip is always expanded
 		}
 
-		return chainTooltips
+		return tooltipChain
 	}
 }
 

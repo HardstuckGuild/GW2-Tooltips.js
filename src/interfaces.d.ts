@@ -244,6 +244,7 @@ namespace API {
 		rarity      : 'Legendary' | 'Ascended' | 'Exotic' | 'Rare' | 'Fine' | 'Uncommon' | 'Common' | 'Trash'
 		description : string
 		facts       : Fact[]
+		attribute_adjustment? : number;
 		//TODO
 	}
 
@@ -263,23 +264,29 @@ namespace API {
 	}
 
 	interface Amulet {
+		id    : number
+		icon  : string
+		name  : string
+		facts : AttributeAdjustFact[]
+	}
+
+	interface ItemStat {
 		id         : number
-		icon       : string
 		name       : string
-		attributes : {
-			[k in Exclude<Attributes, 'None'>] : number | undefined
-		}
+		attributes : { 
+			attribute  : Exclude<Attributes, 'None'>
+			value      : number
+			multiplier : number
+		}[]
 	}
 }
 
-type ObjectDataStorageKeys = `${LegacyCompat.ObjectType}s`
-
 type ObjectDataStorage = {
-	[k in ObjectDataStorageKeys] : Map<number, APIResponseTypeMap[k]>
+	[k in Endpoints] : Map<number, APIResponseTypeMap[k]>
 }
 
 type ObjectsToFetch = {
-	[k in ObjectDataStorageKeys] : Map<number, HTMLElement[] | undefined>
+	[k in `${LegacyCompat.ObjectType}s`] : Map<number, HTMLElement[] | undefined>
 }
 
 interface HandlerParams<TFact = API.Fact> {
@@ -295,6 +302,7 @@ type APIResponseTypeMap = {
 	specializations: API.Specialization;
 	pets           : API.Pet;
 	'pvp/amulets'  : API.Amulet;
+	itemstats      : API.ItemStat;
 }
 
 type Endpoints = keyof APIResponseTypeMap;

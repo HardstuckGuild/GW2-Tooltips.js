@@ -1,13 +1,14 @@
 "use strict";
 class FakeAPI {
     async bulkRequest(endpoint, ids) {
-        var _a, _b;
-        if (['specializations', 'pvp/amulets', 'items'].includes(endpoint)) {
+        var _a, _b, _c, _d;
+        if (['specializations', 'pvp/amulets', 'items', 'itemstats'].includes(endpoint)) {
             const response = await fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
             if (endpoint == 'items') {
                 for (const obj of response) {
                     obj.facts = [];
-                    const buff = (_b = (_a = obj.details) === null || _a === void 0 ? void 0 : _a.infix_upgrade) === null || _b === void 0 ? void 0 : _b.buff;
+                    obj.attribute_adjustment = (_a = obj.details) === null || _a === void 0 ? void 0 : _a.attribute_adjustment;
+                    const buff = (_c = (_b = obj.details) === null || _b === void 0 ? void 0 : _b.infix_upgrade) === null || _c === void 0 ? void 0 : _c.buff;
                     if (buff) {
                         obj.facts.push({
                             type: 'Buff',
@@ -16,6 +17,35 @@ class FakeAPI {
                             order: -1,
                             apply_count: 0,
                             duration: { secs: 0, nanos: 0 }
+                        });
+                    }
+                    const bonuses = (_d = obj.details) === null || _d === void 0 ? void 0 : _d.bonuses;
+                    if (bonuses) {
+                        for (const [i, bonus] of bonuses.entries()) {
+                            obj.facts.push({
+                                type: 'NoData',
+                                icon: '',
+                                order: -1,
+                                text: `(${i + 1}): ${bonus}`,
+                            });
+                        }
+                    }
+                }
+            }
+            else if (endpoint == 'pvp/amulets') {
+                for (const obj of response) {
+                    obj.facts = [];
+                    for (const [attribute, adjustment] of Object.entries(obj.attributes)) {
+                        obj.facts.push({
+                            type: 'AttributeAdjust',
+                            icon: '',
+                            order: -1,
+                            target: attribute,
+                            value: adjustment,
+                            attribute_multiplier: 0,
+                            level_exponent: 0,
+                            hit_count: 0,
+                            level_multiplier: 0,
                         });
                     }
                 }
@@ -62,6 +92,7 @@ class APICache {
             pets: new Set(),
             'pvp/amulets': new Set(),
             specializations: new Set(),
+            itemstats: new Set(),
         }, { [endpoint]: new Set(initialIds) });
         const findNextRelevantEndpoint = () => {
             for (const [endpoint, ids] of Object.entries(additionalIds))
@@ -140,8 +171,9 @@ APICache.storage = {
     pets: new Map(),
     'pvp/amulets': new Map(),
     specializations: new Map(),
+    itemstats: new Map(),
 };
-class SkillsProcessor {
+class FactsProcessor {
     static calculateModifier({ formula, base_amount, formula_param1: level_scaling, formula_param2 }, { level, power, conditionDamage: condition_damage, healing: healing_power }) {
         switch (formula) {
             case 0:
@@ -202,9 +234,7 @@ class SkillsProcessor {
         }
         return weaponStrength;
     }
-    static generateFacts(apiObject, context) {
-        if (!apiObject.facts.length && !apiObject.facts_override)
-            return [];
+    static generateFacts(apiObject, context, additional_facts) {
         let totalDefianceBreak = 0;
         const processFactData = (fact) => {
             if (fact.type === 'Recharge') {
@@ -327,9 +357,9 @@ class SkillsProcessor {
                     return `<tem> ${fact.text}: ${hitCountLabel} ${Math.round(damage)} </tem>`;
                 },
                 AttributeAdjust: ({ fact }) => {
-                    const attribute = context.stats[TUtilsV2.Uncapitalize(fact.target)] || 0;
+                    const attribute = apiObject.attribute_adjustment || context.stats[TUtilsV2.Uncapitalize(fact.target)] || 0;
                     const value = Math.round(fact.value + attribute * fact.attribute_multiplier + context.stats.level ** fact.level_exponent * fact.level_multiplier);
-                    return `<tem> ${fact.text || fact.target} : ${value > 0 ? '+' + value : value} </tem>`;
+                    return `<tem> ${value > 0 ? '+' + value : value} ${fact.text || fact.target} </tem>`;
                 },
                 BuffConversion: ({ fact }) => {
                     const attribute = context.stats[TUtilsV2.Uncapitalize(fact.source)] || 0;
@@ -350,6 +380,12 @@ class SkillsProcessor {
             .sort((a, b) => a.order - b.order)
             .map(processFactData)
             .filter(d => d);
+        if (additional_facts) {
+            for (const fact of additional_facts.map(processFactData)) {
+                if (fact)
+                    factWraps.push(fact);
+            }
+        }
         if ((apiObject.facts.length == 0 || context.gameMode !== 'Pve') && apiObject.facts_override) {
             for (const override of apiObject.facts_override) {
                 if (override.mode === context.gameMode) {
@@ -374,7 +410,7 @@ class SkillsProcessor {
         return factWraps;
     }
 }
-SkillsProcessor.MissingBuff = {
+FactsProcessor.MissingBuff = {
     id: 0,
     name: 'Missing Buff',
     description: 'This Buff failed to load',
@@ -507,7 +543,11 @@ class GW2TooltipsV2 {
             pets: new Map(),
             'pvp/amulets': new Map(),
         };
+        const statsToGet = new Set();
         for (const gw2Object of scope.getElementsByTagName('gw2object')) {
+            const stats = +String(gw2Object.getAttribute('stats'));
+            if (!isNaN(stats))
+                statsToGet.add(stats);
             const objId = +String(gw2Object.getAttribute('objId'));
             const type = (gw2Object.getAttribute('type') || 'skill') + 's';
             if (isNaN(objId) || !(type in objectsToGet))
@@ -534,6 +574,8 @@ class GW2TooltipsV2 {
                 this.cycleTooltipsHandler = undefined;
             });
         }
+        if (statsToGet.size > 0)
+            APICache.ensureExistence('itemstats', statsToGet.values());
         Object.entries(objectsToGet).forEach(async ([key, values]) => {
             if (values.size == 0)
                 return;
@@ -601,7 +643,7 @@ class GW2TooltipsV2 {
         let override = (_b = (_a = apiObject.facts_override) === null || _a === void 0 ? void 0 : _a.find(f => f.mode === gameMode)) === null || _b === void 0 ? void 0 : _b.facts.find(f => f.type === 'Recharge');
         return (_c = (override || recharge)) === null || _c === void 0 ? void 0 : _c.duration;
     }
-    generateToolTip(apiObject, context) {
+    generateToolTip(apiObject, context, stats, additionalFacts) {
         let recharge = '';
         if ('facts' in apiObject) {
             const _recharge = this.getRecharge(apiObject, context.gameMode);
@@ -609,7 +651,8 @@ class GW2TooltipsV2 {
                 recharge = TUtilsV2.newElm('ter', TUtilsV2.DurationToSeconds(_recharge) + 's', TUtilsV2.newImg('156651.png', 'iconsmall'));
             }
         }
-        const headerElements = [TUtilsV2.newElm('teb', apiObject.name)];
+        const namePrefix = stats ? stats.name + ' ' : '';
+        const headerElements = [TUtilsV2.newElm('teb', namePrefix + apiObject.name)];
         if ('palettes' in apiObject)
             headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
         else if ('slot' in apiObject)
@@ -655,28 +698,25 @@ class GW2TooltipsV2 {
             parts.push(description);
         }
         if ('facts' in apiObject) {
-            parts.push(...SkillsProcessor.generateFacts(apiObject, context));
-        }
-        if ('attributes' in apiObject) {
-            parts.push(...Object.entries(apiObject.attributes).map(([attrib, value]) => TUtilsV2.newElm('teh', `+${value} ${attrib}`)));
+            parts.push(...FactsProcessor.generateFacts(apiObject, context, additionalFacts));
         }
         const tooltip = TUtilsV2.newElm('div.tooltip', ...parts);
         tooltip.dataset.id = String(apiObject.id);
         tooltip.style.marginTop = '5px';
         return tooltip;
     }
-    generateToolTipList(initialSkill, gw2Object) {
-        const skillChain = [];
-        const validTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard'];
-        const addSkillToChain = (currentSkill) => {
-            skillChain.push(currentSkill);
+    generateToolTipList(initialAPIObject, gw2Object) {
+        const objectChain = [];
+        const validPaletteTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard'];
+        const addObjectsToChain = (currentSkill) => {
+            objectChain.push(currentSkill);
             if ('palettes' in currentSkill) {
                 for (const palette of currentSkill.palettes) {
                     for (const slot of palette.slots) {
                         if (slot.next_chain && slot.profession !== 'None') {
                             const nextSkillInChain = APICache.storage.skills.get(slot.next_chain);
                             if (nextSkillInChain) {
-                                addSkillToChain(nextSkillInChain);
+                                addObjectsToChain(nextSkillInChain);
                             }
                         }
                     }
@@ -684,33 +724,56 @@ class GW2TooltipsV2 {
                 if (currentSkill.sub_skills) {
                     for (const subSkillId of currentSkill.sub_skills) {
                         const subSkillInChain = APICache.storage.skills.get(subSkillId);
-                        if (subSkillInChain && subSkillInChain.palettes.some(palette => validTypes.includes(palette.type))) {
-                            addSkillToChain(subSkillInChain);
+                        if (subSkillInChain && subSkillInChain.palettes.some(palette => validPaletteTypes.includes(palette.type))) {
+                            addObjectsToChain(subSkillInChain);
                         }
                     }
                 }
             }
         };
-        addSkillToChain(initialSkill);
+        addObjectsToChain(initialAPIObject);
+        const additionalFacts = [];
+        const statSetId = +String(gw2Object.getAttribute('stats'));
+        let statSet = undefined;
+        if (!isNaN(statSetId)) {
+            statSet = APICache.storage.itemstats.get(statSetId);
+            if (!statSet)
+                console.error(`itemstats #${statSetId} is missing in the cache`);
+            else {
+                for (const { attribute, value, multiplier } of statSet.attributes) {
+                    additionalFacts.push({
+                        type: 'AttributeAdjust',
+                        icon: '',
+                        order: -1,
+                        target: attribute,
+                        value,
+                        attribute_multiplier: multiplier,
+                        level_exponent: 0,
+                        hit_count: 0,
+                        level_multiplier: 0,
+                    });
+                }
+            }
+        }
         const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
-        const chainTooltips = skillChain.map(skill => this.generateToolTip(skill, context));
-        chainTooltips.forEach(tooltip => this.tooltip.append(tooltip));
-        if (chainTooltips.length > 1) {
+        const tooltipChain = objectChain.map(obj => this.generateToolTip(obj, context, statSet, additionalFacts));
+        this.tooltip.append(...tooltipChain);
+        if (tooltipChain.length > 1) {
             gw2Object.classList.add('cycler');
             gw2Object.title = 'Right-click to cycle through tooltips';
             let currentTooltipIndex = 0;
-            this.displayCorrectChainTooltip(chainTooltips, currentTooltipIndex);
+            this.displayCorrectChainTooltip(tooltipChain, currentTooltipIndex);
             this.cycleTooltipsHandler = () => {
                 gw2tooltips.cycleTooltips();
-                currentTooltipIndex = (currentTooltipIndex + 1) % chainTooltips.length;
-                gw2tooltips.displayCorrectChainTooltip(chainTooltips, currentTooltipIndex);
+                currentTooltipIndex = (currentTooltipIndex + 1) % tooltipChain.length;
+                gw2tooltips.displayCorrectChainTooltip(tooltipChain, currentTooltipIndex);
                 this.positionTooltip();
             };
         }
         else {
-            chainTooltips[0].classList.add('active');
+            tooltipChain[0].classList.add('active');
         }
-        return chainTooltips;
+        return tooltipChain;
     }
 }
 GW2TooltipsV2.defaultContext = {

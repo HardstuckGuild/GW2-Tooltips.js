@@ -6,6 +6,7 @@ class APICache {
 		pets           : new Map<number, API.Pet>(),
 		'pvp/amulets'  : new Map<number, API.Amulet>(),
 		specializations: new Map<number, API.Specialization>(),
+		itemstats      : new Map<number, API.ItemStat>(),
 	}
 
 	static apiImpl : APIImplementation
@@ -24,6 +25,7 @@ class APICache {
 			pets           : new Set<number>(),
 			'pvp/amulets'  : new Set<number>(),
 			specializations: new Set<number>(),
+			itemstats      : new Set<number>(),
 		}, { [endpoint]: new Set(initialIds) })
 
 		const findNextRelevantEndpoint = () => {
@@ -46,6 +48,7 @@ class APICache {
 
 			try {
 				const response = await this.apiImpl.bulkRequest(currentEndpoint, request)
+				//TODO(Rennorb) @perf: provide option to disable this
 				const unobtainable = request.filter(id => !response.some(obj => obj.id == id))
 				if(unobtainable.length) console.warn(`Did not receive all requested ${currentEndpoint} ids. missing: `, unobtainable);
 
@@ -126,4 +129,7 @@ type ConnectedIdDatum = {
 } | {
 	endpoint : 'pvp/amulets'
 	datum    : APIResponseTypeMap['pvp/amulets']
+} | {
+	endpoint : 'itemstats'
+	datum    : APIResponseTypeMap['itemstats']
 }
