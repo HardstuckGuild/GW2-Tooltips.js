@@ -29,7 +29,12 @@ class TUtilsV2 {
 		return this.dummy.content
 	}
 
-	static GW2Text2HTML = (text? : string, tag = 'span') => text ? text.replace(/<c=@(.*?)>(.*?)<\/c>/g, `<${tag} class="color-$1">$2</${tag}>`).replace(/%%/g, '%') : '';
+	static GW2Text2HTML = (text? : string, tag = 'span', itemStackSize = 1) => text
+		? text
+			.replace(/<c=@(.*?)>(.*?)<\/c>/g, `<${tag} class="color-$1">$2</${tag}>`)
+			.replace(/%%/g, '%')
+			.replace(/\[(.+?)\]/g, itemStackSize > 1 ? '$1' : '')
+		: '';
 
 	//todo probably just spit out one value from the api
 	static DurationToSeconds = (dur : API.Duration) => dur.secs + dur.nanos / 10e8;

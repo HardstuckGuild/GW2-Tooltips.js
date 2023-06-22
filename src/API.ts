@@ -1,46 +1,13 @@
 //NOTE(Rennorb): The different API implementations exist to easily swap out the data source for a local one, or even the official api in theory.
 // If the API is not set on APICache it will set it to HSAPI on the first request to the cache.
 // This is only possible to do if you manually set up the GW2TooltipsV2 window-scoped object.
+// TODO(Rennorb) @cleanup: maybe this can go in the cionfig struct? seems to be the right place for it
 
 class FakeAPI implements APIImplementation {
 	async bulkRequest<T extends keyof APIResponseTypeMap>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]> {
-		if(['specializations', 'pvp/amulets', 'items', 'itemstats'].includes(endpoint)) {
+		if(['specializations', 'pvp/amulets', 'itemstats'].includes(endpoint)) {
 			const response = await fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
-			if(endpoint == 'items') {
-				for(const obj of response) {
-					//hackedy hack hack
-					obj.facts = [];
-
-					obj.attribute_adjustment = obj.details?.attribute_adjustment;
-
-					//sigils
-					const buff = obj.details?.infix_upgrade?.buff;
-					if(buff) {
-						obj.facts.push({
-							type       : 'Buff',
-							buff       : buff.skill_id,
-							icon       : '',
-							order      : -1,
-							apply_count: 0,
-							duration   : { secs: 0, nanos: 0 }
-						} as API.BuffFact)
-					}
-
-					//runes
-					const bonuses : string[] = obj.details?.bonuses;
-					if(bonuses) {
-						for(const [i, bonus] of bonuses.entries()) {
-							obj.facts.push({
-								type : 'NoData',
-								icon : '',
-								order: -1,
-								text : `(${i+1}): ${bonus}`, //TODO(Rennorb): introduce own fact type taht includes the icon
-							} as API.NoDataFact)
-						}
-					}
-				}
-			}
-			else if (endpoint == 'pvp/amulets') {
+			if (endpoint == 'pvp/amulets') {
 				for(const obj of response) {
 					obj.facts = [];
 					//hackedy hack hack

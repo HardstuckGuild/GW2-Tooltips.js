@@ -1,38 +1,9 @@
 "use strict";
 class FakeAPI {
     async bulkRequest(endpoint, ids) {
-        var _a, _b, _c, _d;
-        if (['specializations', 'pvp/amulets', 'items', 'itemstats'].includes(endpoint)) {
+        if (['specializations', 'pvp/amulets', 'itemstats'].includes(endpoint)) {
             const response = await fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
-            if (endpoint == 'items') {
-                for (const obj of response) {
-                    obj.facts = [];
-                    obj.attribute_adjustment = (_a = obj.details) === null || _a === void 0 ? void 0 : _a.attribute_adjustment;
-                    const buff = (_c = (_b = obj.details) === null || _b === void 0 ? void 0 : _b.infix_upgrade) === null || _c === void 0 ? void 0 : _c.buff;
-                    if (buff) {
-                        obj.facts.push({
-                            type: 'Buff',
-                            buff: buff.skill_id,
-                            icon: '',
-                            order: -1,
-                            apply_count: 0,
-                            duration: { secs: 0, nanos: 0 }
-                        });
-                    }
-                    const bonuses = (_d = obj.details) === null || _d === void 0 ? void 0 : _d.bonuses;
-                    if (bonuses) {
-                        for (const [i, bonus] of bonuses.entries()) {
-                            obj.facts.push({
-                                type: 'NoData',
-                                icon: '',
-                                order: -1,
-                                text: `(${i + 1}): ${bonus}`,
-                            });
-                        }
-                    }
-                }
-            }
-            else if (endpoint == 'pvp/amulets') {
+            if (endpoint == 'pvp/amulets') {
                 for (const obj of response) {
                     obj.facts = [];
                     for (const [attribute, adjustment] of Object.entries(obj.attributes)) {
@@ -223,6 +194,8 @@ class FactsProcessor {
             Scepter: 1000,
             Mace: 1000,
             Spear: 1000,
+            Speargun: 1000,
+            Trident: 1000,
         }[weapon_type];
         if (weapon_type === 'None') {
             if (palette_type === 'Standard' || palette_type === 'Toolbelt') {
@@ -445,7 +418,12 @@ class TUtilsV2 {
 TUtilsV2.iconSource = 'https://assets.gw2dat.com/';
 TUtilsV2.missingImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHEAAABuCAIAAACfnGvJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMCSURBVHhe7ZjpkeowEAaJywERD9GQDMGwumyPLj+2XssH+/UPyjMjjVBjUWXf3oJGTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSU51inr8d0u02PVwp/xf/MHQvt9Hm/Be7PlMgIHhyzCjn9hNlpc7ebxe9hhNPp8QifpTdfuz9Oe3thjHH6Cndkfv7DWb0/syNbnN8QJuzkZr5q5K+Xk2C6BtbCTDEAZJDTuIfKi0tUKuZgHhBx89P1Zj5rtK4YQzspL43z6RnltFBR5DMVKVhGFPTy3UYBO6vo0GuIMcxpvs1O2gbhei0tbOazRusvmCe+x6nddDtbBA4/LmEFNfN1o57TOD0F5ZIDGOh0CbL91SrqDYZ07iiQ5etGdrxNpGkz9XowQ53GG2Sa7H5rFc095n1W1nzdqOPUXzbXGMVYp1FqlqlVxMCNXEd9kG806t2n87cw2KE4g53mO/fUKrJgxkzp5Ou5Paf//E4wtNPzUelupki+32k8+cZgMDpQ6V9w6ij+UAeee8/fcLovcsojpzxyyiOnPHLKI6c8csqDOx39MH0B5JRHTnmGO00v2uKLi0B8e7E8ghf+7aP5RimyDrC1ga9HPmIXp2ajy95tvEhwUaHJlpaouUandgD7OF3MpHijbrAlf13MmsOwoulQxruzu9NfGLClvtO6QTF2d87mNISWuWT7ZGtUMwJy2nLVKK2YBcqGx3Mmp+XUomQqGUcf9YpT3afZ2BBUoWFpElqYnm7ooY5P9n8a9QRcDz83lfylFdVcJnGoUAfudAjlD+FopM7CNZy27/aTKr2KU4c93Y6jD/gG13F6HeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklOb9/gEv6oxxwmIw6QAAAABJRU5ErkJggg==';
 TUtilsV2.dummy = document.createElement('template');
-TUtilsV2.GW2Text2HTML = (text, tag = 'span') => text ? text.replace(/<c=@(.*?)>(.*?)<\/c>/g, `<${tag} class="color-$1">$2</${tag}>`).replace(/%%/g, '%') : '';
+TUtilsV2.GW2Text2HTML = (text, tag = 'span', itemStackSize = 1) => text
+    ? text
+        .replace(/<c=@(.*?)>(.*?)<\/c>/g, `<${tag} class="color-$1">$2</${tag}>`)
+        .replace(/%%/g, '%')
+        .replace(/\[(.+?)\]/g, itemStackSize > 1 ? '$1' : '')
+    : '';
 TUtilsV2.DurationToSeconds = (dur) => dur.secs + dur.nanos / 10e8;
 TUtilsV2.Uncapitalize = (str) => str.charAt(0).toLowerCase() + str.slice(1);
 class GW2TooltipsV2 {
@@ -652,7 +630,7 @@ class GW2TooltipsV2 {
             }
         }
         const namePrefix = stats ? stats.name + ' ' : '';
-        const headerElements = [TUtilsV2.newElm('teb', namePrefix + apiObject.name)];
+        const headerElements = [TUtilsV2.newElm('teb', namePrefix + TUtilsV2.GW2Text2HTML(apiObject.name))];
         if ('palettes' in apiObject)
             headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
         else if ('slot' in apiObject)

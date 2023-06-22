@@ -29,7 +29,7 @@ namespace API {
 
 	type Weapons1H = 'Focus' | 'Shield' | 'Torch' | 'Warhorn' | 'BowShort' | 'Axe' | 'Sword' | 'Dagger' | 'Pistol' | 'Scepter' | 'Mace';
 	type Weapons2H = 'Greatsword' | 'Hammer' | 'Staff' | 'BowLong' | 'Rifle';
-	type WeaponsAquatic = 'Spear';
+	type WeaponsAquatic = 'Spear' | 'Trident' | 'Speargun';
 
 	interface Palette {
 		id          : number
@@ -72,7 +72,7 @@ namespace API {
 	}
 	
 	interface BuffFact extends BasicFact<'Buff'> {
-		icon        : string
+		icon?       : string
 		buff        : number
 		apply_count : number
 		duration    : Duration
@@ -83,14 +83,14 @@ namespace API {
 	}
 	interface BuffConversionFact extends BasicFact<'BuffConversion'> {
 		text?   : string
-    icon    : string
+    icon?   : string
     source  : Attributes
     target  : Attributes
     percent : number
 	}
 	interface PrefixedBuffFact extends BasicFact<'PrefixedBuff'>{
     text?       : string
-    icon        : string
+    icon?       : string
     apply_count : number
     buff        : number
     prefix      : number
@@ -98,60 +98,60 @@ namespace API {
 	}
 	interface PrefixedBuffBriefFact extends BasicFact<'PrefixedBuffBrief'>{
 		text?  : string
-		icon   : string
+		icon?  : string
 		buff   : number
 		prefix : number
 	}
 	interface RadiusFact extends BasicFact<'Radius'> {
 		text  : string
-		icon  : string
+		icon? : string
 		value : number
 	}
 	interface RangeFact extends BasicFact<'Range'> {
 		text  : string
-		icon  : string
+		icon? : string
 		value : number
 	}
 	interface RechargeFact extends BasicFact<'Recharge'> {
 		text  : string
-		icon  : string
+		icon? : string
 		value : Duration
 	}
 	interface TimeFact extends BasicFact<'Time'> {
 		text     : string
-		icon     : string
+		icon?    : string
 		duration : Duration;
 	}
 	interface DistanceFact extends BasicFact<'Distance'> {
 		text     : string
-		icon     : string
+		icon?    : string
 		distance : number
 	}
 	interface DurationFact extends BasicFact<'Duration'> {
 		text?    : string
-		icon     : string
+		icon?    : string
 		duration : Duration
 	}
 	interface NumberFact extends BasicFact<'Number'> {
 		text  : string
-		icon  : string
+		icon? : string
 		value : number
 	}
 	type ComboFieldType = 'Water' | 'Fire' // incomplete
 	interface ComboFieldFact extends BasicFact<'ComboField'> {
 		text       : string
-		icon       : string
+		icon?      : string
 		field_type : ComboFieldType
 	}
 	type ComboFinisherType = "Blast" | "Projectile" // incomplete
 	interface ComboFinisherFact extends BasicFact<'ComboFinisher'> {
 		text          : string
-		icon          : string
+		icon?         : string
 		finisher_type : ComboFinisherType
 	}
 	interface HealingAdjustFact extends BasicFact<'HealingAdjust'> {
     text?      : string
-    icon       : string
+    icon?      : string
     value      : number
     attribute  : Attributes
     multiplier : number
@@ -159,22 +159,22 @@ namespace API {
 	}
 	interface NoDataFact extends BasicFact<'NoData'> {
 		text : string
-		icon : string
+		icon?: string
 	}
 	interface DamageFact extends BasicFact<'Damage'> {
 		text           : string
-		icon           : string
+		icon?          : string
 		hit_count      : number
 		dmg_multiplier : number
 	}
 	interface PercentFact extends BasicFact<'Percent'> {
 		text    : string
-		icon    : string
+		icon?   : string
 		percent : number
 	}
 	interface AttributeAdjustFact extends BasicFact<'AttributeAdjust'> {
 		text?                : string
-		icon                 : string
+		icon?                : string
 		value                : number
 		target               : Attributes,
 		attribute_multiplier : number
@@ -183,7 +183,7 @@ namespace API {
 		hit_count            : number
 	}
 	interface StunBreakFact extends BasicFact<'StunBreak'> {
-		icon  : string
+		icon? : string
 		value : true
 	}
 	
@@ -237,15 +237,37 @@ namespace API {
 		provides_weapon_access? : WeaponAccess []
 	}
 
-	interface Item {
-		id          : number
-		icon        : string
-		name        : string
-		rarity      : 'Legendary' | 'Ascended' | 'Exotic' | 'Rare' | 'Fine' | 'Uncommon' | 'Common' | 'Trash'
-		description : string
-		facts       : Fact[]
-		attribute_adjustment? : number;
-		//TODO
+	interface Item extends ItemDetail {
+		id           : number
+		name         : string
+		icon         : string
+		rarity       : 'Junk' | 'Basic' | 'Common' | 'Uncommon' | 'Rare' | 'Exotic' | 'Ascended' | 'Legendary'
+		description? : string
+	}
+
+	type ItemDetail = {
+		type   : 'Armor'
+		detail : {
+			defense : number
+			type    : 'HelmAquatic' | 'Helm' | 'Shoulders' | 'Coat' | 'Gloves' | 'Leggings' | 'Boots'
+			weight  : 'Clothes' | 'Light' | 'Medium' | 'Heavy'
+		} & ItemStatData
+	} | {
+		type   : 'Trinket'
+		detail : {
+			type : 'Amulet' | 'Ring' | 'Accessory' | 'Backpiece'
+		} & ItemStatData
+	} | {
+		type   : 'Weapon'
+		detail : {
+			power : [number, number]
+			type  : Weapons1H | Weapons2H | 'Polearm' | 'BundleSmall' | 'BundleLarge' | WeaponsAquatic | 'Toy' | 'ToyTwoHanded' | 'None'
+		} & ItemStatData
+	}
+
+	type ItemStatData = {
+		attribute_base? : number
+		attribute_set?  : number
 	}
 
 	interface Specialization {

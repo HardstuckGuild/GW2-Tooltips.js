@@ -64,6 +64,8 @@ class FactsProcessor {
 			Scepter    : 1000,
 			Mace       : 1000,
 			Spear      : 1000,
+			Speargun   : 1000,
+			Trident    : 1000,
 		}[weapon_type]
 
 		if(weapon_type === 'None') {

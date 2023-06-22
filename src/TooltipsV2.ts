@@ -292,7 +292,7 @@ class GW2TooltipsV2 {
 		}
 
 		const namePrefix = stats ? stats.name + ' ' : '';
-		const headerElements = [TUtilsV2.newElm('teb', namePrefix + apiObject.name)];
+		const headerElements = [TUtilsV2.newElm('teb', namePrefix + TUtilsV2.GW2Text2HTML(apiObject.name))];
 		
 		//TODO(Rennorb): slots stuff might not be doable serverside since the server is missing context. this is at least a case of @cleanup
 		if('palettes' in apiObject) headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
