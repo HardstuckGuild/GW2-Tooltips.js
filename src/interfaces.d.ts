@@ -329,10 +329,6 @@ type APIResponseTypeMap = {
 
 type Endpoints = keyof APIResponseTypeMap;
 
-type InflatorMap = {
-	[k in ObjectDataStorageKeys] : (gw2Object : HTMLElement, data : APIResponseTypeMap[k]) => void
-}
-
 interface APIImplementation {
 	bulkRequest<T extends Endpoints>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]>;
 }

@@ -182,7 +182,7 @@ class GW2TooltipsV2 {
 		Object.entries(objectsToGet).forEach(async ([key, values]) => {
 			if(values.size == 0) return;
 
-			const inflator = this.inflators[key];
+			const inflator = key == 'specializations' ? this.inflateSpecialization : this.inflateGenericIcon;
 			const cache = APICache.storage[key];
 
 			await APICache.ensureExistence(key, values.keys())
@@ -197,30 +197,17 @@ class GW2TooltipsV2 {
 		})
 	}
 
-	//TODO(Rennorb) @cleanup: as it turns out they cal all be treated the same if you do the styling in the css. so this can probably be reduced to 
-	// if(spec) special tereatment
-	// else generic
-	inflators : InflatorMap = (function() {
-		const genericIconInflater = () => (gw2Object : HTMLElement, data : { name : string, icon? : string }) => {
-			const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, undefined, data.name));
-			wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + data.name;
-			wikiLink.target = '_blank';
-			if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(data.name);
-			gw2Object.append(wikiLink);
-		}
-
-		return {
-			skills: genericIconInflater(),
-			traits: genericIconInflater(),
-			items: genericIconInflater(),
-			specializations: function (gw2Object: HTMLElement, spec: API.Specialization): void {
-				gw2Object.style.backgroundImage = `url(${spec.background})`;
-				gw2Object.dataset.label = spec.name;
-			},
-			pets: genericIconInflater(),
-			"pvp/amulets": genericIconInflater(),
-		}
-	})()
+	inflateGenericIcon(gw2Object : HTMLElement, data : { name : string, icon? : string }) {
+		const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, undefined, data.name));
+		wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + data.name;
+		wikiLink.target = '_blank';
+		if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(data.name);
+		gw2Object.append(wikiLink);
+	}
+	inflateSpecialization(gw2Object : HTMLElement, spec: API.Specialization) {
+		gw2Object.style.backgroundImage = `url(${spec.background})`;
+		gw2Object.dataset.label = spec.name;
+	}
 
 	//TODO(Rennorb): this is neither complete, nor reliable 
 	getSlotName(skill: API.Skill) : string | undefined {

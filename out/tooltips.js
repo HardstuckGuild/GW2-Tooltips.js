@@ -444,27 +444,6 @@ class GW2TooltipsV2 {
     constructor() {
         this.cycling = false;
         this.context = [];
-        this.inflators = (function () {
-            const genericIconInflater = () => (gw2Object, data) => {
-                const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, undefined, data.name));
-                wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + data.name;
-                wikiLink.target = '_blank';
-                if (gw2Object.classList.contains('gw2objectembed'))
-                    wikiLink.append(data.name);
-                gw2Object.append(wikiLink);
-            };
-            return {
-                skills: genericIconInflater(),
-                traits: genericIconInflater(),
-                items: genericIconInflater(),
-                specializations: function (gw2Object, spec) {
-                    gw2Object.style.backgroundImage = `url(${spec.background})`;
-                    gw2Object.dataset.label = spec.name;
-                },
-                pets: genericIconInflater(),
-                "pvp/amulets": genericIconInflater(),
-            };
-        })();
         if (window.GW2TooltipsContext instanceof Array) {
             for (const partialContext of window.GW2TooltipsContext)
                 this.context.push(GW2TooltipsV2.createCompleteContext(partialContext));
@@ -567,7 +546,7 @@ class GW2TooltipsV2 {
         Object.entries(objectsToGet).forEach(async ([key, values]) => {
             if (values.size == 0)
                 return;
-            const inflator = this.inflators[key];
+            const inflator = key == 'specializations' ? this.inflateSpecialization : this.inflateGenericIcon;
             const cache = APICache.storage[key];
             await APICache.ensureExistence(key, values.keys());
             for (const [id, objects] of values) {
@@ -578,6 +557,18 @@ class GW2TooltipsV2 {
                     inflator(gw2Object, data);
             }
         });
+    }
+    inflateGenericIcon(gw2Object, data) {
+        const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, undefined, data.name));
+        wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + data.name;
+        wikiLink.target = '_blank';
+        if (gw2Object.classList.contains('gw2objectembed'))
+            wikiLink.append(data.name);
+        gw2Object.append(wikiLink);
+    }
+    inflateSpecialization(gw2Object, spec) {
+        gw2Object.style.backgroundImage = `url(${spec.background})`;
+        gw2Object.dataset.label = spec.name;
     }
     getSlotName(skill) {
         let skillSlot;
