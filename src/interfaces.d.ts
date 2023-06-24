@@ -26,7 +26,8 @@ namespace API {
 	}
 
 	type Attributes = 'None' | Capitalize<Exclude<keyof Stats, 'level'>>;
-
+	type ArmorType  = 'HelmAquatic' | 'Helm' | 'Shoulders' | 'Coat' | 'Gloves' | 'Leggings' | 'Boots';
+	type TrinketType = 'Amulet' | 'Ring' | 'Accessory' | 'Backpiece';
 	type Weapons1H = 'Focus' | 'Shield' | 'Torch' | 'Warhorn' | 'BowShort' | 'Axe' | 'Sword' | 'Dagger' | 'Pistol' | 'Scepter' | 'Mace';
 	type Weapons2H = 'Greatsword' | 'Hammer' | 'Staff' | 'BowLong' | 'Rifle';
 	type WeaponsAquatic = 'Spear' | 'Trident' | 'Speargun';
@@ -237,7 +238,7 @@ namespace API {
 		provides_weapon_access? : WeaponAccess []
 	}
 
-	interface Item extends ItemDetail {
+	type Item = ItemDetail & {
 		id           : number
 		name         : string
 		icon         : string
@@ -245,25 +246,21 @@ namespace API {
 		description? : string
 	}
 
-	type ItemDetail = {
-		type   : 'Armor'
-		detail : {
-			defense : number
-			type    : 'HelmAquatic' | 'Helm' | 'Shoulders' | 'Coat' | 'Gloves' | 'Leggings' | 'Boots'
-			weight  : 'Clothes' | 'Light' | 'Medium' | 'Heavy'
-		} & ItemStatData
+	type WeaponDetailType = Weapons1H | Weapons2H | 'Polearm' | 'BundleSmall' | 'BundleLarge' | WeaponsAquatic | 'Toy' | 'ToyTwoHanded' | 'None';
+
+	type ItemDetail = ({
+		type    : 'Armor'
+		defense : number
+		subtype : ArmorType
+		weight  : 'Clothes' | 'Light' | 'Medium' | 'Heavy'
 	} | {
-		type   : 'Trinket'
-		detail : {
-			type : 'Amulet' | 'Ring' | 'Accessory' | 'Backpiece'
-		} & ItemStatData
+		type    : 'Trinket'
+		subtype : TrinketType
 	} | {
-		type   : 'Weapon'
-		detail : {
-			power : [number, number]
-			type  : Weapons1H | Weapons2H | 'Polearm' | 'BundleSmall' | 'BundleLarge' | WeaponsAquatic | 'Toy' | 'ToyTwoHanded' | 'None'
-		} & ItemStatData
-	}
+		type    : 'Weapon'
+		power   : [number, number]
+		subtype : WeaponDetailType
+	}) & ItemStatData
 
 	type ItemStatData = {
 		attribute_base? : number
@@ -292,14 +289,17 @@ namespace API {
 		facts : AttributeAdjustFact[]
 	}
 
-	interface ItemStat {
+	interface AttributeSet {
 		id         : number
 		name       : string
 		attributes : { 
 			attribute  : Exclude<Attributes, 'None'>
-			value      : number
-			multiplier : number
+			base_value : number
+			scaling    : number
 		}[]
+		similar_sets? : {
+			[attribute in ItemDetail['subtype']]?: number
+		}
 	}
 }
 
@@ -324,7 +324,7 @@ type APIResponseTypeMap = {
 	specializations: API.Specialization;
 	pets           : API.Pet;
 	'pvp/amulets'  : API.Amulet;
-	itemstats      : API.ItemStat;
+	itemstats      : API.AttributeSet;
 }
 
 type Endpoints = keyof APIResponseTypeMap;

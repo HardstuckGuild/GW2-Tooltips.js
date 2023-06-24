@@ -1,7 +1,7 @@
 "use strict";
 class FakeAPI {
     async bulkRequest(endpoint, ids) {
-        if (['specializations', 'pvp/amulets', 'itemstats'].includes(endpoint)) {
+        if (['specializations', 'pvp/amulets'].includes(endpoint)) {
             const response = await fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
             if (endpoint == 'pvp/amulets') {
                 for (const obj of response) {
@@ -25,12 +25,24 @@ class FakeAPI {
         }
         else {
             return new Promise((resolve, reject) => {
-                const allSkills = window['DUMP_output_' + endpoint];
-                if (allSkills) {
-                    resolve(allSkills.filter(data => Array.prototype.includes.call(ids, data.id)));
+                const allData = window['DUMP_output_' + endpoint];
+                if (allData) {
+                    const apiResult = allData.filter(data => ids.includes(data.id));
+                    if (endpoint == 'itemstats') {
+                        const additionalIdsWithDuplicates = apiResult
+                            .map(set => set.similar_sets)
+                            .filter(similars => similars)
+                            .map(similars => Object.values(similars));
+                        for (const additionalId of new Set(Array.prototype.concat(...additionalIdsWithDuplicates))) {
+                            if (!apiResult.some(set => set.id == additionalId)) {
+                                apiResult.push(allData.find(set => set.id == additionalId));
+                            }
+                        }
+                    }
+                    resolve(apiResult);
                 }
                 else {
-                    console.info(`'${endpoint}' doesn't exist in mock data, synthesizing`);
+                    console.info(`[gw2-tooltips] [FakeAPI]'${endpoint}' doesn't exist in mock data, synthesizing`);
                     if (endpoint == 'pets') {
                         resolve(ids.map(id => ({
                             id,
@@ -77,12 +89,12 @@ class APICache {
             const storageSet = this.storage[currentEndpoint];
             const request = Array.from(additionalIds[currentEndpoint].values());
             additionalIds[currentEndpoint].clear();
-            console.info(`[gw2-tooltips API cache] round #${i++} for a ${endpoint} request, currently fetching ${currentEndpoint}. Ids: `, request);
+            console.info(`[gw2-tooltips] [API cache] round #${i++} for a ${endpoint} request, currently fetching ${currentEndpoint}. Ids: `, request);
             try {
                 const response = await this.apiImpl.bulkRequest(currentEndpoint, request);
                 const unobtainable = request.filter(id => !response.some(obj => obj.id == id));
                 if (unobtainable.length)
-                    console.warn(`Did not receive all requested ${currentEndpoint} ids. missing: `, unobtainable);
+                    console.warn(`[gw2-tooltips] [API cache] Did not receive all requested ${currentEndpoint} ids. missing: `, unobtainable);
                 for (const datum of response) {
                     if (storageSet.has(datum.id))
                         continue;
@@ -169,7 +181,7 @@ class FactsProcessor {
             case 14:
                 return level * level * level_scaling + base_amount + power * formula_param2;
         }
-        console.warn('Could not find formula #', formula, ', using base amount for now!');
+        console.warn('[gw2-tooltips] [facts processor] Could not find formula #', formula, ', using base amount for now!');
         return base_amount;
     }
     static getWeaponStrength({ weapon_type, type: palette_type }) {
@@ -208,6 +220,7 @@ class FactsProcessor {
         return weaponStrength;
     }
     static generateFacts(apiObject, context, additional_facts) {
+        var _a;
         let totalDefianceBreak = 0;
         const processFactData = (fact) => {
             if (fact.type === 'Recharge') {
@@ -238,13 +251,13 @@ class FactsProcessor {
                 PrefixedBuff: ({ fact }) => {
                     let prefix = APICache.storage.skills.get(fact.prefix);
                     if (!prefix) {
-                        console.error('prefix #', fact.prefix, ' is apparently missing in the cache');
+                        console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
                         prefix = this.MissingBuff;
                     }
                     iconSlug = prefix.icon || iconSlug;
                     let buff = APICache.storage.skills.get(fact.buff);
                     if (!buff) {
-                        console.error('buff #', fact.buff, ' is apparently missing in the cache');
+                        console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                         buff = this.MissingBuff;
                     }
                     return `<tem> ${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML} ${buff.name_brief || buff.name} </tem>`;
@@ -252,20 +265,20 @@ class FactsProcessor {
                 PrefixedBuffBrief: ({ fact }) => {
                     let prefix = APICache.storage.skills.get(fact.prefix);
                     if (!prefix) {
-                        console.error('prefix #', fact.prefix, ' is apparently missing in the cache');
+                        console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
                         prefix = this.MissingBuff;
                     }
                     iconSlug = prefix.icon || iconSlug;
                     let buff = APICache.storage.skills.get(fact.buff);
                     if (!buff) {
-                        console.error('buff #', fact.buff, ' is apparently missing in the cache');
+                        console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                         buff = this.MissingBuff;
                     }
                     return `<tem> ${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML} ${buff.name_brief || buff.name} </tem>`;
                 },
                 Buff: ({ fact, buff }) => {
                     if (!buff)
-                        console.error('buff #', fact.buff, ' is apparently missing in the cache');
+                        console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                     buff = buff || this.MissingBuff;
                     let modifiers = '';
                     iconSlug = buff.icon;
@@ -304,7 +317,7 @@ class FactsProcessor {
                 },
                 BuffBrief: ({ fact, buff }) => {
                     if (!buff)
-                        console.error('buff #', fact.buff, ' is apparently missing in the cache');
+                        console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                     buff = buff || this.MissingBuff;
                     iconSlug = buff.icon;
                     let text = TUtilsV2.GW2Text2HTML(fact.text).replace("%str1%", buff.name);
@@ -322,7 +335,7 @@ class FactsProcessor {
                     let hitCountLabel = '';
                     let damage = weaponStrength * fact.hit_count * fact.dmg_multiplier * context.stats.power / context.targetArmor;
                     if (!fact.hit_count)
-                        console.warn("0 hit count: ", fact);
+                        console.warn("[gw2-tooltips] [facts processor] 0 hit count: ", fact);
                     if (fact.hit_count > 1) {
                         damage *= fact.hit_count;
                         hitCountLabel = `(${fact.hit_count}x)`;
@@ -330,7 +343,7 @@ class FactsProcessor {
                     return `<tem> ${fact.text}: ${hitCountLabel} ${Math.round(damage)} </tem>`;
                 },
                 AttributeAdjust: ({ fact }) => {
-                    const attribute = apiObject.attribute_adjustment || context.stats[TUtilsV2.Uncapitalize(fact.target)] || 0;
+                    const attribute = apiObject.attribute_base || context.stats[TUtilsV2.Uncapitalize(fact.target)] || 0;
                     const value = Math.round(fact.value + attribute * fact.attribute_multiplier + context.stats.level ** fact.level_exponent * fact.level_multiplier);
                     return `<tem> ${value > 0 ? '+' + value : value} ${fact.text || fact.target} </tem>`;
                 },
@@ -349,17 +362,14 @@ class FactsProcessor {
             wrapper.append(text);
             return wrapper;
         };
-        const factWraps = apiObject.facts
+        let factWraps = (apiObject.facts || [])
             .sort((a, b) => a.order - b.order)
             .map(processFactData)
             .filter(d => d);
         if (additional_facts) {
-            for (const fact of additional_facts.map(processFactData)) {
-                if (fact)
-                    factWraps.push(fact);
-            }
+            factWraps = factWraps.concat(additional_facts.map(processFactData).filter(wrap => wrap));
         }
-        if ((apiObject.facts.length == 0 || context.gameMode !== 'Pve') && apiObject.facts_override) {
+        if ((!((_a = apiObject.facts) === null || _a === void 0 ? void 0 : _a.length) || context.gameMode !== 'Pve') && apiObject.facts_override) {
             for (const override of apiObject.facts_override) {
                 if (override.mode === context.gameMode) {
                     const sortedOverrideFacts = [...override.facts].sort((a, b) => a.order - b.order);
@@ -609,7 +619,7 @@ class GW2TooltipsV2 {
                     case 'Monster':
                         break;
                     default:
-                        console.error(`unknown palette type '${palette.type}' for skill '${skill.name}'`);
+                        console.error(`[gw2-tooltips] [tooltip engine] unknown palette type '${palette.type}' for skill '${skill.name}'`);
                 }
             }
         }
@@ -675,7 +685,7 @@ class GW2TooltipsV2 {
             description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`;
             parts.push(description);
         }
-        if ('facts' in apiObject) {
+        if ('facts' in apiObject || additionalFacts) {
             parts.push(...FactsProcessor.generateFacts(apiObject, context, additionalFacts));
         }
         const tooltip = TUtilsV2.newElm('div.tooltip', ...parts);
@@ -716,16 +726,27 @@ class GW2TooltipsV2 {
         if (!isNaN(statSetId)) {
             statSet = APICache.storage.itemstats.get(statSetId);
             if (!statSet)
-                console.error(`itemstats #${statSetId} is missing in the cache`);
+                console.error(`[gw2-tooltips] [tooltip engine] itemstat #${statSetId} is missing in the cache`);
             else {
-                for (const { attribute, value, multiplier } of statSet.attributes) {
+                if (this.config.adjustIncorrectStatIds && 'subtype' in initialAPIObject && statSet.similar_sets) {
+                    const correctSetId = statSet.similar_sets[initialAPIObject.subtype];
+                    if (correctSetId !== undefined) {
+                        console.info(`[gw2-tooltips] [tooltip engine] corrected itemstat #${statSetId} to #${correctSetId} because the target is of type ${initialAPIObject.subtype}`);
+                        const newSet = APICache.storage.itemstats.get(correctSetId);
+                        if (!newSet)
+                            console.error(`[gw2-tooltips] [tooltip engine] corrected itemstat #${correctSetId} is missing in the cache`);
+                        else
+                            statSet = newSet;
+                    }
+                }
+                for (const { attribute, base_value, scaling } of statSet.attributes) {
                     additionalFacts.push({
                         type: 'AttributeAdjust',
                         icon: '',
                         order: -1,
                         target: attribute,
-                        value,
-                        attribute_multiplier: multiplier,
+                        value: base_value,
+                        attribute_multiplier: scaling,
                         level_exponent: 0,
                         hit_count: 0,
                         level_multiplier: 0,
@@ -774,6 +795,7 @@ GW2TooltipsV2.defaultContext = {
 };
 GW2TooltipsV2.defaultConfig = {
     autoInitialize: true,
+    adjustIncorrectStatIds: true,
 };
 const gw2tooltips = new GW2TooltipsV2();
 if (gw2tooltips.config.autoInitialize)

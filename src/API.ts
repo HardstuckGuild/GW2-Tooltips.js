@@ -5,7 +5,7 @@
 
 class FakeAPI implements APIImplementation {
 	async bulkRequest<T extends keyof APIResponseTypeMap>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]> {
-		if(['specializations', 'pvp/amulets', 'itemstats'].includes(endpoint)) {
+		if(['specializations', 'pvp/amulets'].includes(endpoint)) {
 			const response = await fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
 			if (endpoint == 'pvp/amulets') {
 				for(const obj of response) {
@@ -31,12 +31,26 @@ class FakeAPI implements APIImplementation {
 		else {
 			return new Promise((resolve, reject) => {
 				//NOTE(Rennorb): must be set up through other externally included files
-				const allSkills = (window as any)['DUMP_output_'+endpoint] as APIResponseTypeMap[T][];
-				if(allSkills) {
-					resolve(allSkills.filter(data => Array.prototype.includes.call(ids, data.id)));
+				const allData = (window as any)['DUMP_output_'+endpoint] as APIResponseTypeMap[T][];
+				if(allData) {
+					const apiResult = allData.filter(data => ids.includes(data.id));
+					// for itemstats the new api will return related attibutes aswell. 
+					if(endpoint == 'itemstats') {
+						const additionalIdsWithDuplicates = ((apiResult as APIResponseTypeMap['itemstats'][])
+							.map(set => set.similar_sets)
+							.filter(similars => similars) as Exclude<API.AttributeSet['similar_sets'], undefined>[]) //ts doesnt understand the filter
+							.map(similars => Object.values(similars));
+
+						for(const additionalId of new Set(Array.prototype.concat(...additionalIdsWithDuplicates))) {
+							if(!apiResult.some(set => set.id == additionalId)) {
+								apiResult.push(allData.find(set => set.id == additionalId) as any);
+							}
+						}
+					}
+					resolve(apiResult);
 				}
 				else {
-					console.info(`'${endpoint}' doesn't exist in mock data, synthesizing`);
+					console.info(`[gw2-tooltips] [FakeAPI]'${endpoint}' doesn't exist in mock data, synthesizing`);
 					if(endpoint == 'pets') {
 						resolve(ids.map(id => ({
 							id,

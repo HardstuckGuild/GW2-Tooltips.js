@@ -38,7 +38,7 @@ class FactsProcessor {
 				return level * level * level_scaling + base_amount + power * formula_param2
 		}
 
-		console.warn('Could not find formula #', formula, ', using base amount for now!')
+		console.warn('[gw2-tooltips] [facts processor] Could not find formula #', formula, ', using base amount for now!')
 		return base_amount; //TODO(Rennorb) @correctness
 	}
 
@@ -79,7 +79,7 @@ class FactsProcessor {
 		return weaponStrength
 	}
 
-	static generateFacts(apiObject : { facts : API.Fact[], facts_override? : API.FactsOverride[], attribute_adjustment? : number }, context : Context, additional_facts? : API.Fact[]) : HTMLElement[] {
+	static generateFacts(apiObject : SupportedTTTypes & { facts? : API.Fact[], facts_override? : API.FactsOverride[], attribute_base? : number }, context : Context, additional_facts? : API.Fact[]) : HTMLElement[] {
 		let totalDefianceBreak = 0
 
 		const processFactData = (fact : API.Fact) => {
@@ -115,13 +115,13 @@ class FactsProcessor {
 				PrefixedBuff : ({ fact }) => {
 					let prefix = APICache.storage.skills.get(fact.prefix)
 					if(!prefix) {
-						console.error('prefix #', fact.prefix, ' is apparently missing in the cache');
+						console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
 						prefix = this.MissingBuff
 					}
 					iconSlug = prefix.icon || iconSlug
 					let buff = APICache.storage.skills.get(fact.buff)
 					if(!buff) {
-						console.error('buff #', fact.buff, ' is apparently missing in the cache');
+						console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
 						buff = this.MissingBuff
 					}
 					return `<tem> ${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML} ${buff.name_brief || buff.name} </tem>`
@@ -129,19 +129,19 @@ class FactsProcessor {
 				PrefixedBuffBrief: ({ fact }) => {
 					let prefix = APICache.storage.skills.get(fact.prefix)
 					if(!prefix) {
-						console.error('prefix #', fact.prefix, ' is apparently missing in the cache');
+						console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
 						prefix = this.MissingBuff
 					}
 					iconSlug = prefix.icon || iconSlug
 					let buff = APICache.storage.skills.get(fact.buff)
 					if(!buff) {
-						console.error('buff #', fact.buff, ' is apparently missing in the cache');
+						console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
 						buff = this.MissingBuff
 					}
 					return `<tem> ${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML} ${buff.name_brief || buff.name} </tem>`
 				},
 				Buff: ({ fact, buff }) => {
-					if(!buff) console.error('buff #', fact.buff, ' is apparently missing in the cache');
+					if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
 					buff = buff || this.MissingBuff // in case we didn't get the buff we wanted from the api
 
 					let modifiers = ''
@@ -189,7 +189,7 @@ class FactsProcessor {
 					return htmlContent
 				},
 				BuffBrief: ({ fact, buff }) => {
-					if(!buff) console.error('buff #', fact.buff, ' is apparently missing in the cache');
+					if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
 					buff = buff || this.MissingBuff // in case we didn't get the buff we wanted from the api
 
 					iconSlug = buff.icon
@@ -212,7 +212,7 @@ class FactsProcessor {
 
 					let hitCountLabel = '';
 					let damage = weaponStrength * fact.hit_count * fact.dmg_multiplier * context.stats.power / context.targetArmor;
-					if(!fact.hit_count) console.warn("0 hit count: ", fact); //TODO(Rennorb) @debug
+					if(!fact.hit_count) console.warn("[gw2-tooltips] [facts processor] 0 hit count: ", fact); //TODO(Rennorb) @debug
 					if(fact.hit_count > 1) {
 						damage *= fact.hit_count;
 						hitCountLabel = `(${fact.hit_count}x)`;
@@ -221,7 +221,7 @@ class FactsProcessor {
 				},
 				AttributeAdjust: ({ fact }) =>{
 					//TODO(Rennorb) @cleanup
-					const attribute = apiObject.attribute_adjustment || (context.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0
+					const attribute = apiObject.attribute_base || (context.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0
 					const value = Math.round(fact.value + attribute * fact.attribute_multiplier + context.stats.level ** fact.level_exponent * fact.level_multiplier)
 					return `<tem> ${value > 0 ? '+'+value : value} ${fact.text || fact.target} </tem>`
 				},
@@ -243,19 +243,17 @@ class FactsProcessor {
 			return wrapper
 		}
 
-		const factWraps = 
-			apiObject.facts
+		let factWraps = 
+			(apiObject.facts || [])
 				.sort((a, b) => a.order - b.order)
 				.map(processFactData)
 				.filter(d => d) as HTMLElement[] // ts doesn't understand what the predicate does
 
 		if(additional_facts) {
-			for(const fact of additional_facts.map(processFactData)) {
-				if(fact) factWraps.push(fact);
-			}
+			factWraps = factWraps.concat(additional_facts.map(processFactData).filter(wrap => wrap) as HTMLElement[])
 		}
 
-		if((apiObject.facts.length == 0 || context.gameMode !== 'Pve') && apiObject.facts_override) { //TODO(Rennorb) @cleanup
+		if((!apiObject.facts?.length || context.gameMode !== 'Pve') && apiObject.facts_override) { //TODO(Rennorb) @cleanup
 			for(const override of apiObject.facts_override) {
 				if(override.mode === context.gameMode) {
 					const sortedOverrideFacts = [...override.facts].sort((a, b) => a.order - b.order)

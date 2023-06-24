@@ -34,5 +34,6 @@ interface Stats {
 }
 
 interface Config {
-	 autoInitialize : bool
+	 autoInitialize         : bool
+	 adjustIncorrectStatIds : bool
 }

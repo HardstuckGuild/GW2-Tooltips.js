@@ -6,7 +6,7 @@ class APICache {
 		pets           : new Map<number, API.Pet>(),
 		'pvp/amulets'  : new Map<number, API.Amulet>(),
 		specializations: new Map<number, API.Specialization>(),
-		itemstats      : new Map<number, API.ItemStat>(),
+		itemstats      : new Map<number, API.AttributeSet>(),
 	}
 
 	static apiImpl : APIImplementation
@@ -44,13 +44,13 @@ class APICache {
 			const request = Array.from(additionalIds[currentEndpoint].values())
 			additionalIds[currentEndpoint].clear()
 
-			console.info(`[gw2-tooltips API cache] round #${i++} for a ${endpoint} request, currently fetching ${currentEndpoint}. Ids: `, request)
+			console.info(`[gw2-tooltips] [API cache] round #${i++} for a ${endpoint} request, currently fetching ${currentEndpoint}. Ids: `, request)
 
 			try {
 				const response = await this.apiImpl.bulkRequest(currentEndpoint, request)
 				//TODO(Rennorb) @perf: provide option to disable this
 				const unobtainable = request.filter(id => !response.some(obj => obj.id == id))
-				if(unobtainable.length) console.warn(`Did not receive all requested ${currentEndpoint} ids. missing: `, unobtainable);
+				if(unobtainable.length) console.warn(`[gw2-tooltips] [API cache] Did not receive all requested ${currentEndpoint} ids. missing: `, unobtainable);
 
 				for(const datum of response) {
 					if(storageSet.has(datum.id)) continue

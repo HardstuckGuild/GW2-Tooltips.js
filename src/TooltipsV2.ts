@@ -14,8 +14,8 @@
 //TODO(Rennorb): Trait game-mode splits
 //TODO(Rennorb): Link minion skills to minion summon skill.
 //TODO(Rennorb) @cleanup: go over gamemode splitting again, currently ist a huge mess. 
-//TODO(Rennorb): Add item stats to tooltips.
-//TODO(Rennorb): specs, items, pets, itemstats and amulets endpoints.
+//TODO(Rennorb): proper item name formatting. 
+//TODO(Rennorb): specs, pets, and amulets endpoints.
 
 
 
@@ -62,7 +62,8 @@ class GW2TooltipsV2 {
 
 	config : Config;
 	static defaultConfig : Config = {
-		autoInitialize: true,
+		autoInitialize        : true,
+		adjustIncorrectStatIds: true,
 	}
 
 	constructor() {
@@ -265,7 +266,7 @@ class GW2TooltipsV2 {
 					case 'Monster':
 						break;
 					default:
-						console.error(`unknown palette type '${palette.type}' for skill '${skill.name}'`)
+						console.error(`[gw2-tooltips] [tooltip engine] unknown palette type '${palette.type}' for skill '${skill.name}'`)
 				}
 			}
 		}
@@ -279,7 +280,7 @@ class GW2TooltipsV2 {
 	}
 
 	// TODO(Rennorb) @cleanup: split this into the inflator system aswell. its getting to convoluted already
-	generateToolTip(apiObject : SupportedTTTypes, context : Context, stats? : API.ItemStat, additionalFacts? : API.Fact[]) : HTMLElement {
+	generateToolTip(apiObject : SupportedTTTypes, context : Context, stats? : API.AttributeSet, additionalFacts? : API.Fact[]) : HTMLElement {
 		let recharge : HTMLElement | '' = ''
 		if('facts' in apiObject) {
 			const _recharge = this.getRecharge(apiObject, context.gameMode);
@@ -291,7 +292,7 @@ class GW2TooltipsV2 {
 			}
 		}
 
-		const namePrefix = stats ? stats.name + ' ' : '';
+		const namePrefix = stats ? stats.name + ' ' : ''; //TODO(Rennorb):  this is more complicated
 		const headerElements = [TUtilsV2.newElm('teb', namePrefix + TUtilsV2.GW2Text2HTML(apiObject.name))];
 		
 		//TODO(Rennorb): slots stuff might not be doable serverside since the server is missing context. this is at least a case of @cleanup
@@ -348,7 +349,7 @@ class GW2TooltipsV2 {
 			parts.push(description)
 		}
 
-		if('facts' in apiObject) {
+		if('facts' in apiObject || additionalFacts) {
 			parts.push(...FactsProcessor.generateFacts(apiObject, context, additionalFacts))
 		}
 
@@ -393,19 +394,29 @@ class GW2TooltipsV2 {
 
 		const additionalFacts : API.Fact[] = [];
 		const statSetId = +String(gw2Object.getAttribute('stats'));
-		let statSet : API.ItemStat | undefined = undefined;
+		let statSet : API.AttributeSet | undefined = undefined;
 		if(!isNaN(statSetId)) {
 			statSet = APICache.storage.itemstats.get(statSetId);
-			if(!statSet) console.error(`itemstats #${statSetId} is missing in the cache`);
+			if(!statSet) console.error(`[gw2-tooltips] [tooltip engine] itemstat #${statSetId} is missing in the cache`);
 			else {
-				for(const {attribute, value, multiplier} of statSet.attributes) {
+				if(this.config.adjustIncorrectStatIds && 'subtype' in initialAPIObject && statSet.similar_sets) {
+					const correctSetId = statSet.similar_sets[initialAPIObject.subtype];
+					if(correctSetId !== undefined) {
+						console.info(`[gw2-tooltips] [tooltip engine] corrected itemstat #${statSetId} to #${correctSetId} because the target is of type ${initialAPIObject.subtype}`);
+						const newSet = APICache.storage.itemstats.get(correctSetId);
+						if(!newSet) console.error(`[gw2-tooltips] [tooltip engine] corrected itemstat #${correctSetId} is missing in the cache`);
+						else statSet = newSet;
+					}
+				}
+
+				for(const {attribute, base_value, scaling} of statSet.attributes) {
 					additionalFacts.push({
 						type  : 'AttributeAdjust',
 						icon  : '',
 						order : -1,
 						target: attribute,
-						value,
-						attribute_multiplier : multiplier,
+						value : base_value,
+						attribute_multiplier : scaling,
 						level_exponent       : 0,
 						hit_count            : 0,
 						level_multiplier     : 0,
