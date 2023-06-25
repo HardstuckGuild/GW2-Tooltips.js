@@ -13,6 +13,7 @@ type PartialContext = Omit<Partial<Context>, 'stats'>  & { stats?: Partial<Stats
 interface Context {
 	traits      : any[] //TODO(Rennorb): specify further. this should be number[] or maybe the traitline ids and up/mid/down choices
 	gameMode    : GameMode
+	sex         : 'Male' | 'Female'
 	targetArmor : number
 	stats       : Stats
 }

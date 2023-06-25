@@ -526,16 +526,17 @@ class GW2TooltipsV2 {
                 const gw2Object = e.target;
                 const type = (gw2Object.getAttribute('type') || 'skill') + 's';
                 const objId = +String(gw2Object.getAttribute('objId'));
+                const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
                 if (type != 'skills' && type != 'traits' && type != 'pvp/amulets' && type != "items")
                     return;
                 const data = APICache.storage[type].get(objId);
                 if (data) {
                     if (type == 'items') {
                         const statId = +String(gw2Object.getAttribute('stats')) || undefined;
-                        this.tooltip.replaceChildren(this.generateItemTooltip(data, statId));
+                        this.tooltip.replaceChildren(this.generateItemTooltip(data, context, statId));
                     }
                     else
-                        this.tooltip.replaceChildren(...this.generateToolTipList(data, gw2Object));
+                        this.tooltip.replaceChildren(...this.generateToolTipList(data, gw2Object, context));
                     this.tooltip.style.display = '';
                 }
             });
@@ -686,7 +687,7 @@ class GW2TooltipsV2 {
         tooltip.style.marginTop = '5px';
         return tooltip;
     }
-    generateToolTipList(initialAPIObject, gw2Object) {
+    generateToolTipList(initialAPIObject, gw2Object, context) {
         const objectChain = [];
         const validPaletteTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard'];
         const addObjectsToChain = (currentSkill) => {
@@ -713,7 +714,6 @@ class GW2TooltipsV2 {
             }
         };
         addObjectsToChain(initialAPIObject);
-        const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
         const tooltipChain = objectChain.map(obj => this.generateToolTip(obj, context));
         this.tooltip.append(...tooltipChain);
         if (tooltipChain.length > 1) {
@@ -733,7 +733,7 @@ class GW2TooltipsV2 {
         }
         return tooltipChain;
     }
-    generateItemTooltip(item, statSetId, stackSize = 1) {
+    generateItemTooltip(item, context, statSetId, stackSize = 1) {
         let statSet = undefined;
         if (item.type == "Armor" || item.type == "Trinket" || item.type == "Weapon") {
             statSetId = statSetId || item.attribute_set;
@@ -761,7 +761,7 @@ class GW2TooltipsV2 {
         const name = this.formatItemName(item, statSet, undefined, stackSize)
             .replaceAll('[s]', stackSize > 1 ? 's' : '')
             .replaceAll(/(\S+)\[pl:"(.+?)"]/g, stackSize > 1 ? '$2' : '$1')
-            .replaceAll(/(\S+)\[f:"(.+?)"]/g, stackSize > 1 ? '$2' : '$1')
+            .replaceAll(/(\S+)\[f:"(.+?)"]/g, context.sex == "Female" ? '$2' : '$1')
             .replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')
             .replaceAll('[null]', '');
         const parts = [TUtilsV2.newElm('tet', TUtilsV2.newElm('teb.color-rarity-' + item.rarity, name), TUtilsV2.newElm('div.flexbox-fill'))];
@@ -817,6 +817,7 @@ class GW2TooltipsV2 {
 GW2TooltipsV2.defaultContext = {
     traits: [],
     gameMode: 'Pve',
+    sex: "Male",
     targetArmor: 2597,
     stats: {
         level: 80,
