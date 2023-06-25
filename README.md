@@ -22,21 +22,25 @@ To archive all of the functionality we use our own proprietary API as opposed to
 	<script>
 	/* may be: PartialContext[] | PartialContext | undefined */
 	var GW2TooltipsContext = {
-		traits   : [] //TODO(Rennorb) @incomplete
-		gameMode : 'Pve' | 'Pvp' | 'Wvw';
-		stats    : {
-			level          : 80,
-			power          : 1000,
-			toughness      : 1000,
-			vitality       : 1000,
-			precision      : 1000,
-			ferocity       : 1000,
-			conditionDamage: 0,
-			expertise      : 0,
-			concentration  : 0,
-			healing        : 0,
-			critDamage     : 0,
-		}
+		gameMode           : 'Pve' | 'Pvp' | 'Wvw' = 'Pve',
+		targetArmor        : 2597,
+		character: {
+			level            : 80,
+			sex              : 'Male' | 'Female' = 'Male',
+			traits           : number[] = [],
+			stats: {
+				power          : 1000,
+				toughness      : 1000,
+				vitality       : 1000,
+				precision      : 1000,
+				ferocity       : 1000,
+				conditionDamage: 0,
+				expertise      : 0,
+				concentration  : 0,
+				healing        : 0,
+				critDamage     : 0,
+			},
+		},
 	}
 	</script>
 	```

@@ -157,7 +157,7 @@ APICache.storage = {
     itemstats: new Map(),
 };
 class FactsProcessor {
-    static calculateModifier({ formula, base_amount, formula_param1: level_scaling, formula_param2 }, { level, power, conditionDamage: condition_damage, healing: healing_power }) {
+    static calculateModifier({ formula, base_amount, formula_param1: level_scaling, formula_param2 }, { level, stats: { power, conditionDamage: condition_damage, healing: healing_power } }) {
         switch (formula) {
             case 0:
                 return level * level_scaling + base_amount;
@@ -226,7 +226,7 @@ class FactsProcessor {
             if (fact.type === 'Recharge') {
                 return null;
             }
-            if (fact.requires_trait && (!context.traits || !fact.requires_trait.some(reqTrait => context.traits.includes(reqTrait)))) {
+            if (fact.requires_trait && (!context.character.traits || !fact.requires_trait.some(reqTrait => context.character.traits.includes(reqTrait)))) {
                 return null;
             }
             let iconSlug = fact.icon;
@@ -284,11 +284,11 @@ class FactsProcessor {
                     iconSlug = buff.icon;
                     if (buff.modifiers) {
                         for (const modifier of buff.modifiers) {
-                            if ((modifier.trait_req && !context.traits.includes(modifier.trait_req)) ||
+                            if ((modifier.trait_req && !context.character.traits.includes(modifier.trait_req)) ||
                                 (modifier.mode && modifier.mode !== context.gameMode)) {
                                 continue;
                             }
-                            let modifierValue = this.calculateModifier(modifier, context.stats);
+                            let modifierValue = this.calculateModifier(modifier, context.character);
                             if (modifier.flags.includes('MulByDuration') &&
                                 !modifier.flags.includes('FormatPercent')) {
                                 modifierValue *= TUtilsV2.DurationToSeconds(fact.duration);
@@ -333,7 +333,7 @@ class FactsProcessor {
                         }
                     }
                     let hitCountLabel = '';
-                    let damage = weaponStrength * fact.hit_count * fact.dmg_multiplier * context.stats.power / context.targetArmor;
+                    let damage = weaponStrength * fact.hit_count * fact.dmg_multiplier * context.character.stats.power / context.targetArmor;
                     if (!fact.hit_count)
                         console.warn("[gw2-tooltips] [facts processor] 0 hit count: ", fact);
                     if (fact.hit_count > 1) {
@@ -343,12 +343,12 @@ class FactsProcessor {
                     return `<tem> ${fact.text}: ${hitCountLabel} ${Math.round(damage)} </tem>`;
                 },
                 AttributeAdjust: ({ fact }) => {
-                    const attribute = apiObject.attribute_base || context.stats[TUtilsV2.Uncapitalize(fact.target)] || 0;
-                    const value = Math.round(fact.value + attribute * fact.attribute_multiplier + context.stats.level ** fact.level_exponent * fact.level_multiplier);
+                    const attribute = apiObject.attribute_base || context.character.stats[TUtilsV2.Uncapitalize(fact.target)] || 0;
+                    const value = Math.round(fact.value + attribute * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier);
                     return `<tem> ${value > 0 ? '+' + value : value} ${fact.text || fact.target} </tem>`;
                 },
                 BuffConversion: ({ fact }) => {
-                    const attribute = context.stats[TUtilsV2.Uncapitalize(fact.source)] || 0;
+                    const attribute = context.character.stats[TUtilsV2.Uncapitalize(fact.source)] || 0;
                     const value = Math.round(attribute * fact.percent / 100);
                     return `<tem> ${fact.text}: Converting ${fact.percent}% of ${fact.source} to +${value} ${fact.target} </tem>`;
                 }
@@ -436,8 +436,10 @@ TUtilsV2.DurationToSeconds = (dur) => dur.secs + dur.nanos / 10e8;
 TUtilsV2.Uncapitalize = (str) => str.charAt(0).toLowerCase() + str.slice(1);
 class GW2TooltipsV2 {
     static createCompleteContext(partialContext) {
-        const stats = Object.assign({}, this.defaultContext.stats, partialContext.stats);
-        return Object.assign({}, this.defaultContext, partialContext, { stats });
+        var _a;
+        const stats = Object.assign({}, this.defaultContext.character.stats, (_a = partialContext.character) === null || _a === void 0 ? void 0 : _a.stats);
+        const character = Object.assign({}, this.defaultContext.character, partialContext.character, { stats });
+        return Object.assign({}, this.defaultContext, partialContext, { character });
     }
     constructor() {
         this.cycling = false;
@@ -564,7 +566,7 @@ class GW2TooltipsV2 {
     }
     inflateGenericIcon(gw2Object, data) {
         const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, undefined, data.name));
-        wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + data.name;
+        wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + TUtilsV2.GW2Text2HTML(data.name).replaceAll(/\[.*?\]/g, '');
         wikiLink.target = '_blank';
         if (gw2Object.classList.contains('gw2objectembed'))
             wikiLink.append(data.name);
@@ -761,12 +763,15 @@ class GW2TooltipsV2 {
         const name = this.formatItemName(item, statSet, undefined, stackSize)
             .replaceAll('[s]', stackSize > 1 ? 's' : '')
             .replaceAll(/(\S+)\[pl:"(.+?)"]/g, stackSize > 1 ? '$2' : '$1')
-            .replaceAll(/(\S+)\[f:"(.+?)"]/g, context.sex == "Female" ? '$2' : '$1')
+            .replaceAll(/(\S+)\[f:"(.+?)"]/g, context.character.sex == "Female" ? '$2' : '$1')
             .replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')
             .replaceAll('[null]', '');
-        const parts = [TUtilsV2.newElm('tet', TUtilsV2.newElm('teb.color-rarity-' + item.rarity, name), TUtilsV2.newElm('div.flexbox-fill'))];
+        const parts = [TUtilsV2.newElm('tet', TUtilsV2.newImg(item.icon), TUtilsV2.newElm('teb.color-rarity-' + item.rarity, name), TUtilsV2.newElm('div.flexbox-fill'))];
         if ('defense' in item) {
             parts.push(TUtilsV2.newElm('te', TUtilsV2.newElm('tem', 'Defense: ', TUtilsV2.newElm('span.color-stat-green', String(item.defense)))));
+        }
+        if ('power' in item) {
+            parts.push(TUtilsV2.newElm('te', TUtilsV2.newElm('tem', 'Weapon Strength: ', TUtilsV2.newElm('span.color-stat-green', `${item.power[0]} - ${item.power[1]}`))));
         }
         if (statSet) {
             parts.push(...statSet.attributes.map(({ attribute, base_value, scaling }) => {
@@ -774,13 +779,33 @@ class GW2TooltipsV2 {
                 return TUtilsV2.newElm('te', TUtilsV2.newElm('tem.color-stat-green', `+${computedValue} ${attribute}`));
             }));
         }
-        const metaInfo = TUtilsV2.newElm('div.group', TUtilsV2.newElm('te.color-rarity-' + item.rarity, item.rarity));
-        if ('weight' in item)
-            metaInfo.append(TUtilsV2.newElm('span', item.weight));
-        if ('subtype' in item)
+        const metaInfo = TUtilsV2.newElm('div.group');
+        if (item.type == "Armor" || item.type == "Weapon" || item.type == "Trinket") {
+            metaInfo.append(TUtilsV2.newElm('te.color-rarity-' + item.rarity, item.rarity));
+            if ('weight' in item)
+                metaInfo.append(TUtilsV2.newElm('span', item.weight));
             metaInfo.append(TUtilsV2.newElm('span', `${item.type}: ${item.subtype}`));
-        if (item.description)
-            metaInfo.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(item.description))));
+            if (item.type == "Weapon" && this.isTwoHanded(item.subtype))
+                metaInfo.append(TUtilsV2.newElm('span.color-rarity-Junk', `(Two-Handed)`));
+            if (item.required_level)
+                metaInfo.append(TUtilsV2.newElm('span', 'Required Level: ' + item.required_level));
+            if (item.description)
+                metaInfo.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(item.description))));
+        }
+        else {
+            if (item.description)
+                metaInfo.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(item.description))));
+        }
+        if (item.flags.includes('AccountBound'))
+            metaInfo.append(TUtilsV2.newElm('span', 'Account Bound'));
+        else if (item.flags.includes('SoulbindOnAcquire'))
+            metaInfo.append(TUtilsV2.newElm('span', 'Soulbound on Acquire'));
+        if (item.vendor_value) {
+            let text = `Vendor Value: ${item.vendor_value * stackSize}c`;
+            if (stackSize > 1)
+                text += ` (${item.vendor_value}c x ${stackSize})`;
+            metaInfo.append(TUtilsV2.newElm('span', text));
+        }
         parts.push(metaInfo);
         const tooltip = TUtilsV2.newElm('div.tooltip.item.active', ...parts);
         tooltip.dataset.id = String(item.id);
@@ -813,24 +838,54 @@ class GW2TooltipsV2 {
             name = `${stackSize} ${name}`;
         return name;
     }
+    isTwoHanded(type) {
+        switch (type) {
+            case 'Axe': return false;
+            case 'Dagger': return false;
+            case 'Mace': return false;
+            case 'Pistol': return false;
+            case 'Scepter': return false;
+            case 'Focus': return false;
+            case 'Sword': return false;
+            case 'BowShort': return false;
+            case 'Torch': return false;
+            case 'Shield': return false;
+            case 'Warhorn': return false;
+            case 'Toy': return false;
+            case 'ToyTwoHanded': return false;
+            case 'BundleSmall': return false;
+            case 'Hammer': return true;
+            case 'BowLong': return true;
+            case 'Greatsword': return true;
+            case 'Polearm': return true;
+            case 'Rifle': return true;
+            case 'Staff': return true;
+            case 'BundleLarge': return true;
+            case 'Spear': return true;
+            case 'Speargun': return true;
+            case 'Trident': return true;
+        }
+    }
 }
 GW2TooltipsV2.defaultContext = {
-    traits: [],
     gameMode: 'Pve',
-    sex: "Male",
     targetArmor: 2597,
-    stats: {
+    character: {
         level: 80,
-        power: 1000,
-        toughness: 1000,
-        vitality: 1000,
-        precision: 1000,
-        ferocity: 1000,
-        conditionDamage: 0,
-        expertise: 0,
-        concentration: 0,
-        healing: 0,
-        critDamage: 0,
+        sex: "Male",
+        traits: [],
+        stats: {
+            power: 1000,
+            toughness: 1000,
+            vitality: 1000,
+            precision: 1000,
+            ferocity: 1000,
+            conditionDamage: 0,
+            expertise: 0,
+            concentration: 0,
+            healing: 0,
+            critDamage: 0,
+        },
     },
 };
 GW2TooltipsV2.defaultConfig = {

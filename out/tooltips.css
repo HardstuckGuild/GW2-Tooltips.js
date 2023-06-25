@@ -87,7 +87,7 @@
 .tooltipWrapper tet {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   gap: 0 1ch;
   white-space: nowrap;
 }
@@ -100,7 +100,8 @@
   gap: 0 .5ch;
 	position: relative;
 }
-.tooltipWrapper te img {
+.tooltipWrapper te img,
+.tooltipWrapper tet>img {
 	width: 32px;
 	height: 32px;
 }

@@ -239,12 +239,14 @@ namespace API {
 	}
 
 	type Item = ItemDetail & {
-		id           : number
-		name         : string
-		icon         : string
-		rarity       : 'Junk' | 'Basic' | 'Common' | 'Uncommon' | 'Rare' | 'Exotic' | 'Ascended' | 'Legendary'
-		flags        : ItemFlag[]
-		description? : string
+		id             : number
+		name           : string
+		icon           : string
+		rarity         : 'Junk' | 'Basic' | 'Common' | 'Uncommon' | 'Rare' | 'Exotic' | 'Ascended' | 'Legendary'
+		flags          : ItemFlag[]
+		required_level : number
+		description?   : string
+		vendor_value   : number
 	}
 
 	type ItemFlag = 'AccountBound' | 'Activity' | 'Dungeon' | 'Pve' | 'Pvp' | 'PvpLobby' | 'ItemFlag7' | 'Wvw' | 'GemStore' | 'HideSuffix' | 'MonsterOnly' | 'NoExport' | 'NoMysticForge' | 'NoSalvage' | 'NoSell' | 'NotUpgradeable' | 'SoulbindOnAcquire' | 'ItemFlag18' | 'Unique' | 'DisallowTrader' | 'DisallowUnderwater' | 'ItemFlag22' | 'ItemFlag23' | 'ItemFlag24' | 'ItemFlag25' | 'BulkConsume' | 'ItemFlag27' | 'ItemFlag28' | 'Indestructible' | 'ItemFlag30' | 'ItemFlag31' | 'ItemFlag32';

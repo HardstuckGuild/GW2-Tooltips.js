@@ -16,6 +16,7 @@
 //TODO(Rennorb) @cleanup: go over gamemode splitting again, currently ist a huge mess. 
 //TODO(Rennorb): proper item name formatting. 
 //TODO(Rennorb): specs, pets, and amulets endpoints.
+//TODO(Rennorb): item defense / weapon power (scaling)
 
 
 
@@ -38,27 +39,30 @@ class GW2TooltipsV2 {
 
 	context : Context[] = [];
 	static defaultContext : Context = {
-		traits     : [],
-		gameMode   : 'Pve',
-		sex        : "Male",
-		targetArmor: 2597,
-		stats      : {
-			level          : 80,
-			power          : 1000,
-			toughness      : 1000,
-			vitality       : 1000,
-			precision      : 1000,
-			ferocity       : 1000,
-			conditionDamage: 0,
-			expertise      : 0,
-			concentration  : 0,
-			healing        : 0,
-			critDamage     : 0,
+		gameMode           : 'Pve',
+		targetArmor        : 2597,
+		character: {
+			level            : 80,
+			sex              : "Male",
+			traits           : [],
+			stats: {
+				power          : 1000,
+				toughness      : 1000,
+				vitality       : 1000,
+				precision      : 1000,
+				ferocity       : 1000,
+				conditionDamage: 0,
+				expertise      : 0,
+				concentration  : 0,
+				healing        : 0,
+				critDamage     : 0,
+			},
 		},
 	}
 	static createCompleteContext(partialContext : PartialContext) : Context {
-		const stats = Object.assign({}, this.defaultContext.stats, partialContext.stats)
-		return Object.assign({}, this.defaultContext, partialContext, { stats });
+		const stats = Object.assign({}, this.defaultContext.character.stats, partialContext.character?.stats);
+		const character = Object.assign({}, this.defaultContext.character, partialContext.character, { stats });
+		return Object.assign({}, this.defaultContext, partialContext, { character });
 	}
 
 	config : Config;
@@ -207,7 +211,7 @@ class GW2TooltipsV2 {
 
 	inflateGenericIcon(gw2Object : HTMLElement, data : { name : string, icon? : string }) {
 		const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, undefined, data.name));
-		wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + data.name;
+		wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + TUtilsV2.GW2Text2HTML(data.name).replaceAll(/\[.*?\]/g, '');
 		wikiLink.target = '_blank';
 		if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(data.name);
 		gw2Object.append(wikiLink);
@@ -436,13 +440,17 @@ class GW2TooltipsV2 {
 		const name = this.formatItemName(item, statSet, undefined, stackSize)
 			.replaceAll('[s]', stackSize > 1 ? 's' : '')
 			.replaceAll(/(\S+)\[pl:"(.+?)"]/g, stackSize > 1 ? '$2' : '$1')
-			.replaceAll(/(\S+)\[f:"(.+?)"]/g, context.sex == "Female" ? '$2' : '$1')
+			.replaceAll(/(\S+)\[f:"(.+?)"]/g, context.character.sex == "Female" ? '$2' : '$1')
 			.replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')
 			.replaceAll('[null]', '');
-		const parts = [TUtilsV2.newElm('tet', TUtilsV2.newElm('teb.color-rarity-'+item.rarity, name), TUtilsV2.newElm('div.flexbox-fill'))];
+		const parts = [TUtilsV2.newElm('tet', TUtilsV2.newImg(item.icon),  TUtilsV2.newElm('teb.color-rarity-'+item.rarity, name), TUtilsV2.newElm('div.flexbox-fill'))];
 
 		if('defense' in item) {
 			parts.push(TUtilsV2.newElm('te', TUtilsV2.newElm('tem', 'Defense: ', TUtilsV2.newElm('span.color-stat-green', String(item.defense)))));
+		}
+
+		if('power' in item) {
+			parts.push(TUtilsV2.newElm('te', TUtilsV2.newElm('tem', 'Weapon Strength: ', TUtilsV2.newElm('span.color-stat-green', `${item.power[0]} - ${item.power[1]}`))));
 		}
 
 	
@@ -453,10 +461,32 @@ class GW2TooltipsV2 {
 			}));
 		}
 
-		const metaInfo = TUtilsV2.newElm('div.group', TUtilsV2.newElm('te.color-rarity-'+item.rarity, item.rarity));
-		if('weight' in item) metaInfo.append(TUtilsV2.newElm('span', item.weight));
-		if('subtype' in item) metaInfo.append(TUtilsV2.newElm('span', `${item.type}: ${item.subtype}`));
-		if(item.description) metaInfo.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(item.description))));
+		//TODO(Rennorb): upgrades / infusions
+
+		const metaInfo = TUtilsV2.newElm('div.group');
+		if(item.type == "Armor" || item.type == "Weapon" || item.type == "Trinket") {
+			metaInfo.append(TUtilsV2.newElm('te.color-rarity-'+item.rarity, item.rarity));
+			if('weight' in item) metaInfo.append(TUtilsV2.newElm('span', item.weight));
+			metaInfo.append(TUtilsV2.newElm('span', `${item.type}: ${item.subtype}`));
+			if(item.type == "Weapon" && this.isTwoHanded(item.subtype)) metaInfo.append(TUtilsV2.newElm('span.color-rarity-Junk', `(Two-Handed)`));
+			if(item.required_level) metaInfo.append(TUtilsV2.newElm('span', 'Required Level: '+item.required_level));
+			if(item.description) metaInfo.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(item.description))));
+		}
+		else {
+			if(item.description) metaInfo.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(item.description))));
+		}
+
+		if(item.flags.includes('AccountBound')) metaInfo.append(TUtilsV2.newElm('span', 'Account Bound'));
+		else if(item.flags.includes('SoulbindOnAcquire')) metaInfo.append(TUtilsV2.newElm('span', 'Soulbound on Acquire'));
+		//TODO(Rennorb): soulbind on use
+		//TODO(Rennorb): salvage
+		
+		if(item.vendor_value) {
+			let text = `Vendor Value: ${item.vendor_value * stackSize}c`;
+			if(stackSize > 1)
+				text += ` (${item.vendor_value}c x ${stackSize})`;
+			metaInfo.append(TUtilsV2.newElm('span', text)); //TODO(Rennorb): visuals
+		}
 
 		parts.push(metaInfo);
 
@@ -498,6 +528,36 @@ class GW2TooltipsV2 {
 			name = `${stackSize} ${name}`;
 
 		return name;
+	}
+
+	isTwoHanded(type : API.WeaponDetailType) {
+		switch(type) {
+			case 'Axe'         : return false; 
+			case 'Dagger'      : return false; 
+			case 'Mace'        : return false; 
+			case 'Pistol'      : return false; 
+			case 'Scepter'     : return false; 
+			case 'Focus'       : return false; 
+			case 'Sword'       : return false; 
+			case 'BowShort'    : return false; 
+			case 'Torch'       : return false; 
+			case 'Shield'      : return false; 
+			case 'Warhorn'     : return false; 
+			case 'Toy'         : return false; 
+			case 'ToyTwoHanded': return false; 
+			case 'BundleSmall' : return false; 
+			
+			case 'Hammer'     : return true;
+			case 'BowLong'    : return true;
+			case 'Greatsword' : return true;
+			case 'Polearm'    : return true;
+			case 'Rifle'      : return true;
+			case 'Staff'      : return true;
+			case 'BundleLarge': return true;
+			case 'Spear'      : return true;
+			case 'Speargun'   : return true;
+			case 'Trident'    : return true;
+		}
 	}
 }
 

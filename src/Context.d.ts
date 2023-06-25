@@ -8,20 +8,26 @@ declare interface Window {
 	GW2TooltipsConfig  : Config | undefined;
 }
 
-type PartialContext = Omit<Partial<Context>, 'stats'>  & { stats?: Partial<Stats> }
+type PartialContext = PartialR<Context>
+
+type PartialR<T> = { [P in keyof T]?: (T[P] extends string | number ? T[P] : PartialR<T[P]>) | undefined; }
 
 interface Context {
-	traits      : any[] //TODO(Rennorb): specify further. this should be number[] or maybe the traitline ids and up/mid/down choices
 	gameMode    : GameMode
-	sex         : 'Male' | 'Female'
 	targetArmor : number
-	stats       : Stats
+	character   : Character
 }
 
 type GameMode = 'Pve' | 'Pvp' | 'Wvw';
 
+interface Character {
+	level  : number
+	sex    : 'Male' | 'Female'
+	traits : number[] //TODO(Rennorb): add a collect function that can take them from existing specialization objects
+	stats  : Stats
+}
+
 interface Stats {
-	level          : number
 	power          : number
 	toughness      : number
 	vitality       : number

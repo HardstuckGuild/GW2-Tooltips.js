@@ -11,7 +11,7 @@ class FactsProcessor {
 
 	static calculateModifier(
 		{ formula, base_amount, formula_param1: level_scaling, formula_param2 } : API.Modifier,
-		{ level, power, conditionDamage: condition_damage, healing: healing_power } : Stats,
+		{ level, stats: { power, conditionDamage: condition_damage, healing: healing_power }} : Character,
 	) {
 		//TODO(Rennorb): this is **screaming** tabledrive me
 		switch (formula) {
@@ -86,7 +86,7 @@ class FactsProcessor {
 			if(fact.type === 'Recharge') { //meta facts
 				return null;
 			}
-			if(fact.requires_trait && (!context.traits || !fact.requires_trait.some(reqTrait => context.traits.includes(reqTrait)))) {
+			if(fact.requires_trait && (!context.character.traits || !fact.requires_trait.some(reqTrait => context.character.traits.includes(reqTrait)))) {
 				return null
 			}
 
@@ -149,13 +149,13 @@ class FactsProcessor {
 					if(buff.modifiers) {
 						for(const modifier of buff.modifiers) {
 							if(
-								(modifier.trait_req && !context.traits.includes(modifier.trait_req)) ||
+								(modifier.trait_req && !context.character.traits.includes(modifier.trait_req)) ||
 								(modifier.mode && modifier.mode !== context.gameMode)
 							) {
 								continue
 							}
 
-							let modifierValue = this.calculateModifier(modifier, context.stats)
+							let modifierValue = this.calculateModifier(modifier, context.character)
 
 							if(
 								modifier.flags.includes('MulByDuration') &&
@@ -211,7 +211,7 @@ class FactsProcessor {
 					}
 
 					let hitCountLabel = '';
-					let damage = weaponStrength * fact.hit_count * fact.dmg_multiplier * context.stats.power / context.targetArmor;
+					let damage = weaponStrength * fact.hit_count * fact.dmg_multiplier * context.character.stats.power / context.targetArmor;
 					if(!fact.hit_count) console.warn("[gw2-tooltips] [facts processor] 0 hit count: ", fact); //TODO(Rennorb) @debug
 					if(fact.hit_count > 1) {
 						damage *= fact.hit_count;
@@ -221,13 +221,13 @@ class FactsProcessor {
 				},
 				AttributeAdjust: ({ fact }) =>{
 					//TODO(Rennorb) @cleanup
-					const attribute = apiObject.attribute_base || (context.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0
-					const value = Math.round(fact.value + attribute * fact.attribute_multiplier + context.stats.level ** fact.level_exponent * fact.level_multiplier)
+					const attribute = apiObject.attribute_base || (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0
+					const value = Math.round(fact.value + attribute * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier)
 					return `<tem> ${value > 0 ? '+'+value : value} ${fact.text || fact.target} </tem>`
 				},
 				BuffConversion : ({ fact }) =>{
 					//TODO(Rennorb) @cleanup
-					const attribute = (context.stats as any)[TUtilsV2.Uncapitalize(fact.source)] || 0
+					const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.source)] || 0
 					const value = Math.round(attribute * fact.percent / 100)
 					return `<tem> ${fact.text}: Converting ${fact.percent}% of ${fact.source} to +${value} ${fact.target} </tem>`
 				}
