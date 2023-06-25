@@ -219,7 +219,7 @@ class FactsProcessor {
         }
         return weaponStrength;
     }
-    static generateFacts(apiObject, context, additional_facts) {
+    static generateFacts(apiObject, context) {
         var _a;
         let totalDefianceBreak = 0;
         const processFactData = (fact) => {
@@ -362,13 +362,10 @@ class FactsProcessor {
             wrapper.append(text);
             return wrapper;
         };
-        let factWraps = (apiObject.facts || [])
+        const factWraps = (apiObject.facts || [])
             .sort((a, b) => a.order - b.order)
             .map(processFactData)
             .filter(d => d);
-        if (additional_facts) {
-            factWraps = factWraps.concat(additional_facts.map(processFactData).filter(wrap => wrap));
-        }
         if ((!((_a = apiObject.facts) === null || _a === void 0 ? void 0 : _a.length) || context.gameMode !== 'Pve') && apiObject.facts_override) {
             for (const override of apiObject.facts_override) {
                 if (override.mode === context.gameMode) {
@@ -428,11 +425,12 @@ class TUtilsV2 {
 TUtilsV2.iconSource = 'https://assets.gw2dat.com/';
 TUtilsV2.missingImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHEAAABuCAIAAACfnGvJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMCSURBVHhe7ZjpkeowEAaJywERD9GQDMGwumyPLj+2XssH+/UPyjMjjVBjUWXf3oJGTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSU51inr8d0u02PVwp/xf/MHQvt9Hm/Be7PlMgIHhyzCjn9hNlpc7ebxe9hhNPp8QifpTdfuz9Oe3thjHH6Cndkfv7DWb0/syNbnN8QJuzkZr5q5K+Xk2C6BtbCTDEAZJDTuIfKi0tUKuZgHhBx89P1Zj5rtK4YQzspL43z6RnltFBR5DMVKVhGFPTy3UYBO6vo0GuIMcxpvs1O2gbhei0tbOazRusvmCe+x6nddDtbBA4/LmEFNfN1o57TOD0F5ZIDGOh0CbL91SrqDYZ07iiQ5etGdrxNpGkz9XowQ53GG2Sa7H5rFc095n1W1nzdqOPUXzbXGMVYp1FqlqlVxMCNXEd9kG806t2n87cw2KE4g53mO/fUKrJgxkzp5Ou5Paf//E4wtNPzUelupki+32k8+cZgMDpQ6V9w6ij+UAeee8/fcLovcsojpzxyyiOnPHLKI6c8csqDOx39MH0B5JRHTnmGO00v2uKLi0B8e7E8ghf+7aP5RimyDrC1ga9HPmIXp2ajy95tvEhwUaHJlpaouUandgD7OF3MpHijbrAlf13MmsOwoulQxruzu9NfGLClvtO6QTF2d87mNISWuWT7ZGtUMwJy2nLVKK2YBcqGx3Mmp+XUomQqGUcf9YpT3afZ2BBUoWFpElqYnm7ooY5P9n8a9QRcDz83lfylFdVcJnGoUAfudAjlD+FopM7CNZy27/aTKr2KU4c93Y6jD/gG13F6HeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklOb9/gEv6oxxwmIw6QAAAABJRU5ErkJggg==';
 TUtilsV2.dummy = document.createElement('template');
-TUtilsV2.GW2Text2HTML = (text, tag = 'span', itemStackSize = 1) => text
+TUtilsV2.GW2Text2HTML = (text, tag = 'span') => text
     ? text
         .replace(/<c=@(.*?)>(.*?)<\/c>/g, `<${tag} class="color-$1">$2</${tag}>`)
         .replace(/%%/g, '%')
-        .replace(/\[(.+?)\]/g, itemStackSize > 1 ? '$1' : '')
+        .replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')
+        .replaceAll('[null]', '')
     : '';
 TUtilsV2.DurationToSeconds = (dur) => dur.secs + dur.nanos / 10e8;
 TUtilsV2.Uncapitalize = (str) => str.charAt(0).toLowerCase() + str.slice(1);
@@ -532,7 +530,12 @@ class GW2TooltipsV2 {
                     return;
                 const data = APICache.storage[type].get(objId);
                 if (data) {
-                    this.tooltip.replaceChildren(...this.generateToolTipList(data, gw2Object));
+                    if (type == 'items') {
+                        const statId = +String(gw2Object.getAttribute('stats')) || undefined;
+                        this.tooltip.replaceChildren(this.generateItemTooltip(data, statId));
+                    }
+                    else
+                        this.tooltip.replaceChildren(...this.generateToolTipList(data, gw2Object));
                     this.tooltip.style.display = '';
                 }
             });
@@ -622,7 +625,7 @@ class GW2TooltipsV2 {
         let override = (_b = (_a = apiObject.facts_override) === null || _a === void 0 ? void 0 : _a.find(f => f.mode === gameMode)) === null || _b === void 0 ? void 0 : _b.facts.find(f => f.type === 'Recharge');
         return (_c = (override || recharge)) === null || _c === void 0 ? void 0 : _c.duration;
     }
-    generateToolTip(apiObject, context, stats, additionalFacts) {
+    generateToolTip(apiObject, context) {
         let recharge = '';
         if ('facts' in apiObject) {
             const _recharge = this.getRecharge(apiObject, context.gameMode);
@@ -630,8 +633,7 @@ class GW2TooltipsV2 {
                 recharge = TUtilsV2.newElm('ter', TUtilsV2.DurationToSeconds(_recharge) + 's', TUtilsV2.newImg('156651.png', 'iconsmall'));
             }
         }
-        const namePrefix = stats ? stats.name + ' ' : '';
-        const headerElements = [TUtilsV2.newElm('teb', namePrefix + TUtilsV2.GW2Text2HTML(apiObject.name))];
+        const headerElements = [TUtilsV2.newElm('teb', TUtilsV2.GW2Text2HTML(apiObject.name))];
         if ('palettes' in apiObject)
             headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
         else if ('slot' in apiObject)
@@ -676,8 +678,8 @@ class GW2TooltipsV2 {
             description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`;
             parts.push(description);
         }
-        if ('facts' in apiObject || additionalFacts) {
-            parts.push(...FactsProcessor.generateFacts(apiObject, context, additionalFacts));
+        if ('facts' in apiObject) {
+            parts.push(...FactsProcessor.generateFacts(apiObject, context));
         }
         const tooltip = TUtilsV2.newElm('div.tooltip', ...parts);
         tooltip.dataset.id = String(apiObject.id);
@@ -711,42 +713,8 @@ class GW2TooltipsV2 {
             }
         };
         addObjectsToChain(initialAPIObject);
-        const additionalFacts = [];
-        const statSetId = +String(gw2Object.getAttribute('stats'));
-        let statSet = undefined;
-        if (!isNaN(statSetId)) {
-            statSet = APICache.storage.itemstats.get(statSetId);
-            if (!statSet)
-                console.error(`[gw2-tooltips] [tooltip engine] itemstat #${statSetId} is missing in the cache`);
-            else {
-                if (this.config.adjustIncorrectStatIds && 'subtype' in initialAPIObject && statSet.similar_sets) {
-                    const correctSetId = statSet.similar_sets[initialAPIObject.subtype];
-                    if (correctSetId !== undefined) {
-                        console.info(`[gw2-tooltips] [tooltip engine] corrected itemstat #${statSetId} to #${correctSetId} because the target is of type ${initialAPIObject.subtype}`);
-                        const newSet = APICache.storage.itemstats.get(correctSetId);
-                        if (!newSet)
-                            console.error(`[gw2-tooltips] [tooltip engine] corrected itemstat #${correctSetId} is missing in the cache`);
-                        else
-                            statSet = newSet;
-                    }
-                }
-                for (const { attribute, base_value, scaling } of statSet.attributes) {
-                    additionalFacts.push({
-                        type: 'AttributeAdjust',
-                        icon: '',
-                        order: -1,
-                        target: attribute,
-                        value: base_value,
-                        attribute_multiplier: scaling,
-                        level_exponent: 0,
-                        hit_count: 0,
-                        level_multiplier: 0,
-                    });
-                }
-            }
-        }
         const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
-        const tooltipChain = objectChain.map(obj => this.generateToolTip(obj, context, statSet, additionalFacts));
+        const tooltipChain = objectChain.map(obj => this.generateToolTip(obj, context));
         this.tooltip.append(...tooltipChain);
         if (tooltipChain.length > 1) {
             gw2Object.classList.add('cycler');
@@ -764,6 +732,86 @@ class GW2TooltipsV2 {
             tooltipChain[0].classList.add('active');
         }
         return tooltipChain;
+    }
+    generateItemTooltip(item, statSetId, stackSize = 1) {
+        let statSet = undefined;
+        if (item.type == "Armor" || item.type == "Trinket" || item.type == "Weapon") {
+            statSetId = statSetId || item.attribute_set;
+            if (statSetId === undefined)
+                console.warn(`[gw2-tooltips] [tooltip engine] Hovering on item without specified or innate stats. Specify the stats by adding 'stats="<stat_set_id>" to the html element.' `);
+            else {
+                statSet = APICache.storage.itemstats.get(statSetId);
+                if (!statSet)
+                    console.error(`[gw2-tooltips] [tooltip engine] itemstat #${statSetId} is missing in cache.`);
+                else {
+                    if (this.config.adjustIncorrectStatIds && statSet.similar_sets) {
+                        const correctSetId = statSet.similar_sets[item.subtype];
+                        if (correctSetId !== undefined) {
+                            console.info(`[gw2-tooltips] [tooltip engine] Corrected itemstat #${statSetId} to #${correctSetId} because the target is of type ${item.subtype}.`);
+                            const newSet = APICache.storage.itemstats.get(correctSetId);
+                            if (!newSet)
+                                console.error(`[gw2-tooltips] [tooltip engine] Corrected itemstat #${correctSetId} is missing in the cache.`);
+                            else
+                                statSet = newSet;
+                        }
+                    }
+                }
+            }
+        }
+        const name = this.formatItemName(item, statSet, undefined, stackSize)
+            .replaceAll('[s]', stackSize > 1 ? 's' : '')
+            .replaceAll(/(\S+)\[pl:"(.+?)"]/g, stackSize > 1 ? '$2' : '$1')
+            .replaceAll(/(\S+)\[f:"(.+?)"]/g, stackSize > 1 ? '$2' : '$1')
+            .replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')
+            .replaceAll('[null]', '');
+        const parts = [TUtilsV2.newElm('tet', TUtilsV2.newElm('teb.color-rarity-' + item.rarity, name), TUtilsV2.newElm('div.flexbox-fill'))];
+        if ('defense' in item) {
+            parts.push(TUtilsV2.newElm('te', TUtilsV2.newElm('tem', 'Defense: ', TUtilsV2.newElm('span.color-stat-green', String(item.defense)))));
+        }
+        if (statSet) {
+            parts.push(...statSet.attributes.map(({ attribute, base_value, scaling }) => {
+                const computedValue = Math.round(base_value + item.attribute_base * scaling);
+                return TUtilsV2.newElm('te', TUtilsV2.newElm('tem.color-stat-green', `+${computedValue} ${attribute}`));
+            }));
+        }
+        const metaInfo = TUtilsV2.newElm('div.group', TUtilsV2.newElm('te.color-rarity-' + item.rarity, item.rarity));
+        if ('weight' in item)
+            metaInfo.append(TUtilsV2.newElm('span', item.weight));
+        if ('subtype' in item)
+            metaInfo.append(TUtilsV2.newElm('span', `${item.type}: ${item.subtype}`));
+        if (item.description)
+            metaInfo.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(item.description))));
+        parts.push(metaInfo);
+        const tooltip = TUtilsV2.newElm('div.tooltip.item.active', ...parts);
+        tooltip.dataset.id = String(item.id);
+        return tooltip;
+    }
+    formatItemName(item, statSet, upgradeComponent, stackSize = 1) {
+        let name;
+        if (item.type == 'TraitGuide') {
+            name = item.trait;
+        }
+        else {
+            name = item.name;
+        }
+        let arg1, arg2, arg3, arg4;
+        arg1 = arg2 = arg3 = arg4 = '';
+        if (!item.flags.includes('HideSuffix')) {
+            if (statSet && statSet.name) {
+                arg1 = statSet.name;
+                arg2 = " ";
+            }
+            if (upgradeComponent && upgradeComponent.suffix) {
+                arg4 = upgradeComponent.suffix;
+                arg3 = " ";
+            }
+        }
+        name = name.replace('%str1%', arg1).replace('%str2%', arg2).replace('%str3%', arg3).replace('%str4%', arg4);
+        if (item.flags.includes('Pvp') || item.flags.includes('PvpLobby'))
+            name += " (PvP)";
+        if (stackSize > 1)
+            name = `${stackSize} ${name}`;
+        return name;
     }
 }
 GW2TooltipsV2.defaultContext = {

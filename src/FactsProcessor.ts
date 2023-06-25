@@ -79,7 +79,7 @@ class FactsProcessor {
 		return weaponStrength
 	}
 
-	static generateFacts(apiObject : SupportedTTTypes & { facts? : API.Fact[], facts_override? : API.FactsOverride[], attribute_base? : number }, context : Context, additional_facts? : API.Fact[]) : HTMLElement[] {
+	static generateFacts(apiObject : SupportedTTTypes & { facts? : API.Fact[], facts_override? : API.FactsOverride[], attribute_base? : number }, context : Context) : HTMLElement[] {
 		let totalDefianceBreak = 0
 
 		const processFactData = (fact : API.Fact) => {
@@ -243,15 +243,11 @@ class FactsProcessor {
 			return wrapper
 		}
 
-		let factWraps = 
+		const factWraps = 
 			(apiObject.facts || [])
 				.sort((a, b) => a.order - b.order)
 				.map(processFactData)
 				.filter(d => d) as HTMLElement[] // ts doesn't understand what the predicate does
-
-		if(additional_facts) {
-			factWraps = factWraps.concat(additional_facts.map(processFactData).filter(wrap => wrap) as HTMLElement[])
-		}
 
 		if((!apiObject.facts?.length || context.gameMode !== 'Pve') && apiObject.facts_override) { //TODO(Rennorb) @cleanup
 			for(const override of apiObject.facts_override) {

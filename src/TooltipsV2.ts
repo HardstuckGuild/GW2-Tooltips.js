@@ -165,9 +165,15 @@ class GW2TooltipsV2 {
 
 				if(type != 'skills' && type != 'traits' && type != 'pvp/amulets' && type != "items") return; //TODO(Rennorb): others disabled for now
 
+
 				const data = APICache.storage[type].get(objId) //TODO(Rennorb) @cleanup: move into generateToolTipList?
 				if(data) {
-					this.tooltip.replaceChildren(...this.generateToolTipList(data, gw2Object));
+					if(type == 'items') {
+						const statId = +String(gw2Object.getAttribute('stats')) || undefined;
+						this.tooltip.replaceChildren(this.generateItemTooltip(data as API.Item, statId));
+					}
+					else
+						this.tooltip.replaceChildren(...this.generateToolTipList(data as Exclude<typeof data, API.Item>, gw2Object));
 					this.tooltip.style.display = ''; //empty value resets actual value to use stylesheet
 				}
 			})
@@ -267,7 +273,7 @@ class GW2TooltipsV2 {
 	}
 
 	// TODO(Rennorb) @cleanup: split this into the inflator system aswell. its getting to convoluted already
-	generateToolTip(apiObject : SupportedTTTypes, context : Context, stats? : API.AttributeSet, additionalFacts? : API.Fact[]) : HTMLElement {
+	generateToolTip(apiObject : SupportedTTTypes, context : Context) : HTMLElement {
 		let recharge : HTMLElement | '' = ''
 		if('facts' in apiObject) {
 			const _recharge = this.getRecharge(apiObject, context.gameMode);
@@ -279,8 +285,7 @@ class GW2TooltipsV2 {
 			}
 		}
 
-		const namePrefix = stats ? stats.name + ' ' : ''; //TODO(Rennorb):  this is more complicated
-		const headerElements = [TUtilsV2.newElm('teb', namePrefix + TUtilsV2.GW2Text2HTML(apiObject.name))];
+		const headerElements = [TUtilsV2.newElm('teb', TUtilsV2.GW2Text2HTML(apiObject.name))];
 		
 		//TODO(Rennorb): slots stuff might not be doable serverside since the server is missing context. this is at least a case of @cleanup
 		if('palettes' in apiObject) headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
@@ -336,8 +341,8 @@ class GW2TooltipsV2 {
 			parts.push(description)
 		}
 
-		if('facts' in apiObject || additionalFacts) {
-			parts.push(...FactsProcessor.generateFacts(apiObject, context, additionalFacts))
+		if('facts' in apiObject) {
+			parts.push(...FactsProcessor.generateFacts(apiObject, context))
 		}
 
 		const tooltip = TUtilsV2.newElm('div.tooltip', ...parts)
@@ -379,41 +384,8 @@ class GW2TooltipsV2 {
 
 		addObjectsToChain(initialAPIObject)
 
-		const additionalFacts : API.Fact[] = [];
-		const statSetId = +String(gw2Object.getAttribute('stats'));
-		let statSet : API.AttributeSet | undefined = undefined;
-		if(!isNaN(statSetId)) {
-			statSet = APICache.storage.itemstats.get(statSetId);
-			if(!statSet) console.error(`[gw2-tooltips] [tooltip engine] itemstat #${statSetId} is missing in the cache`);
-			else {
-				if(this.config.adjustIncorrectStatIds && 'subtype' in initialAPIObject && statSet.similar_sets) {
-					const correctSetId = statSet.similar_sets[initialAPIObject.subtype];
-					if(correctSetId !== undefined) {
-						console.info(`[gw2-tooltips] [tooltip engine] corrected itemstat #${statSetId} to #${correctSetId} because the target is of type ${initialAPIObject.subtype}`);
-						const newSet = APICache.storage.itemstats.get(correctSetId);
-						if(!newSet) console.error(`[gw2-tooltips] [tooltip engine] corrected itemstat #${correctSetId} is missing in the cache`);
-						else statSet = newSet;
-					}
-				}
-
-				for(const {attribute, base_value, scaling} of statSet.attributes) {
-					additionalFacts.push({
-						type  : 'AttributeAdjust',
-						icon  : '',
-						order : -1,
-						target: attribute,
-						value : base_value,
-						attribute_multiplier : scaling,
-						level_exponent       : 0,
-						hit_count            : 0,
-						level_multiplier     : 0,
-					} as API.AttributeAdjustFact);
-				}
-			}
-		}
-
 		const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
-		const tooltipChain = objectChain.map(obj => this.generateToolTip(obj, context, statSet, additionalFacts));
+		const tooltipChain = objectChain.map(obj => this.generateToolTip(obj, context));
 		this.tooltip.append(...tooltipChain)
 
 		if(tooltipChain.length > 1) {
@@ -436,9 +408,99 @@ class GW2TooltipsV2 {
 
 		return tooltipChain
 	}
+
+	generateItemTooltip(item : API.Item, statSetId? : number, stackSize = 1) : HTMLElement {
+		let statSet : API.AttributeSet | undefined = undefined;
+		if(item.type == "Armor" || item.type == "Trinket" || item.type == "Weapon") {
+			statSetId = statSetId || item.attribute_set;
+			if(statSetId === undefined) console.warn(`[gw2-tooltips] [tooltip engine] Hovering on item without specified or innate stats. Specify the stats by adding 'stats="<stat_set_id>" to the html element.' `);
+			else {
+				statSet = APICache.storage.itemstats.get(statSetId);
+				if(!statSet) console.error(`[gw2-tooltips] [tooltip engine] itemstat #${statSetId} is missing in cache.`);
+				else {
+					//TODO(Rennorb): should this happen at injection time?
+					if(this.config.adjustIncorrectStatIds && statSet.similar_sets) {
+						const correctSetId = statSet.similar_sets[item.subtype];
+						if(correctSetId !== undefined) {
+							console.info(`[gw2-tooltips] [tooltip engine] Corrected itemstat #${statSetId} to #${correctSetId} because the target is of type ${item.subtype}.`);
+							const newSet = APICache.storage.itemstats.get(correctSetId);
+							if(!newSet) console.error(`[gw2-tooltips] [tooltip engine] Corrected itemstat #${correctSetId} is missing in the cache.`);
+							else statSet = newSet;
+						}
+					}
+				}
+			}
+		}
+
+		const name = this.formatItemName(item, statSet, undefined, stackSize)
+			.replaceAll('[s]', stackSize > 1 ? 's' : '')
+			.replaceAll(/(\S+)\[pl:"(.+?)"]/g, stackSize > 1 ? '$2' : '$1')
+			.replaceAll(/(\S+)\[f:"(.+?)"]/g, stackSize > 1 ? '$2' : '$1')
+			.replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')
+			.replaceAll('[null]', '');
+		const parts = [TUtilsV2.newElm('tet', TUtilsV2.newElm('teb.color-rarity-'+item.rarity, name), TUtilsV2.newElm('div.flexbox-fill'))];
+
+		if('defense' in item) {
+			parts.push(TUtilsV2.newElm('te', TUtilsV2.newElm('tem', 'Defense: ', TUtilsV2.newElm('span.color-stat-green', String(item.defense)))));
+		}
+
+	
+		if(statSet) {
+			parts.push(...statSet.attributes.map(({attribute, base_value, scaling}) => {
+				const computedValue = Math.round(base_value + (item as any).attribute_base * scaling); //TODO(Rennorb) @cleanup
+				return TUtilsV2.newElm('te', TUtilsV2.newElm('tem.color-stat-green', `+${computedValue} ${attribute}`));
+			}));
+		}
+
+		const metaInfo = TUtilsV2.newElm('div.group', TUtilsV2.newElm('te.color-rarity-'+item.rarity, item.rarity));
+		if('weight' in item) metaInfo.append(TUtilsV2.newElm('span', item.weight));
+		if('subtype' in item) metaInfo.append(TUtilsV2.newElm('span', `${item.type}: ${item.subtype}`));
+		if(item.description) metaInfo.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(item.description))));
+
+		parts.push(metaInfo);
+
+		const tooltip = TUtilsV2.newElm('div.tooltip.item.active', ...parts);
+		tooltip.dataset.id = String(item.id);
+		return tooltip;
+	}
+
+	formatItemName(item : API.Item, statSet? : API.AttributeSet, upgradeComponent? : any, stackSize = 1) : string {
+		let name;
+		if(item.type == 'TraitGuide') {
+			name = item.trait;
+		}
+		else {
+			name = item.name;
+		}
+
+		let arg1, arg2, arg3, arg4;
+		arg1 = arg2 = arg3 = arg4 = '';
+
+		if(!item.flags.includes('HideSuffix')) {
+			if(statSet && statSet.name) {
+				arg1 = statSet.name;
+				arg2 = " ";
+			}
+
+			if(upgradeComponent && upgradeComponent.suffix) {
+				arg4 = upgradeComponent.suffix;
+				arg3 = " ";
+			}
+		}
+
+		name = name.replace('%str1%', arg1).replace('%str2%', arg2).replace('%str3%', arg3).replace('%str4%', arg4);
+
+		if(item.flags.includes('Pvp') || item.flags.includes('PvpLobby'))
+			name += " (PvP)";
+
+		if(stackSize > 1)
+			name = `${stackSize} ${name}`;
+
+		return name;
+	}
 }
 
-type SupportedTTTypes = API.Skill | API.Trait | API.Amulet | API.Item; //TODO(Rennorb) @cleanup: once its finished
+type SupportedTTTypes = API.Skill | API.Trait | API.Amulet; //TODO(Rennorb) @cleanup: once its finished
 
 
 const gw2tooltips = new GW2TooltipsV2()

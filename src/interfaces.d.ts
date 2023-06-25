@@ -243,8 +243,11 @@ namespace API {
 		name         : string
 		icon         : string
 		rarity       : 'Junk' | 'Basic' | 'Common' | 'Uncommon' | 'Rare' | 'Exotic' | 'Ascended' | 'Legendary'
+		flags        : ItemFlag[]
 		description? : string
 	}
+
+	type ItemFlag = 'AccountBound' | 'Activity' | 'Dungeon' | 'Pve' | 'Pvp' | 'PvpLobby' | 'ItemFlag7' | 'Wvw' | 'GemStore' | 'HideSuffix' | 'MonsterOnly' | 'NoExport' | 'NoMysticForge' | 'NoSalvage' | 'NoSell' | 'NotUpgradeable' | 'SoulbindOnAcquire' | 'ItemFlag18' | 'Unique' | 'DisallowTrader' | 'DisallowUnderwater' | 'ItemFlag22' | 'ItemFlag23' | 'ItemFlag24' | 'ItemFlag25' | 'BulkConsume' | 'ItemFlag27' | 'ItemFlag28' | 'Indestructible' | 'ItemFlag30' | 'ItemFlag31' | 'ItemFlag32';
 
 	type WeaponDetailType = Weapons1H | Weapons2H | 'Polearm' | 'BundleSmall' | 'BundleLarge' | WeaponsAquatic | 'Toy' | 'ToyTwoHanded' | 'None';
 
@@ -260,7 +263,10 @@ namespace API {
 		type    : 'Weapon'
 		power   : [number, number]
 		subtype : WeaponDetailType
-	}) & ItemStatData
+	}) & ItemStatData | {
+		type  : 'TraitGuide'
+		trait : 'todo'
+	}
 
 	type ItemStatData = {
 		attribute_base? : number

@@ -24,7 +24,17 @@
 .color-warning { color: #FFED0002 }
 .color-event { color: #FFCC6633 }
 
+.color-rarity-Junk { color: #a9a9a9ff }
+.color-rarity-Basic { color: #ffffffff }
+.color-rarity-Common { color: #226fdcff }
+.color-rarity-Uncommon { color: #1a9306ff }
+.color-rarity-Rare { color: #fcd00bff }
+.color-rarity-Exotic { color: #ffa405ff }
+.color-rarity-Ascended { color: #ffa3b1ff }
+.color-rarity-Legendary { color: #4c139dff }
 
+/* probably not correct */
+.color-stat-green { color: #33e87bf5 }
 
 
 .flexbox-fill {
@@ -67,6 +77,13 @@
 	display: none;
 }
 
+.tooltip .group {
+	display: flex;
+	flex-direction: column;
+
+	margin-top: 0.75em;
+}
+
 .tooltipWrapper tet {
   display: flex;
   justify-content: space-between;
@@ -74,7 +91,7 @@
   gap: 0 1ch;
   white-space: nowrap;
 }
-.tooltipWrapper tet teb {
+.tooltip:not(.item) tet teb {
 	color: var(--gw2-tt-color-tt-title);
 }
 
