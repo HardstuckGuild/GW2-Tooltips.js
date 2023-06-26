@@ -473,9 +473,8 @@ class GW2TooltipsV2 {
 					index += context.character.level;
 				}
 
-				const base = (context.character.isPlayer ? this.LUT_POWER_PLAYER : this.LUT_POWER_MONSTER)[Math.min(100, index)];
-				const avg    = base * item.power.mul;
-				const spread = base * item.power.spread;
+				const avg = (context.character.isPlayer ? this.LUT_POWER_PLAYER : this.LUT_POWER_MONSTER)[Math.min(100, index)] * item.power.mul;
+				const spread = avg * item.power.spread;
 				power = [Math.ceil(avg - spread), Math.ceil(avg + spread)];
 			}
 			else {
