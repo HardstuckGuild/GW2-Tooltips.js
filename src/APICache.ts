@@ -107,6 +107,11 @@ class APICache {
 			for(const { facts } of datum.facts_override)
 				addFacts(facts);
 		}
+
+		if('attribute_set' in datum && datum.attribute_set) {
+			if(!this.storage.itemstats.has(datum.attribute_set))
+				connectedIdsStorage.itemstats.add(datum.attribute_set);
+		}
 	}
 }
 

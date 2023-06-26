@@ -145,6 +145,10 @@ class APICache {
             for (const { facts } of datum.facts_override)
                 addFacts(facts);
         }
+        if ('attribute_set' in datum && datum.attribute_set) {
+            if (!this.storage.itemstats.has(datum.attribute_set))
+                connectedIdsStorage.itemstats.add(datum.attribute_set);
+        }
     }
 }
 APICache.storage = {
@@ -825,7 +829,7 @@ class GW2TooltipsV2 {
         }
         if (statSet) {
             parts.push(...statSet.attributes.map(({ attribute, base_value, scaling }) => {
-                const computedValue = Math.round(base_value + item.attribute_base * scaling);
+                const computedValue = Math.round(base_value + (item.attribute_base || 0) * scaling);
                 return TUtilsV2.newElm('te', TUtilsV2.newElm('tem.color-stat-green', `+${computedValue} ${attribute}`));
             }));
         }

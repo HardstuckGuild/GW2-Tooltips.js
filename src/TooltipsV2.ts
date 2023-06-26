@@ -488,7 +488,7 @@ class GW2TooltipsV2 {
 	
 		if(statSet) {
 			parts.push(...statSet.attributes.map(({attribute, base_value, scaling}) => {
-				const computedValue = Math.round(base_value + (item as any).attribute_base * scaling); //TODO(Rennorb) @cleanup
+				const computedValue = Math.round(base_value + ((item as any).attribute_base || 0) * scaling); //TODO(Rennorb) @cleanup
 				return TUtilsV2.newElm('te', TUtilsV2.newElm('tem.color-stat-green', `+${computedValue} ${attribute}`));
 			}));
 		}
