@@ -21,10 +21,11 @@ interface Context {
 type GameMode = 'Pve' | 'Pvp' | 'Wvw';
 
 interface Character {
-	level  : number
-	sex    : 'Male' | 'Female'
-	traits : number[] //TODO(Rennorb): add a collect function that can take them from existing specialization objects
-	stats  : Stats
+	level    : number
+	isPlayer : bool
+	sex      : 'Male' | 'Female'
+	traits   : number[] //TODO(Rennorb): add a collect function that can take them from existing specialization objects
+	stats    : Stats
 }
 
 interface Stats {

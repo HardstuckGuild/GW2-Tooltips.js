@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html class="no-js" style="scroll-behavior: smooth;" lang="en-US">
+<script src="../out/tooltips.js" defer></script>
+
+<script src="./output.skills.js"></script>
+<script src="./output.traits.js"></script>
+<script src="./output.items.js"></script>
+<script src="./output.itemstats.js"></script>
+<script>
+	var GW2TooltipsConfig = {
+		autoInitialize: false,
+	}
+	var GW2TooltipsContext = {
+		gameMode: 'Pvp',
+	}
+	window.addEventListener('load', () => {
+		APICache.apiImpl = new FakeAPI();
+		gw2tooltips.hookDocument(document)
+	})
+</script>
+<link rel="stylesheet" href="../out/tooltips.css" />
+<link rel="stylesheet" href="./tooltips.min.css" />
+<head>
+</head>
+<body class="gw2_builds-template-default single single-gw2_builds postid-19944 webp-support">
+	<gw2object objid="77458" type="item" stats="161"></gw2object>
+	<gw2object objid="77352" type="item" stats="161"></gw2object>
+</body>
+</html>

@@ -26,6 +26,7 @@ To archive all of the functionality we use our own proprietary API as opposed to
 		targetArmor        : 2597,
 		character: {
 			level            : 80,
+			isPlayer         : true,
 			sex              : 'Male' | 'Female' = 'Male',
 			traits           : number[] = [],
 			stats: {

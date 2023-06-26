@@ -244,6 +244,7 @@ namespace API {
 		icon           : string
 		rarity         : 'Junk' | 'Basic' | 'Common' | 'Uncommon' | 'Rare' | 'Exotic' | 'Ascended' | 'Legendary'
 		flags          : ItemFlag[]
+		level          : number
 		required_level : number
 		description?   : string
 		vendor_value   : number
@@ -255,20 +256,28 @@ namespace API {
 
 	type ItemDetail = ({
 		type    : 'Armor'
-		defense : number
+		defense : ValueOrLutOffset
 		subtype : ArmorType
 		weight  : 'Clothes' | 'Light' | 'Medium' | 'Heavy'
 	} | {
 		type    : 'Trinket'
 		subtype : TrinketType
 	} | {
-		type    : 'Weapon'
-		power   : [number, number]
-		subtype : WeaponDetailType
+		type     : 'Weapon'
+		power    : [number, number] | {
+			//if unset its itemlevel scaling
+			scaling? : 'PlayerLevel' | 'PlayerLevelScaleRarity' | 'ItemScale4'
+			mul      : number
+			spread   : number
+		}
+		defense? : ValueOrLutOffset
+		subtype  : WeaponDetailType
 	}) & ItemStatData | {
 		type  : 'TraitGuide'
 		trait : 'todo'
 	}
+
+	type ValueOrLutOffset = number | [number, number] //base index, mul
 
 	type ItemStatData = {
 		attribute_base? : number

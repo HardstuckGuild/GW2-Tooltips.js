@@ -79,7 +79,7 @@ class FactsProcessor {
 		return weaponStrength
 	}
 
-	static generateFacts(apiObject : SupportedTTTypes & { facts? : API.Fact[], facts_override? : API.FactsOverride[], attribute_base? : number }, context : Context) : HTMLElement[] {
+	static generateFacts(apiObject : SupportedTTTypes & { facts? : API.Fact[], facts_override? : API.FactsOverride[] }, context : Context) : HTMLElement[] {
 		let totalDefianceBreak = 0
 
 		const processFactData = (fact : API.Fact) => {
@@ -221,7 +221,7 @@ class FactsProcessor {
 				},
 				AttributeAdjust: ({ fact }) =>{
 					//TODO(Rennorb) @cleanup
-					const attribute = apiObject.attribute_base || (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0
+					const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0
 					const value = Math.round(fact.value + attribute * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier)
 					return `<tem> ${value > 0 ? '+'+value : value} ${fact.text || fact.target} </tem>`
 				},

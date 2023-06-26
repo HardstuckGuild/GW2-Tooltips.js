@@ -43,6 +43,7 @@ class GW2TooltipsV2 {
 		targetArmor        : 2597,
 		character: {
 			level            : 80,
+			isPlayer         : true,
 			sex              : "Male",
 			traits           : [],
 			stats: {
@@ -211,7 +212,8 @@ class GW2TooltipsV2 {
 
 	inflateGenericIcon(gw2Object : HTMLElement, data : { name : string, icon? : string }) {
 		const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, undefined, data.name));
-		wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + TUtilsV2.GW2Text2HTML(data.name).replaceAll(/\[.*?\]/g, '');
+		wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + TUtilsV2.GW2Text2HTML(data.name.replaceAll(/%str\d%/g, ''))
+		.replaceAll(/\[.*?\]/g, '');
 		wikiLink.target = '_blank';
 		if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(data.name);
 		gw2Object.append(wikiLink);
@@ -445,12 +447,42 @@ class GW2TooltipsV2 {
 			.replaceAll('[null]', '');
 		const parts = [TUtilsV2.newElm('tet', TUtilsV2.newImg(item.icon),  TUtilsV2.newElm('teb.color-rarity-'+item.rarity, name), TUtilsV2.newElm('div.flexbox-fill'))];
 
-		if('defense' in item) {
-			parts.push(TUtilsV2.newElm('te', TUtilsV2.newElm('tem', 'Defense: ', TUtilsV2.newElm('span.color-stat-green', String(item.defense)))));
+		if('defense' in item && item.defense) {
+			const defense = (typeof item.defense  == "number")
+				? item.defense
+				: this.LUT_DEFENSE[Math.min(100, (item.defense[0] + context.character.level))] * item.defense[1];
+
+			parts.push(TUtilsV2.newElm('te', TUtilsV2.newElm('tem', 'Defense: ', TUtilsV2.newElm('span.color-stat-green', String(defense)))));
 		}
 
 		if('power' in item) {
-			parts.push(TUtilsV2.newElm('te', TUtilsV2.newElm('tem', 'Weapon Strength: ', TUtilsV2.newElm('span.color-stat-green', `${item.power[0]} - ${item.power[1]}`))));
+			let power;
+			if('mul' in item.power) {
+				let minRarity : keyof typeof this.LUT_RARITY = 'Common';
+				if(['PlayerLevelScaleRarity', 'ItemScale4'].includes(item.power.scaling!)) {
+					//NOTE(Rennorb) @hardcoded: these thresholds are apparently from a config
+					if(context.character.level >= 14) minRarity = 'Uncommon'; // content:Configuration?guid=Wu52xQQYEUWiDdyKv+jf2Q==
+					else if(context.character.level >= 30) minRarity = 'Rare'; // content:Configuration?guid=AX9BmdFkNkuyIpWOz58kmA==
+					else if(context.character.level >= 60) minRarity = 'Exotic'; // content:Configuration?guid=X6vQWpTe2Ui+LPdJTv560g==
+					else if(context.character.level >= 80) minRarity = 'Legendary'; // content:Configuration?guid=W2O5W4HAPEy3GJFfaSt4mQ==
+				}
+				let index = Math.max(this.LUT_RARITY[item.rarity], this.LUT_RARITY[minRarity]);
+				if(!item.power.scaling) //no scaling means ItemLevel scaling
+					index += item.level;
+				else { //any of the other three
+					index += context.character.level;
+				}
+
+				const base = (context.character.isPlayer ? this.LUT_POWER_PLAYER : this.LUT_POWER_MONSTER)[Math.min(100, index)];
+				const avg    = base * item.power.mul;
+				const spread = base * item.power.spread;
+				power = [Math.ceil(avg - spread), Math.ceil(avg + spread)];
+			}
+			else {
+				power = item.power;
+			}
+
+			parts.push(TUtilsV2.newElm('te', TUtilsV2.newElm('tem', 'Weapon Strength: ', TUtilsV2.newElm('span.color-stat-green', `${power[0]} - ${power[1]}`))));
 		}
 
 	
@@ -465,7 +497,7 @@ class GW2TooltipsV2 {
 
 		const metaInfo = TUtilsV2.newElm('div.group');
 		if(item.type == "Armor" || item.type == "Weapon" || item.type == "Trinket") {
-			metaInfo.append(TUtilsV2.newElm('te.color-rarity-'+item.rarity, item.rarity));
+			metaInfo.append(TUtilsV2.newElm('span.color-rarity-'+item.rarity, item.rarity));
 			if('weight' in item) metaInfo.append(TUtilsV2.newElm('span', item.weight));
 			metaInfo.append(TUtilsV2.newElm('span', `${item.type}: ${item.subtype}`));
 			if(item.type == "Weapon" && this.isTwoHanded(item.subtype)) metaInfo.append(TUtilsV2.newElm('span.color-rarity-Junk', `(Two-Handed)`));
@@ -559,6 +591,29 @@ class GW2TooltipsV2 {
 			case 'Trident'    : return true;
 		}
 	}
+
+	LUT_DEFENSE = [
+		115, 120, 125, 129, 133, 137, 142, 146, 150, 154, 162, 168, 175, 182, 189, 196, 202, 209, 216, 223, 232, 240, 248, 257, 265, 274, 282, 290, 299, 307, 319, 330, 341, 352, 363, 374, 385, 396, 407, 418, 431, 443, 456, 469, 481, 494, 506, 519, 532, 544, 560, 575, 590, 606, 621, 636, 651, 666, 682, 697, 714, 731, 748, 764, 781, 798, 815, 832, 848, 865, 885, 905, 924, 943, 963, 982, 1002, 1021, 1040, 1060, 1081, 1102, 1123, 1144, 1165, 1186, 1207, 1228, 1249, 1270, 1291, 1312, 1333, 1354, 1375, 1396, 1417, 1438, 1459, 1480, 1501,
+	];
+
+	LUT_POWER_PLAYER = [
+		170, 173, 176, 179, 182, 185, 188, 191, 194, 197, 202, 207, 212, 217, 222, 227, 232, 237, 242, 247, 253, 259, 265, 271, 277, 283, 289, 295, 301, 307, 315, 323, 331, 339, 347, 355, 363, 371, 379, 387, 396, 405, 414, 423, 432, 441, 450, 459, 468, 477, 488, 499, 510, 521, 532, 543, 554, 565, 576, 587, 599, 611, 623, 635, 647, 659, 671, 683, 695, 707, 721, 735, 749, 763, 777, 791, 805, 819, 833, 847, 862, 877, 892, 907, 922, 937, 952, 967, 982, 997, 1012, 1027, 1042, 1057, 1072, 1087, 1102, 1117, 1132, 1147, 1162,
+	];
+
+	LUT_POWER_MONSTER = [
+		162, 179, 197, 214, 231, 249, 267, 286, 303, 322, 344, 367, 389, 394, 402, 412, 439, 454, 469, 483, 500, 517, 556, 575, 593, 612, 622, 632, 672, 684, 728, 744, 761, 778, 820, 839, 885, 905, 924, 943, 991, 1016, 1067, 1093, 1119, 1145, 1193, 1220, 1275, 1304, 1337, 1372, 1427, 1461, 1525, 1562, 1599, 1637, 1692, 1731, 1802, 1848, 1891, 1936, 1999, 2045, 2153, 2201, 2249, 2298, 2368, 2424, 2545, 2604, 2662, 2723, 2792, 2854, 2985, 3047, 3191, 3269, 3348, 3427, 3508, 3589, 3671, 3754, 3838, 3922, 4007, 4093, 4180, 4267, 4356, 4445, 4535, 4625, 4717, 4809, 4902,
+	];
+
+	LUT_RARITY = {
+		Junk     : 0,
+		Basic    : 0,
+		Common   : 1,
+		Uncommon : 2,
+		Rare     : 3,
+		Exotic   : 4,
+		Ascended : 4,
+		Legendary: 4,
+	};
 }
 
 type SupportedTTTypes = API.Skill | API.Trait | API.Amulet; //TODO(Rennorb) @cleanup: once its finished
