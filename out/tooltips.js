@@ -414,6 +414,8 @@ class TUtilsV2 {
         return el;
     }
     static newImg(src, className, alt) {
+        if (typeof src == 'number')
+            src = src + '.png';
         const img = document.createElement('img');
         img.src = src ? (src.includes(':') ? src : this.iconSource + src) : this.missingImage;
         if (className)
@@ -466,6 +468,14 @@ class GW2TooltipsV2 {
             Exotic: 4,
             Ascended: 4,
             Legendary: 4,
+        };
+        this.ICONS = {
+            COIN_COPPER: 156902,
+            COIN_SILVER: 156907,
+            COIN_GOLD: 156904,
+            SLOT_Upgrade: 517197,
+            SLOT_Infusion: 517202,
+            SLOT_Enrichment: 517204,
         };
         if (window.GW2TooltipsContext instanceof Array) {
             for (const partialContext of window.GW2TooltipsContext)
@@ -552,13 +562,14 @@ class GW2TooltipsV2 {
                 const type = (gw2Object.getAttribute('type') || 'skill') + 's';
                 const objId = +String(gw2Object.getAttribute('objId'));
                 const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
+                const stackSize = +String(gw2Object.getAttribute('count')) || undefined;
                 if (type != 'skills' && type != 'traits' && type != 'pvp/amulets' && type != "items")
                     return;
                 const data = APICache.storage[type].get(objId);
                 if (data) {
                     if (type == 'items') {
                         const statId = +String(gw2Object.getAttribute('stats')) || undefined;
-                        this.tooltip.replaceChildren(this.generateItemTooltip(data, context, statId));
+                        this.tooltip.replaceChildren(this.generateItemTooltip(data, context, statId, stackSize));
                     }
                     else
                         this.tooltip.replaceChildren(...this.generateToolTipList(data, gw2Object, context));
@@ -575,7 +586,18 @@ class GW2TooltipsV2 {
         Object.entries(objectsToGet).forEach(async ([key, values]) => {
             if (values.size == 0)
                 return;
-            const inflator = key == 'specializations' ? this.inflateSpecialization : this.inflateGenericIcon;
+            let inflator;
+            switch (key) {
+                case 'items':
+                    inflator = this.inflateItem.bind(this);
+                    break;
+                case 'specializations':
+                    inflator = this.inflateSpecialization.bind(this);
+                    break;
+                default:
+                    inflator = this.inflateGenericIcon.bind(this);
+                    break;
+            }
             const cache = APICache.storage[key];
             await APICache.ensureExistence(key, values.keys());
             for (const [id, objects] of values) {
@@ -594,6 +616,17 @@ class GW2TooltipsV2 {
         wikiLink.target = '_blank';
         if (gw2Object.classList.contains('gw2objectembed'))
             wikiLink.append(data.name);
+        gw2Object.append(wikiLink);
+    }
+    inflateItem(gw2Object, item) {
+        const stackSize = +String(gw2Object.getAttribute('count')) || 1;
+        const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
+        const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(item.icon, undefined, item.name));
+        wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + TUtilsV2.GW2Text2HTML(item.name.replaceAll(/%str\d%/g, ''))
+            .replaceAll(/\[.*?\]/g, '');
+        wikiLink.target = '_blank';
+        if (gw2Object.classList.contains('gw2objectembed'))
+            wikiLink.append(this.formatItemName(item, context, undefined, undefined, stackSize));
         gw2Object.append(wikiLink);
     }
     inflateSpecialization(gw2Object, spec) {
@@ -784,12 +817,8 @@ class GW2TooltipsV2 {
                 }
             }
         }
-        const name = this.formatItemName(item, statSet, undefined, stackSize)
-            .replaceAll('[s]', stackSize > 1 ? 's' : '')
-            .replaceAll(/(\S+)\[pl:"(.+?)"]/g, stackSize > 1 ? '$2' : '$1')
-            .replaceAll(/(\S+)\[f:"(.+?)"]/g, context.character.sex == "Female" ? '$2' : '$1')
-            .replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')
-            .replaceAll('[null]', '');
+        const countPrefix = stackSize > 1 ? stackSize + ' ' : '';
+        const name = countPrefix + this.formatItemName(item, context, statSet, undefined, stackSize);
         const parts = [TUtilsV2.newElm('tet', TUtilsV2.newImg(item.icon), TUtilsV2.newElm('teb.color-rarity-' + item.rarity, name), TUtilsV2.newElm('div.flexbox-fill'))];
         if ('defense' in item && item.defense) {
             const defense = (typeof item.defense == "number")
@@ -826,11 +855,14 @@ class GW2TooltipsV2 {
             }
             parts.push(TUtilsV2.newElm('te', TUtilsV2.newElm('tem', 'Weapon Strength: ', TUtilsV2.newElm('span.color-stat-green', `${power[0]} - ${power[1]}`))));
         }
-        if (statSet) {
+        if (statSet && 'attribute_base' in item) {
             parts.push(...statSet.attributes.map(({ attribute, base_value, scaling }) => {
-                const computedValue = Math.round(base_value + (item.attribute_base || 0) * scaling);
+                const computedValue = Math.round(base_value + item.attribute_base * scaling);
                 return TUtilsV2.newElm('te', TUtilsV2.newElm('tem.color-stat-green', `+${computedValue} ${attribute}`));
             }));
+        }
+        if ('slots' in item) {
+            parts.push(TUtilsV2.newElm('div.group', ...item.slots.map(s => TUtilsV2.newElm('te', TUtilsV2.newImg(this.ICONS['SLOT_' + s], 'iconsmall'), `Empty ${s} Slot`))));
         }
         const metaInfo = TUtilsV2.newElm('div.group');
         if (item.type == "Armor" || item.type == "Weapon" || item.type == "Trinket") {
@@ -854,17 +886,17 @@ class GW2TooltipsV2 {
         else if (item.flags.includes('SoulbindOnAcquire'))
             metaInfo.append(TUtilsV2.newElm('span', 'Soulbound on Acquire'));
         if (item.vendor_value) {
-            let text = `Vendor Value: ${item.vendor_value * stackSize}c`;
+            let inner = ['Vendor Value: ', this.formatCoins(item.vendor_value * stackSize)];
             if (stackSize > 1)
-                text += ` (${item.vendor_value}c x ${stackSize})`;
-            metaInfo.append(TUtilsV2.newElm('span', text));
+                inner.push(' (', this.formatCoins(item.vendor_value), ` x ${stackSize})`);
+            metaInfo.append(TUtilsV2.newElm('span', ...inner));
         }
         parts.push(metaInfo);
         const tooltip = TUtilsV2.newElm('div.tooltip.item.active', ...parts);
         tooltip.dataset.id = String(item.id);
         return tooltip;
     }
-    formatItemName(item, statSet, upgradeComponent, stackSize = 1) {
+    formatItemName(item, context, statSet, upgradeComponent, stackSize = 1) {
         let name;
         if (item.type == 'TraitGuide') {
             name = item.trait;
@@ -887,9 +919,19 @@ class GW2TooltipsV2 {
         name = name.replace('%str1%', arg1).replace('%str2%', arg2).replace('%str3%', arg3).replace('%str4%', arg4);
         if (item.flags.includes('Pvp') || item.flags.includes('PvpLobby'))
             name += " (PvP)";
-        if (stackSize > 1)
-            name = `${stackSize} ${name}`;
-        return name;
+        return name.replaceAll('[s]', stackSize > 1 ? 's' : '')
+            .replaceAll(/(\S+)\[pl:"(.+?)"]/g, stackSize > 1 ? '$2' : '$1')
+            .replaceAll(/(\S+)\[f:"(.+?)"]/g, context.character.sex == "Female" ? '$2' : '$1')
+            .replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')
+            .replaceAll('[null]', '');
+    }
+    formatCoins(amount) {
+        const parts = [String(Math.floor(amount % 100)), TUtilsV2.newImg(this.ICONS.COIN_COPPER, 'iconsmall', '')];
+        if (amount > 99)
+            parts.unshift(String(Math.floor((amount / 100) % 100)), TUtilsV2.newImg(this.ICONS.COIN_SILVER, 'iconsmall', ''));
+        if (amount > 9999)
+            parts.unshift(String(Math.floor(amount / 10000)), TUtilsV2.newImg(this.ICONS.COIN_GOLD, 'iconsmall', ''));
+        return TUtilsV2.newElm('span', ...parts);
     }
     isTwoHanded(type) {
         switch (type) {

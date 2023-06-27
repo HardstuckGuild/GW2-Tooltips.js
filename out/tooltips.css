@@ -130,6 +130,7 @@
 .tooltipWrapper .iconsmall {
 	width: var(--gw2-tt-font-size-m);
 	height: auto;
+	vertical-align: bottom;
 }
 
 .tooltipWrapper ter img {
@@ -139,6 +140,7 @@
 
 
 gw2object {
+	position: relative;
 	display: inline-block;
 	background-color: var(--gw2-tt-color-shadow);
 }
@@ -151,6 +153,16 @@ gw2object[type=skill] img,
 gw2object.gw2objectembed img {
 	clip-path: inset(8%);
 	scale: 1.2;
+}
+
+gw2object[count]::before {
+	content: attr(count);
+	position: absolute;
+	top: 2px;
+	right: 2px;
+}
+gw2object.gw2objectembed[count]::before {
+	position: relative;
 }
 
 gw2object:empty,

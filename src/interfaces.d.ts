@@ -272,17 +272,16 @@ namespace API {
 		}
 		defense? : ValueOrLutOffset
 		subtype  : WeaponDetailType
-	}) & ItemStatData | {
+	}) & {
+		attribute_base : number
+		attribute_set? : number
+		slots          : ('Upgrade' | 'Infusion' | 'Enrichment')[]
+	} | {
 		type  : 'TraitGuide'
 		trait : 'todo'
 	}
 
 	type ValueOrLutOffset = number | [number, number] //base index, mul
-
-	type ItemStatData = {
-		attribute_base? : number
-		attribute_set?  : number
-	}
 
 	interface Specialization {
 		id         : number
