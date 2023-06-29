@@ -525,6 +525,7 @@ class GW2TooltipsV2 {
 			if(item.description) metaInfo.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(item.description))));
 		}
 
+		if(item.flags.includes('Unique')) metaInfo.append(TUtilsV2.newElm('span', 'Unique'));
 		if(item.flags.includes('AccountBound')) metaInfo.append(TUtilsV2.newElm('span', 'Account Bound'));
 		else if(item.flags.includes('SoulbindOnAcquire')) metaInfo.append(TUtilsV2.newElm('span', 'Soulbound on Acquire'));
 		//TODO(Rennorb): soulbind on use
