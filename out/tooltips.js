@@ -163,26 +163,26 @@ APICache.storage = {
 class FactsProcessor {
     static calculateModifier({ formula, base_amount, formula_param1: level_scaling, formula_param2 }, { level, stats: { power, conditionDamage: condition_damage, healing: healing_power } }) {
         switch (formula) {
-            case 0:
+            case 'BuffLevelLinear':
                 return level * level_scaling + base_amount;
-            case 1:
+            case 'ConditionDamage':
                 return level * level_scaling + base_amount + condition_damage * formula_param2;
-            case 2:
+            case 'ConditionDamageSquared':
                 return level * level * level_scaling + base_amount + condition_damage * formula_param2;
-            case 6:
+            case 'NoScaling':
                 return base_amount;
-            case 7:
+            case 'Regeneration':
                 return level * level_scaling + base_amount + healing_power * formula_param2;
-            case 8:
+            case 'RegenerationSquared':
                 return level * level * level_scaling + base_amount + healing_power * formula_param2;
-            case 9:
-            case 10:
+            case 'SpawnScaleLinear':
+            case 'TargetLevelLinear':
                 return level * level_scaling + base_amount;
-            case 11:
+            case 'BuffFormulaType11':
                 return level * level_scaling + base_amount - formula_param2;
-            case 13:
+            case 'Power':
                 return level * level_scaling + base_amount + power * formula_param2;
-            case 14:
+            case 'PowerSquared':
                 return level * level * level_scaling + base_amount + power * formula_param2;
         }
         console.warn('[gw2-tooltips] [facts processor] Could not find formula #', formula, ', using base amount for now!');
