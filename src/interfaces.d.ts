@@ -76,7 +76,7 @@ namespace API {
 		icon?       : string
 		buff        : number
 		apply_count : number
-		duration    : Duration
+		duration    : Milliseconds
 	}
 	interface BuffBriefFact extends BasicFact<'BuffBrief'> {
 		text : string
@@ -95,7 +95,7 @@ namespace API {
     apply_count : number
     buff        : number
     prefix      : number
-    duration    : Duration
+    duration    : Milliseconds
 	}
 	interface PrefixedBuffBriefFact extends BasicFact<'PrefixedBuffBrief'>{
 		text?  : string
@@ -116,12 +116,12 @@ namespace API {
 	interface RechargeFact extends BasicFact<'Recharge'> {
 		text  : string
 		icon? : string
-		value : Duration
+		value : Milliseconds
 	}
 	interface TimeFact extends BasicFact<'Time'> {
 		text     : string
 		icon?    : string
-		duration : Duration;
+		duration : Milliseconds;
 	}
 	interface DistanceFact extends BasicFact<'Distance'> {
 		text     : string
@@ -131,7 +131,7 @@ namespace API {
 	interface DurationFact extends BasicFact<'Duration'> {
 		text?    : string
 		icon?    : string
-		duration : Duration
+		duration : Milliseconds
 	}
 	interface NumberFact extends BasicFact<'Number'> {
 		text  : string
@@ -217,17 +217,12 @@ namespace API {
 	
 	interface RechargeOverride {
 		mode     : string
-		recharge : Duration
-	}
-
-	interface Duration {
-		secs  : number
-		nanos : number
+		recharge : Milliseconds
 	}
 
 	interface Trait {
 		id                 : number
-		icon?              : string
+		icon               : string
 		name               : string
 		name_brief?        : string
 		description?       : string
@@ -279,6 +274,14 @@ namespace API {
 	} | {
 		type  : 'TraitGuide'
 		trait : 'todo'
+	} | {
+		type    : 'UpgradeComponent'
+		subtype : 'Rune' | 'Sigil' | 'Gem' | 'Default'
+		tiers   : {
+			description? : string
+			facts?       : Fact[]
+			modifiers?   : Modifier[]
+		}[]
 	}
 
 	type ValueOrLutOffset = number | [number, number] //base index, mul
@@ -318,6 +321,8 @@ namespace API {
 		}
 	}
 }
+
+type Milliseconds = number;
 
 type ObjectDataStorage = {
 	[k in Endpoints] : Map<number, APIResponseTypeMap[k]>

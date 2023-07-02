@@ -84,6 +84,10 @@
 	margin-top: 0.75em;
 }
 
+.tooltip .group.slots {
+	gap: 0.5em;
+}
+
 .tooltipWrapper tet {
   display: flex;
   justify-content: space-between;

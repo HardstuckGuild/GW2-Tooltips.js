@@ -14,7 +14,6 @@
 //TODO(Rennorb): Trait game-mode splits
 //TODO(Rennorb): Link minion skills to minion summon skill.
 //TODO(Rennorb) @cleanup: go over gamemode splitting again, currently ist a huge mess. 
-//TODO(Rennorb): proper item name formatting. 
 //TODO(Rennorb): specs, pets, and amulets endpoints.
 //TODO(Rennorb): item defense / weapon power (scaling)
 
@@ -292,7 +291,7 @@ class GW2TooltipsV2 {
 		return skillSlot
 	}
 
-	getRecharge(apiObject : { facts : API.Fact[], facts_override? : API.FactsOverride[] }, gameMode : GameMode) : API.Duration | undefined {
+	getRecharge(apiObject : { facts : API.Fact[], facts_override? : API.FactsOverride[] }, gameMode : GameMode) : Milliseconds | undefined {
 		let recharge = apiObject.facts.find(f => f.type === 'Recharge');
 		let override = apiObject.facts_override?.find(f => f.mode === gameMode)?.facts.find(f => f.type === 'Recharge');
 		return (override || recharge)?.duration;
@@ -305,7 +304,7 @@ class GW2TooltipsV2 {
 			const _recharge = this.getRecharge(apiObject, context.gameMode);
 			if(_recharge) {
 				recharge = TUtilsV2.newElm('ter', 
-					TUtilsV2.DurationToSeconds(_recharge)+'s', 
+					(_recharge / 1000)+'s', 
 					TUtilsV2.newImg('156651.png', 'iconsmall')
 				);
 			}
@@ -498,7 +497,41 @@ class GW2TooltipsV2 {
 			parts.push(TUtilsV2.newElm('te', TUtilsV2.newElm('tem', 'Weapon Strength: ', TUtilsV2.newElm('span.color-stat-green', `${power[0]} - ${power[1]}`))));
 		}
 
-	
+		if('tiers' in item) {
+			const group = TUtilsV2.newElm('div.group');
+			for(const [i, tier] of item.tiers.entries()) {
+				let tier_wrap = TUtilsV2.newElm('te');
+				if(tier.description) tier_wrap.append(TUtilsV2.GW2Text2HTML(tier.description));
+
+				//NOTE(Rennorb): facts seem to exist, but almost universally be wrong.
+				/*
+				if(tier.facts) for(const fact of tier.facts) {
+					const { wrapper } = FactsProcessor.generateFact(fact, null as any, context);
+					if(wrapper) tier_wrap.append(wrapper);
+				}
+				*/
+
+				/*
+				if(tier.modifiers) for(const modifier of tier.modifiers) {
+					//TODO(Rennorb) @cleanup: unify this wth the buf fact processing 
+					let modifierValue = FactsProcessor.calculateModifier(modifier, context.character)
+
+					let text;
+					if(modifier.flags.includes('FormatPercent')) {
+						text = `${Math.round(modifierValue)}% ${modifier.description}`
+					} else {
+						text = `${Math.round(modifierValue)} ${modifier.description}`
+					}
+					tier_wrap.append(TUtilsV2.newElm('te', text));
+				}
+				*/
+				const w = TUtilsV2.newElm('te', tier_wrap);
+				if(item.subtype == "Rune") w.prepend(`(${i + 1})`);
+				group.append(w);
+			}
+			parts.push(group);
+		}
+
 		if(statSet && 'attribute_base' in item) {
 			parts.push(...statSet.attributes.map(({attribute, base_value, scaling}) => {
 				const computedValue = Math.round(base_value + item.attribute_base! * scaling);
@@ -507,9 +540,9 @@ class GW2TooltipsV2 {
 		}
 
 		if('slots' in item) {
-			parts.push(TUtilsV2.newElm('div.group', ...item.slots.map(s => TUtilsV2.newElm('te',
+			parts.push(TUtilsV2.newElm('div.group.slots', ...item.slots.map(s => TUtilsV2.newElm('te',
 				TUtilsV2.newImg(this.ICONS['SLOT_'+s as keyof typeof this.ICONS], 'iconsmall'), `Empty ${s} Slot`
-				))));
+			))));
 		}
 
 		const metaInfo = TUtilsV2.newElm('div.group');
