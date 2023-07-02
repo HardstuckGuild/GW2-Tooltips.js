@@ -353,3 +353,7 @@ type Endpoints = keyof APIResponseTypeMap;
 interface APIImplementation {
 	bulkRequest<T extends Endpoints>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]>;
 }
+
+interface ScopeElement {
+	getElementsByTagName(qualifiedName: string) : HTMLCollectionOf<Element>
+}

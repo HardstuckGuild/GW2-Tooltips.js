@@ -17,7 +17,7 @@
 //TODO(Rennorb): specs, pets, and amulets endpoints.
 //TODO(Rennorb): item defense / weapon power (scaling)
 
-
+/// <reference path="Collect.ts" />
 
 type TypeBridge<T, K extends keyof T> = [K, T[K]]
 declare interface ObjectConstructor {
@@ -57,17 +57,33 @@ class GW2TooltipsV2 {
 				healing        : 0,
 				critDamage     : 0,
 			},
+			statSources: {
+				power          : [],
+				toughness      : [],
+				vitality       : [],
+				precision      : [],
+				ferocity       : [],
+				conditionDamage: [],
+				expertise      : [],
+				concentration  : [],
+				healing        : [],
+				critDamage     : [],
+			},
+			runeCounts: {},
 		},
 	}
 	static createCompleteContext(partialContext : PartialContext) : Context {
 		const stats = Object.assign({}, this.defaultContext.character.stats, partialContext.character?.stats);
-		const character = Object.assign({}, this.defaultContext.character, partialContext.character, { stats });
+		const statSources = Object.assign({}, this.defaultContext.character.statSources, partialContext.character?.statSources);
+		const runeCounts = Object.assign({}, partialContext.character?.runeCounts);
+		const character = Object.assign({}, this.defaultContext.character, partialContext.character, { stats, statSources, runeCounts });
 		return Object.assign({}, this.defaultContext, partialContext, { character });
 	}
 
 	config : Config;
 	static defaultConfig : Config = {
 		autoInitialize        : true,
+		autoCollectRuneCounts : true,
 		adjustIncorrectStatIds: true,
 	}
 
@@ -137,7 +153,7 @@ class GW2TooltipsV2 {
 		tooltip.style.transform = `translate(${tooltipXpos}px, ${tooltipYpos}px)`
 	}
 
-	hookDocument(scope: { getElementsByTagName(qualifiedName: string): HTMLCollectionOf<Element> }, _unused? : any) : void {
+	hookDocument(scope : ScopeElement, _unused? : any) : Promise<void[]> {
 		//NOTE(Rennorb): need to use an array since there might be multiple occurrences of the same id in a given scope
 		const objectsToGet : ObjectsToFetch = {
 			skills         : new Map<number, HTMLElement[] | undefined>(),
@@ -192,7 +208,7 @@ class GW2TooltipsV2 {
 
 		if(statsToGet.size > 0) APICache.ensureExistence('itemstats', statsToGet.values());
 
-		Object.entries(objectsToGet).forEach(async ([key, values]) => {
+		return Promise.all(Object.entries(objectsToGet).map(async ([key, values]) => {
 			if(values.size == 0) return;
 
 			let inflator;
@@ -212,7 +228,7 @@ class GW2TooltipsV2 {
 				for(const gw2Object of objects)
 					inflator(gw2Object, data as any);
 			}
-		})
+		}))
 	}
 
 	inflateGenericIcon(gw2Object : HTMLElement, data : { name : string, icon? : string }) {
@@ -526,7 +542,10 @@ class GW2TooltipsV2 {
 				}
 				*/
 				const w = TUtilsV2.newElm('te', tier_wrap);
-				if(item.subtype == "Rune") w.prepend(`(${i + 1})`);
+				if(item.subtype == "Rune") {
+					const colorClass = i < (context.character.runeCounts[item.id] || 0) ? '.color-stat-green' : '';
+					w.prepend(TUtilsV2.newElm('span'+colorClass, `(${i + 1})`));
+				}
 				group.append(w);
 			}
 			parts.push(group);
@@ -691,4 +710,14 @@ type SupportedTTTypes = API.Skill | API.Trait | API.Amulet; //TODO(Rennorb) @cle
 
 
 const gw2tooltips = new GW2TooltipsV2()
-if(gw2tooltips.config.autoInitialize) gw2tooltips.hookDocument(document)
+if(gw2tooltips.config.autoInitialize) {
+	gw2tooltips.hookDocument(document)
+		.then(_ => { if(gw2tooltips.config.autoCollectRuneCounts) {
+			const targets = document.getElementsByClassName('armors');
+			if(targets.length) for(const target of targets)
+				Collect.allRuneCounts(gw2tooltips.context, target)
+			else {
+				console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `armors` could be found to use as source. Runes will not be collected as there is no way to tell which rune belongs to the build and which one is just in some arbitrary text.");
+			}
+ 		}})
+}

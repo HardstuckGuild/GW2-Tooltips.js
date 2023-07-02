@@ -10,7 +10,7 @@ declare interface Window {
 
 type PartialContext = PartialR<Context>
 
-type PartialR<T> = { [P in keyof T]?: (T[P] extends string | number ? T[P] : PartialR<T[P]>) | undefined; }
+type PartialR<T> = { [P in keyof T]?: (T[P] extends string | number | StatSource ? T[P] : PartialR<T[P]>) | undefined; }
 
 interface Context {
 	gameMode    : GameMode
@@ -21,11 +21,13 @@ interface Context {
 type GameMode = 'Pve' | 'Pvp' | 'Wvw';
 
 interface Character {
-	level    : number
-	isPlayer : bool
-	sex      : 'Male' | 'Female'
-	traits   : number[] //TODO(Rennorb): add a collect function that can take them from existing specialization objects
-	stats    : Stats
+	level       : number
+	isPlayer    : bool
+	sex         : 'Male' | 'Female'
+	traits      : number[] //TODO(Rennorb): add a collect function that can take them from existing specialization objects
+	stats       : Stats
+	statSources : { [k in keyof Stats]: StatSource[] } //TODO(Rennorb): add a collect function that can take from existing gw2objects
+	runeCounts  : { [k : number]: number } //TODO(Rennorb): add a collect function that can take from existing gw2objects
 }
 
 interface Stats {
@@ -41,7 +43,16 @@ interface Stats {
 	critDamage     : number
 }
 
+interface StatSource {
+	amount : number
+	type   : 'Flat' | 'Percent'
+	source : string
+}
+
+
+
 interface Config {
 	 autoInitialize         : bool
+	 autoCollectRuneCounts  : bool
 	 adjustIncorrectStatIds : bool
 }

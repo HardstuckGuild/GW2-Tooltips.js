@@ -160,6 +160,69 @@ APICache.storage = {
     specializations: new Map(),
     itemstats: new Map(),
 };
+class Collect {
+    static allRuneCounts(contexts, scope, mode = 1) {
+        const elements = scope.getElementsByTagName('gw2object');
+        for (const pair of contexts.entries()) {
+            const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('statSet')) || 0) == pair[0]);
+            this._runeCounts(...pair, elsInCorrectCtx, mode);
+        }
+        const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('statSet')) || 0) >= contexts.length);
+        if (elsWithWrongCtx.length) {
+            console.warn("[gw2-tooltips] [collect] Some targets in scope ", scope, " have the wrong context: ", elsWithWrongCtx);
+        }
+    }
+    static specificRuneCounts(contextIndex, targetContext, scope, mode = 1) {
+        this._runeCounts(contextIndex, targetContext, scope.getElementsByTagName('gw2object'), mode);
+    }
+    static _runeCounts(contextIndex, targetContext, elements, mode = 1) {
+        var _a, _b, _c, _d;
+        const counts = {};
+        for (const element of elements) {
+            let id;
+            if (element.getAttribute('type') !== 'item' || !(id = +String(element.getAttribute('objid'))))
+                continue;
+            const item = APICache.storage.items.get(id);
+            if (!item || !('subtype' in item) || item.subtype !== 'Rune')
+                continue;
+            counts[item.id] = (counts[item.id] || 0) + 1;
+        }
+        switch (mode) {
+            case 0:
+                targetContext.character.runeCounts = counts;
+                break;
+            case 3:
+                targetContext.character.runeCounts = Object.assign(targetContext.character.runeCounts, counts);
+                break;
+            case 1:
+                {
+                    if (window.GW2TooltipsContext instanceof Array) {
+                        targetContext.character.runeCounts = Object.assign(counts, (_a = window.GW2TooltipsContext[contextIndex].character) === null || _a === void 0 ? void 0 : _a.runeCounts);
+                    }
+                    else if (window.GW2TooltipsContext) {
+                        targetContext.character.runeCounts = Object.assign(counts, (_b = window.GW2TooltipsContext.character) === null || _b === void 0 ? void 0 : _b.runeCounts);
+                    }
+                    else {
+                        targetContext.character.runeCounts = counts;
+                    }
+                }
+                break;
+            case 2:
+                {
+                    if (window.GW2TooltipsContext instanceof Array) {
+                        targetContext.character.runeCounts = Object.assign({}, (_c = window.GW2TooltipsContext[contextIndex].character) === null || _c === void 0 ? void 0 : _c.runeCounts, counts);
+                    }
+                    else if (window.GW2TooltipsContext) {
+                        targetContext.character.runeCounts = Object.assign({}, (_d = window.GW2TooltipsContext.character) === null || _d === void 0 ? void 0 : _d.runeCounts, counts);
+                    }
+                    else {
+                        targetContext.character.runeCounts = counts;
+                    }
+                }
+                break;
+        }
+    }
+}
 class FactsProcessor {
     static calculateModifier({ formula, base_amount, formula_param1: level_scaling, formula_param2 }, { level, stats: { power, conditionDamage: condition_damage, healing: healing_power } }) {
         switch (formula) {
@@ -441,9 +504,11 @@ TUtilsV2.GW2Text2HTML = (text, tag = 'span') => text
 TUtilsV2.Uncapitalize = (str) => str.charAt(0).toLowerCase() + str.slice(1);
 class GW2TooltipsV2 {
     static createCompleteContext(partialContext) {
-        var _a;
+        var _a, _b, _c;
         const stats = Object.assign({}, this.defaultContext.character.stats, (_a = partialContext.character) === null || _a === void 0 ? void 0 : _a.stats);
-        const character = Object.assign({}, this.defaultContext.character, partialContext.character, { stats });
+        const statSources = Object.assign({}, this.defaultContext.character.statSources, (_b = partialContext.character) === null || _b === void 0 ? void 0 : _b.statSources);
+        const runeCounts = Object.assign({}, (_c = partialContext.character) === null || _c === void 0 ? void 0 : _c.runeCounts);
+        const character = Object.assign({}, this.defaultContext.character, partialContext.character, { stats, statSources, runeCounts });
         return Object.assign({}, this.defaultContext, partialContext, { character });
     }
     constructor() {
@@ -582,7 +647,7 @@ class GW2TooltipsV2 {
         }
         if (statsToGet.size > 0)
             APICache.ensureExistence('itemstats', statsToGet.values());
-        Object.entries(objectsToGet).forEach(async ([key, values]) => {
+        return Promise.all(Object.entries(objectsToGet).map(async ([key, values]) => {
             if (values.size == 0)
                 return;
             let inflator;
@@ -606,7 +671,7 @@ class GW2TooltipsV2 {
                 for (const gw2Object of objects)
                     inflator(gw2Object, data);
             }
-        });
+        }));
     }
     inflateGenericIcon(gw2Object, data) {
         const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, undefined, data.name));
@@ -861,8 +926,10 @@ class GW2TooltipsV2 {
                 if (tier.description)
                     tier_wrap.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(tier.description))));
                 const w = TUtilsV2.newElm('te', tier_wrap);
-                if (item.subtype == "Rune")
-                    w.prepend(`(${i + 1})`);
+                if (item.subtype == "Rune") {
+                    const colorClass = i < (context.character.runeCounts[item.id] || 0) ? '.color-stat-green' : '';
+                    w.prepend(TUtilsV2.newElm('span' + colorClass, `(${i + 1})`));
+                }
                 group.append(w);
             }
             parts.push(group);
@@ -998,12 +1065,38 @@ GW2TooltipsV2.defaultContext = {
             healing: 0,
             critDamage: 0,
         },
+        statSources: {
+            power: [],
+            toughness: [],
+            vitality: [],
+            precision: [],
+            ferocity: [],
+            conditionDamage: [],
+            expertise: [],
+            concentration: [],
+            healing: [],
+            critDamage: [],
+        },
+        runeCounts: {},
     },
 };
 GW2TooltipsV2.defaultConfig = {
     autoInitialize: true,
+    autoCollectRuneCounts: true,
     adjustIncorrectStatIds: true,
 };
 const gw2tooltips = new GW2TooltipsV2();
-if (gw2tooltips.config.autoInitialize)
-    gw2tooltips.hookDocument(document);
+if (gw2tooltips.config.autoInitialize) {
+    gw2tooltips.hookDocument(document)
+        .then(_ => {
+        if (gw2tooltips.config.autoCollectRuneCounts) {
+            const targets = document.getElementsByClassName('armors');
+            if (targets.length)
+                for (const target of targets)
+                    Collect.allRuneCounts(gw2tooltips.context, target);
+            else {
+                console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `armors` could be found to use as source. Runes will not be collected as there is no way to tell which rune belongs to the build and which one is just in some arbitrary text.");
+            }
+        }
+    });
+}
