@@ -859,7 +859,7 @@ class GW2TooltipsV2 {
             for (const [i, tier] of item.tiers.entries()) {
                 let tier_wrap = TUtilsV2.newElm('te');
                 if (tier.description)
-                    tier_wrap.append(TUtilsV2.GW2Text2HTML(tier.description));
+                    tier_wrap.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(tier.description))));
                 const w = TUtilsV2.newElm('te', tier_wrap);
                 if (item.subtype == "Rune")
                     w.prepend(`(${i + 1})`);

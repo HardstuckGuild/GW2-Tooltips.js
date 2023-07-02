@@ -501,7 +501,7 @@ class GW2TooltipsV2 {
 			const group = TUtilsV2.newElm('div.group');
 			for(const [i, tier] of item.tiers.entries()) {
 				let tier_wrap = TUtilsV2.newElm('te');
-				if(tier.description) tier_wrap.append(TUtilsV2.GW2Text2HTML(tier.description));
+				if(tier.description) tier_wrap.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(tier.description))));
 
 				//NOTE(Rennorb): facts seem to exist, but almost universally be wrong.
 				/*
