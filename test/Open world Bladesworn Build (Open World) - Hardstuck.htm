@@ -12,12 +12,8 @@
 <script src="./output.itemstats.js"></script>
 <script>
 	var GW2TooltipsConfig = {
-		autoInitialize: false,
+		apiImpl: () => new FakeAPI(),
 	}
-	window.addEventListener('load', () => {
-		APICache.apiImpl = new FakeAPI();
-		gw2tooltips.hookDocument(document).then(_ => { Collect.allRuneCounts(gw2tooltips.context, document) })
-	})
 </script>
 <link rel="stylesheet" href="../out/tooltips.css" />
 </head>

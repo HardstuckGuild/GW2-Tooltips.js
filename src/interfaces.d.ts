@@ -54,7 +54,9 @@ namespace API {
 		formula_param1 : number
 		formula_param2 : number
 		formula        : 'BuffLevelLinear' | 'ConditionDamage' | 'ConditionDamageSquared' | 'CritDamage' | 'CritDamageSquared' | 'BuffFormulaType5' | 'NoScaling' | 'Regeneration' | 'RegenerationSquared' | 'SpawnScaleLinear' | 'TargetLevelLinear' | 'BuffFormulaType11' | 'InfiniteDungeonScale' | 'Power' | 'PowerSquared' | 'BuffFormulaType15'
+		attribute?     : Exclude<Attributes, 'None'>
 		description    : string
+		//description_override
 		flags          : ('FormatDuration' | 'FormatPercent' | 'SkipNextEntry' | 'MulByDuration' | 'DivDurationBy3' | 'DivDurationBy10' | 'NonStacking')[]
 		trait_req?     : number
 		mode?          : GameMode

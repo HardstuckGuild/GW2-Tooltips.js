@@ -11,16 +11,16 @@ class FactsProcessor {
 
 	static calculateModifier(
 		{ formula, base_amount, formula_param1: level_scaling, formula_param2 } : API.Modifier,
-		{ level, stats: { power, conditionDamage: condition_damage, healing: healing_power }} : Character,
+		{ level, stats: { power, conditionDmg, healing: healing_power }} : Character,
 	) {
 		//TODO(Rennorb): this is **screaming** tabledrive me
 		switch (formula) {
 			case 'BuffLevelLinear':
 				return         level * level_scaling + base_amount
 			case 'ConditionDamage':
-				return         level * level_scaling + base_amount + condition_damage * formula_param2
+				return         level * level_scaling + base_amount + conditionDmg * formula_param2
 			case 'ConditionDamageSquared':
-				return level * level * level_scaling + base_amount + condition_damage * formula_param2
+				return level * level * level_scaling + base_amount + conditionDmg * formula_param2
 			case 'NoScaling':
 				return                                 base_amount
 			case 'Regeneration':

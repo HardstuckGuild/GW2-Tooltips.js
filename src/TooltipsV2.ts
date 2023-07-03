@@ -16,6 +16,7 @@
 //TODO(Rennorb) @cleanup: go over gamemode splitting again, currently ist a huge mess. 
 //TODO(Rennorb): specs, pets, and amulets endpoints.
 //TODO(Rennorb): item defense / weapon power (scaling)
+//TODO(Rennorb): translation for attributes into 'human readable' (in game) names
 
 /// <reference path="Collect.ts" />
 
@@ -46,28 +47,28 @@ class GW2TooltipsV2 {
 			sex              : "Male",
 			traits           : [],
 			stats: {
-				power          : 1000,
-				toughness      : 1000,
-				vitality       : 1000,
-				precision      : 1000,
-				ferocity       : 1000,
-				conditionDamage: 0,
-				expertise      : 0,
-				concentration  : 0,
-				healing        : 0,
-				critDamage     : 0,
+				power         : 1000,
+				toughness     : 1000,
+				vitality      : 1000,
+				precision     : 1000,
+				ferocity      : 1000,
+				conditionDmg  : 0,
+				expertise     : 0,
+				concentration : 0,
+				healing       : 0,
+				critDamage    : 0,
 			},
 			statSources: {
-				power          : [],
-				toughness      : [],
-				vitality       : [],
-				precision      : [],
-				ferocity       : [],
-				conditionDamage: [],
-				expertise      : [],
-				concentration  : [],
-				healing        : [],
-				critDamage     : [],
+				power         : [],
+				toughness     : [],
+				vitality      : [],
+				precision     : [],
+				ferocity      : [],
+				conditionDmg  : [],
+				expertise     : [],
+				concentration : [],
+				healing       : [],
+				critDamage    : [],
 			},
 			runeCounts: {},
 		},
@@ -84,6 +85,7 @@ class GW2TooltipsV2 {
 	static defaultConfig : Config = {
 		autoInitialize        : true,
 		autoCollectRuneCounts : true,
+		autoCollectStatSources: true,
 		adjustIncorrectStatIds: true,
 	}
 
@@ -100,16 +102,17 @@ class GW2TooltipsV2 {
 		}
 
 		this.config = Object.assign({}, GW2TooltipsV2.defaultConfig, window.GW2TooltipsConfig)
+		if(this.config.apiImpl) APICache.apiImpl = this.config.apiImpl();
 
 		this.tooltip = TUtilsV2.newElm('div.tooltipWrapper')
 		this.tooltip.style.display = 'none';
 		document.body.appendChild(this.tooltip)
 
 		document.addEventListener('mousemove', event => {
-			gw2tooltips.lastMouseX = event.pageX
-			gw2tooltips.lastMouseY = event.pageY
+			this.lastMouseX = event.pageX
+			this.lastMouseY = event.pageY
 			if(this.tooltip.style.display != 'none')
-				gw2tooltips.positionTooltip()
+				this.positionTooltip()
 		})
 		document.addEventListener('contextmenu', event => {
 			if(!this.cycleTooltipsHandler) return;
@@ -436,9 +439,9 @@ class GW2TooltipsV2 {
 			this.displayCorrectChainTooltip(tooltipChain, currentTooltipIndex)
 
 			this.cycleTooltipsHandler = () => {
-				gw2tooltips.cycleTooltips() //TODO(Rennorb) @cleanup: why are there two functions with basically the same name
+				this.cycleTooltips() //TODO(Rennorb) @cleanup: why are there two functions with basically the same name
 				currentTooltipIndex = (currentTooltipIndex + 1) % tooltipChain.length
-				gw2tooltips.displayCorrectChainTooltip(tooltipChain, currentTooltipIndex)
+				this.displayCorrectChainTooltip(tooltipChain, currentTooltipIndex)
 				this.positionTooltip()
 			};
 		}
@@ -709,15 +712,27 @@ class GW2TooltipsV2 {
 type SupportedTTTypes = API.Skill | API.Trait | API.Amulet; //TODO(Rennorb) @cleanup: once its finished
 
 
-const gw2tooltips = new GW2TooltipsV2()
-if(gw2tooltips.config.autoInitialize) {
-	gw2tooltips.hookDocument(document)
-		.then(_ => { if(gw2tooltips.config.autoCollectRuneCounts) {
-			const targets = document.getElementsByClassName('armors');
-			if(targets.length) for(const target of targets)
-				Collect.allRuneCounts(gw2tooltips.context, target)
-			else {
-				console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `armors` could be found to use as source. Runes will not be collected as there is no way to tell which rune belongs to the build and which one is just in some arbitrary text.");
+window.gw2tooltips = new GW2TooltipsV2()
+if(window.gw2tooltips.config.autoInitialize) {
+	window.gw2tooltips.hookDocument(document)
+		.then(_ => {
+			//TODO(Rennorb) @cleanup: those routines could probably be combined into one when both options are active
+			if(window.gw2tooltips.config.autoCollectRuneCounts) {
+				const targets = document.getElementsByClassName('armors');
+				if(targets.length) for(const target of targets)
+					Collect.allRuneCounts(window.gw2tooltips.context, target)
+				else {
+					console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `armors` could be found to use as source. Runes will not be collected as there is no way to tell which rune belongs to the build and which one is just in some arbitrary text.");
+				}
 			}
- 		}})
+
+			if(window.gw2tooltips.config.autoCollectStatSources) {
+				const targets = document.getElementsByClassName('gw2-build-wrapper');
+				if(targets.length) for(const target of targets)
+					Collect.allStatSources(window.gw2tooltips.context, target)
+				else {
+					console.warn("[gw2-tooltips] [collect] `config.autoCollectStatSources` is active, but no element with class `gw2-build-wrapper` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
+				}
+			}
+		})
 }

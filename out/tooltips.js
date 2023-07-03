@@ -222,16 +222,140 @@ class Collect {
                 break;
         }
     }
+    static allStatSources(contexts, scope, mode = 1) {
+        const elements = scope.getElementsByTagName('gw2object');
+        for (const pair of contexts.entries()) {
+            const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('statSet')) || 0) == pair[0]);
+            this._statSources(...pair, elsInCorrectCtx, mode);
+        }
+        const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('statSet')) || 0) >= contexts.length);
+        if (elsWithWrongCtx.length) {
+            console.warn("[gw2-tooltips] [collect] Some targets in scope ", scope, " have the wrong context: ", elsWithWrongCtx);
+        }
+    }
+    static specificStatSources(contextIndex, targetContext, scope, mode = 1) {
+        this._statSources(contextIndex, targetContext, scope.getElementsByTagName('gw2object'), mode);
+    }
+    static _statSources(contextIndex, targetContext, elements, mode = 1) {
+        var _a, _b, _c, _d, _e, _f;
+        const sources = {
+            power: [],
+            toughness: [],
+            vitality: [],
+            precision: [],
+            ferocity: [],
+            conditionDmg: [],
+            expertise: [],
+            concentration: [],
+            healing: [],
+            critDamage: [],
+        };
+        let upgrades = Object.assign({}, targetContext.character.runeCounts);
+        for (const element of elements) {
+            let id;
+            if (element.getAttribute('type') !== 'item' || !(id = +String(element.getAttribute('objid'))))
+                continue;
+            const item = APICache.storage.items.get(id);
+            if (!item || !('subtype' in item))
+                continue;
+            if (item.type === 'UpgradeComponent') {
+                const tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + 1;
+                let tier;
+                if (item.subtype === 'Rune') {
+                    if (tierNumber > 6) {
+                        if (!targetContext.character.runeCounts[item.id])
+                            console.warn("[gw2-tooltips] [collect] Found more than 6 runes of the same type. Here is the 7th rune element: ", element);
+                        continue;
+                    }
+                    tier = item.tiers[tierNumber - 1];
+                }
+                else {
+                    if (item.subtype === 'Sigil' && tierNumber > 1) {
+                        if (tierNumber > 2)
+                            console.warn("[gw2-tooltips] [collect] Found more than 2 sigils of the same type. Here is the 3th sigil element: ", element);
+                        continue;
+                    }
+                    tier = item.tiers[0];
+                }
+                if (tier.modifiers)
+                    for (const mod of tier.modifiers) {
+                        if (!mod.attribute)
+                            continue;
+                        const amount = FactsProcessor.calculateModifier(mod, targetContext.character);
+                        const type = mod.flags.includes('FormatPercent') ? 'Percent' : 'Flat';
+                        sources[TUtilsV2.Uncapitalize(mod.attribute)].push({ amount, type, source: item.name });
+                    }
+            }
+        }
+        switch (mode) {
+            case 0:
+                targetContext.character.statSources = sources;
+                break;
+            case 3:
+                targetContext.character.statSources = Object.assign(targetContext.character.statSources, sources);
+                break;
+            case 1:
+                {
+                    if (window.GW2TooltipsContext instanceof Array) {
+                        targetContext.character.statSources = Object.assign(sources, (_a = window.GW2TooltipsContext[contextIndex].character) === null || _a === void 0 ? void 0 : _a.statSources);
+                    }
+                    else if (window.GW2TooltipsContext) {
+                        targetContext.character.statSources = Object.assign(sources, (_b = window.GW2TooltipsContext.character) === null || _b === void 0 ? void 0 : _b.statSources);
+                    }
+                    else {
+                        targetContext.character.statSources = sources;
+                    }
+                }
+                break;
+            case 2:
+                {
+                    if (window.GW2TooltipsContext instanceof Array) {
+                        targetContext.character.statSources = Object.assign({}, (_c = window.GW2TooltipsContext[contextIndex].character) === null || _c === void 0 ? void 0 : _c.statSources, sources);
+                    }
+                    else if (window.GW2TooltipsContext) {
+                        targetContext.character.statSources = Object.assign({}, (_d = window.GW2TooltipsContext.character) === null || _d === void 0 ? void 0 : _d.statSources, sources);
+                    }
+                    else {
+                        targetContext.character.statSources = sources;
+                    }
+                }
+                break;
+        }
+        {
+            let baseStats;
+            if (window.GW2TooltipsContext instanceof Array) {
+                baseStats = Object.assign({}, (_e = window.GW2TooltipsContext[contextIndex].character) === null || _e === void 0 ? void 0 : _e.stats, GW2TooltipsV2.defaultContext.character.stats);
+            }
+            else if (window.GW2TooltipsContext) {
+                baseStats = Object.assign({}, (_f = window.GW2TooltipsContext.character) === null || _f === void 0 ? void 0 : _f.stats, GW2TooltipsV2.defaultContext.character.stats);
+            }
+            else {
+                baseStats = Object.assign({}, GW2TooltipsV2.defaultContext.character.stats);
+            }
+            for (const [attrib, sources] of Object.entries(targetContext.character.statSources)) {
+                let value = baseStats[attrib];
+                for (const { amount, source } of sources.filter(s => s.type === "Flat")) {
+                    value += amount;
+                    console.log(`[gw2-tooltips] [collect] ${source}: ${attrib} + ${amount} = ${value}`);
+                }
+                for (const { amount, source } of sources.filter(s => s.type === "Percent")) {
+                    value *= amount;
+                    console.log(`[gw2-tooltips] [collect] ${source}: ${attrib} * ${amount} = ${value}`);
+                }
+                targetContext.character.stats[attrib] = value;
+            }
+        }
+    }
 }
 class FactsProcessor {
-    static calculateModifier({ formula, base_amount, formula_param1: level_scaling, formula_param2 }, { level, stats: { power, conditionDamage: condition_damage, healing: healing_power } }) {
+    static calculateModifier({ formula, base_amount, formula_param1: level_scaling, formula_param2 }, { level, stats: { power, conditionDmg, healing: healing_power } }) {
         switch (formula) {
             case 'BuffLevelLinear':
                 return level * level_scaling + base_amount;
             case 'ConditionDamage':
-                return level * level_scaling + base_amount + condition_damage * formula_param2;
+                return level * level_scaling + base_amount + conditionDmg * formula_param2;
             case 'ConditionDamageSquared':
-                return level * level * level_scaling + base_amount + condition_damage * formula_param2;
+                return level * level * level_scaling + base_amount + conditionDmg * formula_param2;
             case 'NoScaling':
                 return base_amount;
             case 'Regeneration':
@@ -552,14 +676,16 @@ class GW2TooltipsV2 {
             this.context.push(GW2TooltipsV2.createCompleteContext({}));
         }
         this.config = Object.assign({}, GW2TooltipsV2.defaultConfig, window.GW2TooltipsConfig);
+        if (this.config.apiImpl)
+            APICache.apiImpl = this.config.apiImpl();
         this.tooltip = TUtilsV2.newElm('div.tooltipWrapper');
         this.tooltip.style.display = 'none';
         document.body.appendChild(this.tooltip);
         document.addEventListener('mousemove', event => {
-            gw2tooltips.lastMouseX = event.pageX;
-            gw2tooltips.lastMouseY = event.pageY;
+            this.lastMouseX = event.pageX;
+            this.lastMouseY = event.pageY;
             if (this.tooltip.style.display != 'none')
-                gw2tooltips.positionTooltip();
+                this.positionTooltip();
         });
         document.addEventListener('contextmenu', event => {
             if (!this.cycleTooltipsHandler)
@@ -845,9 +971,9 @@ class GW2TooltipsV2 {
             let currentTooltipIndex = 0;
             this.displayCorrectChainTooltip(tooltipChain, currentTooltipIndex);
             this.cycleTooltipsHandler = () => {
-                gw2tooltips.cycleTooltips();
+                this.cycleTooltips();
                 currentTooltipIndex = (currentTooltipIndex + 1) % tooltipChain.length;
-                gw2tooltips.displayCorrectChainTooltip(tooltipChain, currentTooltipIndex);
+                this.displayCorrectChainTooltip(tooltipChain, currentTooltipIndex);
                 this.positionTooltip();
             };
         }
@@ -1059,7 +1185,7 @@ GW2TooltipsV2.defaultContext = {
             vitality: 1000,
             precision: 1000,
             ferocity: 1000,
-            conditionDamage: 0,
+            conditionDmg: 0,
             expertise: 0,
             concentration: 0,
             healing: 0,
@@ -1071,7 +1197,7 @@ GW2TooltipsV2.defaultContext = {
             vitality: [],
             precision: [],
             ferocity: [],
-            conditionDamage: [],
+            conditionDmg: [],
             expertise: [],
             concentration: [],
             healing: [],
@@ -1083,19 +1209,29 @@ GW2TooltipsV2.defaultContext = {
 GW2TooltipsV2.defaultConfig = {
     autoInitialize: true,
     autoCollectRuneCounts: true,
+    autoCollectStatSources: true,
     adjustIncorrectStatIds: true,
 };
-const gw2tooltips = new GW2TooltipsV2();
-if (gw2tooltips.config.autoInitialize) {
-    gw2tooltips.hookDocument(document)
+window.gw2tooltips = new GW2TooltipsV2();
+if (window.gw2tooltips.config.autoInitialize) {
+    window.gw2tooltips.hookDocument(document)
         .then(_ => {
-        if (gw2tooltips.config.autoCollectRuneCounts) {
+        if (window.gw2tooltips.config.autoCollectRuneCounts) {
             const targets = document.getElementsByClassName('armors');
             if (targets.length)
                 for (const target of targets)
-                    Collect.allRuneCounts(gw2tooltips.context, target);
+                    Collect.allRuneCounts(window.gw2tooltips.context, target);
             else {
                 console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `armors` could be found to use as source. Runes will not be collected as there is no way to tell which rune belongs to the build and which one is just in some arbitrary text.");
+            }
+        }
+        if (window.gw2tooltips.config.autoCollectStatSources) {
+            const targets = document.getElementsByClassName('gw2-build-wrapper');
+            if (targets.length)
+                for (const target of targets)
+                    Collect.allStatSources(window.gw2tooltips.context, target);
+            else {
+                console.warn("[gw2-tooltips] [collect] `config.autoCollectStatSources` is active, but no element with class `gw2-build-wrapper` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
             }
         }
     });

@@ -1,7 +1,7 @@
 //NOTE(Rennorb): The different API implementations exist to easily swap out the data source for a local one, or even the official api in theory.
 // If the API is not set on APICache it will set it to HSAPI on the first request to the cache.
-// This is only possible to do if you manually set up the GW2TooltipsV2 window-scoped object.
-// TODO(Rennorb) @cleanup: maybe this can go in the cionfig struct? seems to be the right place for it
+// This can be done by specifying the apiImpl config option.
+//TODO(Rennorb): readme
 
 class FakeAPI implements APIImplementation {
 	async bulkRequest<T extends keyof APIResponseTypeMap>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]> {

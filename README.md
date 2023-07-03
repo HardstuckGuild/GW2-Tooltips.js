@@ -41,13 +41,26 @@ To archive all of the functionality we use our own proprietary API as opposed to
 				healing        : 0,
 				critDamage     : 0,
 			},
+			statSources: {
+				power         : StatSource[] = [] // StatSource : {
+				toughness     : StatSource[] = [] // 	amount : number
+				vitality      : StatSource[] = [] // 	type   : 'Flat' | 'Percent'
+				precision     : StatSource[] = [] // 	source : string
+				ferocity      : StatSource[] = [] // }
+				conditionDmg  : StatSource[] = []
+				expertise     : StatSource[] = []
+				concentration : StatSource[] = []
+				healing       : StatSource[] = []
+				critDamage    : StatSource[] = []
+			},
+			runeCounts : { [item_id : number] : number } = {},
 		},
 	}
 	</script>
 	```
 	If you want to have typings for this context structure you can use `src/Context.d.ts`.
 3. Optionally define config structures <span style="color: red">//TODO(Rennorb)</span>
-3. Include the script and style <span style="color: red">//TODO(Rennorb) @prio:low : style does not actually exist in this form </span>
+3. Include the script and style
 	```html
 	<head>
 		<script type="text/javascript" script="path/to/tooltips.js" defer></script>
@@ -56,7 +69,6 @@ To archive all of the functionality we use our own proprietary API as opposed to
 	```
 
 By including the script it wil automatically hook the whole document of the current page.
-<span style="color: red">//TODO(Rennorb) @hardcoded </span>
 
 ## Compiling form TypeScript
 1. Download [Node.js](https://nodejs.org/en)

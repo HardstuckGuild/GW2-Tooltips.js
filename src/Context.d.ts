@@ -6,6 +6,7 @@
 declare interface Window {
 	GW2TooltipsContext : PartialContext[] | PartialContext | undefined;
 	GW2TooltipsConfig  : Config | undefined;
+	gw2tooltips        : GW2TooltipsV2
 }
 
 type PartialContext = PartialR<Context>
@@ -31,16 +32,16 @@ interface Character {
 }
 
 interface Stats {
-	power          : number
-	toughness      : number
-	vitality       : number
-	precision      : number
-	ferocity       : number
-	conditionDamage: number
-	expertise      : number
-	concentration  : number
-	healing        : number
-	critDamage     : number
+	power         : number
+	toughness     : number
+	vitality      : number
+	precision     : number
+	ferocity      : number
+	conditionDmg  : number
+	expertise     : number
+	concentration : number
+	healing       : number
+	critDamage    : number
 }
 
 interface StatSource {
@@ -53,6 +54,11 @@ interface StatSource {
 
 interface Config {
 	 autoInitialize         : bool
+	 // only works if auto initialize is turned on
 	 autoCollectRuneCounts  : bool
+	 // only works if auto initialize is turned on
+	 autoCollectStatSources : bool
 	 adjustIncorrectStatIds : bool
+
+	 apiImpl?               : () => APIImplementation
 }
