@@ -72,6 +72,7 @@
 	background-image: url(../out/tooltip-bg.jpg);
 	background-size: cover;
 	background-blend-mode: hard-light;
+	color: #d3d2cf;
 }
 .tooltipWrapper > :not(.tooltip.active) te {
 	display: none;
