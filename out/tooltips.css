@@ -46,11 +46,16 @@
 	position: absolute;
 	top: 0;
 	left: 0;
-	display: flex;
+	max-width: min(50ch, 100%);
+	min-width: 40ch;
 
+	display: flex;
 	flex-direction: column;
 	flex-wrap: wrap;
 	gap: 0 .25rem;
+
+	line-height: 1.2;
+	font-size: var(--gw2-tt-font-size-s);
 	
 	pointer-events: none;  /* important */
 }
@@ -63,11 +68,7 @@
 	box-shadow: #000 4px 4px 8px;
 
 	padding: 4px;
-	max-width: min(50ch, 100%);
-	min-width: 40ch;
 	max-height: 80vh;
-	line-height: 1.2;
-	font-size: var(--gw2-tt-font-size-s);
 
 	background-color: #373f46;
 	background-image: url(../out/tooltip-bg.jpg);
@@ -110,6 +111,7 @@
 .tooltipWrapper tet>img {
 	width: 32px;
 	height: 32px;
+	flex: 0 0 auto
 }
 
 .tooltipWrapper teb {
