@@ -58,6 +58,8 @@ interface Config {
 	 autoCollectRuneCounts  : bool
 	 // only works if auto initialize is turned on
 	 autoCollectStatSources : bool
+	 // only works if auto initialize is turned on
+	 autoInferEquipmentUpgrades : bool
 	 adjustIncorrectStatIds : bool
 
 	 apiImpl?               : () => APIImplementation

@@ -98,6 +98,7 @@ class Collect {
 				const tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + 1;
 				let tier;
 				if(item.subtype === 'Rune') {
+					//TODO(Rennorb) @bug: this doesn't work if the runes are already collected / manually set. its already at 6 in that case and the value isn't properly processed.
 					if(tierNumber > 6) {
 						//NOTE(Rennorb): Only complain if we are manually counting runes. 
 						//TODO(Rennorb) @correctness: Is this the right way to do it? should we just complain when runes are specified but we find one that isn't?

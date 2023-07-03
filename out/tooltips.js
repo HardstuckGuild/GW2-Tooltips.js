@@ -759,7 +759,7 @@ class GW2TooltipsV2 {
                 if (data) {
                     if (type == 'items') {
                         const statId = +String(gw2Object.getAttribute('stats')) || undefined;
-                        this.tooltip.replaceChildren(this.generateItemTooltip(data, context, statId, stackSize));
+                        this.tooltip.replaceChildren(this.generateItemTooltip(data, context, gw2Object, statId, stackSize));
                     }
                     else
                         this.tooltip.replaceChildren(...this.generateToolTipList(data, gw2Object, context));
@@ -982,7 +982,8 @@ class GW2TooltipsV2 {
         }
         return tooltipChain;
     }
-    generateItemTooltip(item, context, statSetId, stackSize = 1) {
+    generateItemTooltip(item, context, target, statSetId, stackSize = 1) {
+        var _a;
         let statSet = undefined;
         if (item.type == "Armor" || item.type == "Trinket" || item.type == "Weapon") {
             statSetId = statSetId || item.attribute_set;
@@ -1007,8 +1008,13 @@ class GW2TooltipsV2 {
                 }
             }
         }
+        let slottedItems;
+        if ('slots' in item) {
+            slottedItems = (_a = target.getAttribute('slotted')) === null || _a === void 0 ? void 0 : _a.split(',').map(id => APICache.storage.items.get(+String(id) || 0)).filter(i => i && 'subtype' in i);
+        }
         const countPrefix = stackSize > 1 ? stackSize + ' ' : '';
-        const name = countPrefix + this.formatItemName(item, context, statSet, undefined, stackSize);
+        const upgradeNameSource = (slottedItems === null || slottedItems === void 0 ? void 0 : slottedItems.find(i => i.subtype !== 'Default')) || (slottedItems === null || slottedItems === void 0 ? void 0 : slottedItems[0]);
+        const name = countPrefix + this.formatItemName(item, context, statSet, upgradeNameSource, stackSize);
         const parts = [TUtilsV2.newElm('tet', TUtilsV2.newImg(item.icon), TUtilsV2.newElm('teb.color-rarity-' + item.rarity, name), TUtilsV2.newElm('div.flexbox-fill'))];
         if ('defense' in item && item.defense) {
             const defense = (typeof item.defense == "number")
@@ -1046,19 +1052,7 @@ class GW2TooltipsV2 {
             parts.push(TUtilsV2.newElm('te', TUtilsV2.newElm('tem', 'Weapon Strength: ', TUtilsV2.newElm('span.color-stat-green', `${power[0]} - ${power[1]}`))));
         }
         if ('tiers' in item) {
-            const group = TUtilsV2.newElm('div.group');
-            for (const [i, tier] of item.tiers.entries()) {
-                let tier_wrap = TUtilsV2.newElm('te');
-                if (tier.description)
-                    tier_wrap.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(tier.description))));
-                const w = TUtilsV2.newElm('te', tier_wrap);
-                if (item.subtype == "Rune") {
-                    const colorClass = i < (context.character.runeCounts[item.id] || 0) ? '.color-stat-green' : '';
-                    w.prepend(TUtilsV2.newElm('span' + colorClass, `(${i + 1})`));
-                }
-                group.append(w);
-            }
-            parts.push(group);
+            parts.push(this.generateUpgradeItemGroup(item, context));
         }
         if (statSet && 'attribute_base' in item) {
             parts.push(...statSet.attributes.map(({ attribute, base_value, scaling }) => {
@@ -1066,8 +1060,31 @@ class GW2TooltipsV2 {
                 return TUtilsV2.newElm('te', TUtilsV2.newElm('tem.color-stat-green', `+${computedValue} ${attribute}`));
             }));
         }
-        if ('slots' in item) {
-            parts.push(TUtilsV2.newElm('div.group.slots', ...item.slots.map(s => TUtilsV2.newElm('te', TUtilsV2.newImg(this.ICONS['SLOT_' + s], 'iconsmall'), `Empty ${s} Slot`))));
+        if ('slots' in item && slottedItems) {
+            parts.push(TUtilsV2.newElm('div.group.slots', ...item.slots.map(s => {
+                let slottedItemIdx;
+                switch (s) {
+                    case 'Upgrade':
+                        slottedItemIdx = slottedItems.findIndex(i => ['Rune', 'Sigil', 'Gem'].includes(i.subtype));
+                        break;
+                    case 'Infusion':
+                        slottedItemIdx = slottedItems.findIndex(i => i.subtype == 'Default');
+                        break;
+                    case 'Enrichment':
+                        slottedItemIdx = slottedItems.findIndex(i => i.subtype == 'Default');
+                        break;
+                }
+                if (slottedItemIdx > -1) {
+                    const slottedItem = slottedItems.splice(slottedItemIdx, 1)[0];
+                    const group = this.generateUpgradeItemGroup(slottedItem, context);
+                    const name = this.formatItemName(slottedItem, context, statSet);
+                    group.prepend(TUtilsV2.newElm('tet', TUtilsV2.newImg(slottedItem.icon, 'iconsmall'), TUtilsV2.newElm('teb.color-rarity-' + slottedItem.rarity, name), TUtilsV2.newElm('div.flexbox-fill')));
+                    return group;
+                }
+                else {
+                    return TUtilsV2.newElm('te', TUtilsV2.newImg(this.ICONS['SLOT_' + s], 'iconsmall'), `Empty ${s} Slot`);
+                }
+            })));
         }
         const metaInfo = TUtilsV2.newElm('div.group');
         if (item.type == "Armor" || item.type == "Weapon" || item.type == "Trinket") {
@@ -1105,6 +1122,35 @@ class GW2TooltipsV2 {
         tooltip.dataset.id = String(item.id);
         return tooltip;
     }
+    generateUpgradeItemGroup(item, context) {
+        const group = TUtilsV2.newElm('div.group');
+        for (const [i, tier] of item.tiers.entries()) {
+            let tier_wrap = TUtilsV2.newElm('te');
+            if (tier.description)
+                tier_wrap.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(tier.description))));
+            const w = TUtilsV2.newElm('te', tier_wrap);
+            if (item.subtype == "Rune") {
+                const colorClass = i < (context.character.runeCounts[item.id] || 0) ? '.color-stat-green' : '';
+                w.prepend(TUtilsV2.newElm('span' + colorClass, `(${i + 1})`));
+            }
+            group.append(w);
+        }
+        return group;
+    }
+    inferItemUpgrades(wrapper) {
+        if (wrapper.childElementCount < 2)
+            return;
+        const [item, ...upgrades] = wrapper.children;
+        if (item.getAttribute('type') !== 'item')
+            return;
+        const itemCtx = +String(item.getAttribute('contextSet')) || 0;
+        const attrString = upgrades
+            .filter(u => u.getAttribute('type') === 'item' && u.getAttribute('objid')
+            && (+String(item.getAttribute('contextSet')) || 0) === itemCtx)
+            .map(u => u.getAttribute('objid')).join(',');
+        if (attrString)
+            item.setAttribute('slotted', attrString);
+    }
     formatItemName(item, context, statSet, upgradeComponent, stackSize = 1) {
         let name;
         if (item.type == 'TraitGuide') {
@@ -1115,11 +1161,13 @@ class GW2TooltipsV2 {
         }
         let arg1, arg2, arg3, arg4;
         arg1 = arg2 = arg3 = arg4 = '';
-        if (!item.flags.includes('HideSuffix')) {
+        if (!item.flags.includes('HidePrefix')) {
             if (statSet && statSet.name) {
                 arg1 = statSet.name;
                 arg2 = " ";
             }
+        }
+        if (!item.flags.includes('HideSuffix')) {
             if (upgradeComponent && upgradeComponent.suffix) {
                 arg4 = upgradeComponent.suffix;
                 arg3 = " ";
@@ -1211,6 +1259,7 @@ GW2TooltipsV2.defaultConfig = {
     autoCollectRuneCounts: true,
     autoCollectStatSources: true,
     adjustIncorrectStatIds: true,
+    autoInferEquipmentUpgrades: true,
 };
 window.gw2tooltips = new GW2TooltipsV2();
 if (window.gw2tooltips.config.autoInitialize) {
@@ -1232,6 +1281,15 @@ if (window.gw2tooltips.config.autoInitialize) {
                     Collect.allStatSources(window.gw2tooltips.context, target);
             else {
                 console.warn("[gw2-tooltips] [collect] `config.autoCollectStatSources` is active, but no element with class `gw2-build-wrapper` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
+            }
+        }
+        if (window.gw2tooltips.config.autoInferEquipmentUpgrades) {
+            const targets = document.querySelectorAll('.weapon, .armor, .trinket');
+            if (targets.length)
+                for (const target of targets)
+                    window.gw2tooltips.inferItemUpgrades(target);
+            else {
+                console.warn("[gw2-tooltips] [collect] `config.autoInferEquipmentUpgrades` is active, but no wrapper elements element with class `'.weapon`, `.armor` or `.trinket` could be found to use as source. No elements will be updated");
             }
         }
     });

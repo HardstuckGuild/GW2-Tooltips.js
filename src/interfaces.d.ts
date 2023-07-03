@@ -235,7 +235,9 @@ namespace API {
 		provides_weapon_access? : WeaponAccess []
 	}
 
-	type Item = ItemDetail & {
+	type Item = ItemDetail & ItemBase
+	
+	type ItemBase = {
 		id             : number
 		name           : string
 		icon           : string
@@ -251,6 +253,7 @@ namespace API {
 
 	type WeaponDetailType = Weapons1H | Weapons2H | 'Polearm' | 'BundleSmall' | 'BundleLarge' | WeaponsAquatic | 'Toy' | 'ToyTwoHanded' | 'None';
 
+	//TODO(Rennorb) @cleanup
 	type ItemDetail = ({
 		type    : 'Armor'
 		defense : ValueOrLutOffset
@@ -276,7 +279,9 @@ namespace API {
 	} | {
 		type  : 'TraitGuide'
 		trait : 'todo'
-	} | {
+	} | UpgradeComponentDetail
+
+	type UpgradeComponentDetail = {
 		type    : 'UpgradeComponent'
 		subtype : 'Rune' | 'Sigil' | 'Gem' | 'Default'
 		tiers   : {

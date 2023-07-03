@@ -83,10 +83,11 @@ class GW2TooltipsV2 {
 
 	config : Config;
 	static defaultConfig : Config = {
-		autoInitialize        : true,
-		autoCollectRuneCounts : true,
-		autoCollectStatSources: true,
-		adjustIncorrectStatIds: true,
+		autoInitialize            : true,
+		autoCollectRuneCounts     : true,
+		autoCollectStatSources    : true,
+		adjustIncorrectStatIds    : true,
+		autoInferEquipmentUpgrades: true,
 	}
 
 	constructor() {
@@ -196,7 +197,7 @@ class GW2TooltipsV2 {
 				if(data) {
 					if(type == 'items') {
 						const statId = +String(gw2Object.getAttribute('stats')) || undefined;
-						this.tooltip.replaceChildren(this.generateItemTooltip(data as API.Item, context, statId, stackSize));
+						this.tooltip.replaceChildren(this.generateItemTooltip(data as API.Item, context, gw2Object, statId, stackSize));
 					}
 					else
 						this.tooltip.replaceChildren(...this.generateToolTipList(data as Exclude<typeof data, API.Item>, gw2Object, context));
@@ -452,7 +453,7 @@ class GW2TooltipsV2 {
 		return tooltipChain
 	}
 
-	generateItemTooltip(item : API.Item, context : Context, statSetId? : number, stackSize = 1) : HTMLElement {
+	generateItemTooltip(item : API.Item, context : Context, target : HTMLElement, statSetId? : number, stackSize = 1) : HTMLElement {
 		let statSet : API.AttributeSet | undefined = undefined;
 		if(item.type == "Armor" || item.type == "Trinket" || item.type == "Weapon") {
 			statSetId = statSetId || item.attribute_set;
@@ -475,8 +476,16 @@ class GW2TooltipsV2 {
 			}
 		}
 
+		let slottedItems : (API.ItemBase & API.UpgradeComponentDetail)[] | undefined;
+		if('slots' in item) {
+			slottedItems = target.getAttribute('slotted')?.split(',')
+				.map(id => APICache.storage.items.get(+String(id) || 0))
+				.filter(i => i && 'subtype' in i) as (API.ItemBase & API.UpgradeComponentDetail)[];
+		}
+
 		const countPrefix = stackSize > 1 ? stackSize + ' ' : '';
-		const name = countPrefix + this.formatItemName(item, context, statSet, undefined, stackSize);
+		const upgradeNameSource = slottedItems?.find(i => i.subtype !== 'Default') || slottedItems?.[0];
+		const name = countPrefix + this.formatItemName(item, context, statSet, upgradeNameSource, stackSize);
 		const parts = [TUtilsV2.newElm('tet', TUtilsV2.newImg(item.icon),  TUtilsV2.newElm('teb.color-rarity-'+item.rarity, name), TUtilsV2.newElm('div.flexbox-fill'))];
 
 		if('defense' in item && item.defense) {
@@ -517,41 +526,7 @@ class GW2TooltipsV2 {
 		}
 
 		if('tiers' in item) {
-			const group = TUtilsV2.newElm('div.group');
-			for(const [i, tier] of item.tiers.entries()) {
-				let tier_wrap = TUtilsV2.newElm('te');
-				if(tier.description) tier_wrap.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(tier.description))));
-
-				//NOTE(Rennorb): facts seem to exist, but almost universally be wrong.
-				/*
-				if(tier.facts) for(const fact of tier.facts) {
-					const { wrapper } = FactsProcessor.generateFact(fact, null as any, context);
-					if(wrapper) tier_wrap.append(wrapper);
-				}
-				*/
-
-				/*
-				if(tier.modifiers) for(const modifier of tier.modifiers) {
-					//TODO(Rennorb) @cleanup: unify this wth the buf fact processing 
-					let modifierValue = FactsProcessor.calculateModifier(modifier, context.character)
-
-					let text;
-					if(modifier.flags.includes('FormatPercent')) {
-						text = `${Math.round(modifierValue)}% ${modifier.description}`
-					} else {
-						text = `${Math.round(modifierValue)} ${modifier.description}`
-					}
-					tier_wrap.append(TUtilsV2.newElm('te', text));
-				}
-				*/
-				const w = TUtilsV2.newElm('te', tier_wrap);
-				if(item.subtype == "Rune") {
-					const colorClass = i < (context.character.runeCounts[item.id] || 0) ? '.color-stat-green' : '';
-					w.prepend(TUtilsV2.newElm('span'+colorClass, `(${i + 1})`));
-				}
-				group.append(w);
-			}
-			parts.push(group);
+			parts.push(this.generateUpgradeItemGroup(item, context));
 		}
 
 		if(statSet && 'attribute_base' in item) {
@@ -561,10 +536,29 @@ class GW2TooltipsV2 {
 			}));
 		}
 
-		if('slots' in item) {
-			parts.push(TUtilsV2.newElm('div.group.slots', ...item.slots.map(s => TUtilsV2.newElm('te',
-				TUtilsV2.newImg(this.ICONS['SLOT_'+s as keyof typeof this.ICONS], 'iconsmall'), `Empty ${s} Slot`
-			))));
+		if('slots' in item && slottedItems) {
+			parts.push(TUtilsV2.newElm('div.group.slots', ...item.slots.map(s => {
+				let slottedItemIdx;
+				//TODO(Rennorb) @correctness @cleanup: this should use UpgradeComponent Flags
+				switch(s) {
+					case 'Upgrade'   : slottedItemIdx = slottedItems!.findIndex(i => ['Rune', 'Sigil', 'Gem'].includes(i.subtype)); break;
+					case 'Infusion'  : slottedItemIdx = slottedItems!.findIndex(i => i.subtype == 'Default'); break;
+					case 'Enrichment': slottedItemIdx = slottedItems!.findIndex(i => i.subtype == 'Default'); break;
+				}
+
+				if(slottedItemIdx > -1) {
+					const slottedItem = slottedItems!.splice(slottedItemIdx, 1)[0];
+					const group = this.generateUpgradeItemGroup(slottedItem, context);
+					const name = this.formatItemName(slottedItem, context, statSet);
+					group.prepend(TUtilsV2.newElm('tet', TUtilsV2.newImg(slottedItem.icon, 'iconsmall'),  TUtilsV2.newElm('teb.color-rarity-'+slottedItem.rarity, name), TUtilsV2.newElm('div.flexbox-fill')));
+					return group;
+				}
+				else {
+					return TUtilsV2.newElm('te',
+						TUtilsV2.newImg(this.ICONS['SLOT_'+s as keyof typeof this.ICONS], 'iconsmall'), `Empty ${s} Slot`
+					)
+				}
+			})));
 		}
 
 		const metaInfo = TUtilsV2.newElm('div.group');
@@ -602,6 +596,63 @@ class GW2TooltipsV2 {
 		return tooltip;
 	}
 
+	generateUpgradeItemGroup(item : API.ItemBase & API.UpgradeComponentDetail, context : Context) : HTMLElement {
+		const group = TUtilsV2.newElm('div.group');
+		for(const [i, tier] of item.tiers.entries()) {
+			let tier_wrap = TUtilsV2.newElm('te');
+			if(tier.description) tier_wrap.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(tier.description))));
+
+			//NOTE(Rennorb): facts seem to exist, but almost universally be wrong.
+			/*
+			if(tier.facts) for(const fact of tier.facts) {
+				const { wrapper } = FactsProcessor.generateFact(fact, null as any, context);
+				if(wrapper) tier_wrap.append(wrapper);
+			}
+			*/
+
+			/*
+			if(tier.modifiers) for(const modifier of tier.modifiers) {
+				//TODO(Rennorb) @cleanup: unify this wth the buf fact processing 
+				let modifierValue = FactsProcessor.calculateModifier(modifier, context.character)
+
+				let text;
+				if(modifier.flags.includes('FormatPercent')) {
+					text = `${Math.round(modifierValue)}% ${modifier.description}`
+				} else {
+					text = `${Math.round(modifierValue)} ${modifier.description}`
+				}
+				tier_wrap.append(TUtilsV2.newElm('te', text));
+			}
+			*/
+			const w = TUtilsV2.newElm('te', tier_wrap);
+			if(item.subtype == "Rune") {
+				const colorClass = i < (context.character.runeCounts[item.id] || 0) ? '.color-stat-green' : '';
+				w.prepend(TUtilsV2.newElm('span'+colorClass, `(${i + 1})`));
+			}
+			group.append(w);
+		}
+
+		return group;
+	}
+
+	//TODO(Rennorb) @cleanup: probably move this
+	inferItemUpgrades(wrapper : Element) {
+		if(wrapper.childElementCount < 2) return;
+
+		const [item, ...upgrades] = wrapper.children;
+		if(item.getAttribute('type') !== 'item') return;
+
+		const itemCtx = +String(item.getAttribute('contextSet')) || 0 ;
+
+		const attrString = upgrades
+			.filter(u =>
+				u.getAttribute('type') === 'item' && u.getAttribute('objid')
+				&& (+String(item.getAttribute('contextSet')) || 0) === itemCtx
+			)
+			.map(u => u.getAttribute('objid')).join(',');
+		if(attrString) item.setAttribute('slotted', attrString);
+	}
+
 	formatItemName(item : API.Item, context : Context, statSet? : API.AttributeSet, upgradeComponent? : any, stackSize = 1) : string {
 		let name;
 		if(item.type == 'TraitGuide') {
@@ -614,12 +665,14 @@ class GW2TooltipsV2 {
 		let arg1, arg2, arg3, arg4;
 		arg1 = arg2 = arg3 = arg4 = '';
 
-		if(!item.flags.includes('HideSuffix')) {
+		if(!item.flags.includes('HidePrefix' as any)) { //TODO(Rennorb) @correctness: this flag comes from skindef and is currently not properly exported
 			if(statSet && statSet.name) {
 				arg1 = statSet.name;
 				arg2 = " ";
 			}
+		}
 
+		if(!item.flags.includes('HideSuffix')) {
 			if(upgradeComponent && upgradeComponent.suffix) {
 				arg4 = upgradeComponent.suffix;
 				arg3 = " ";
@@ -732,6 +785,15 @@ if(window.gw2tooltips.config.autoInitialize) {
 					Collect.allStatSources(window.gw2tooltips.context, target)
 				else {
 					console.warn("[gw2-tooltips] [collect] `config.autoCollectStatSources` is active, but no element with class `gw2-build-wrapper` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
+				}
+			}
+
+			if(window.gw2tooltips.config.autoInferEquipmentUpgrades) {
+				const targets = document.querySelectorAll('.weapon, .armor, .trinket');
+				if(targets.length) for(const target of targets)
+					window.gw2tooltips.inferItemUpgrades(target)
+				else {
+					console.warn("[gw2-tooltips] [collect] `config.autoInferEquipmentUpgrades` is active, but no wrapper elements element with class `'.weapon`, `.armor` or `.trinket` could be found to use as source. No elements will be updated");
 				}
 			}
 		})
