@@ -15,10 +15,7 @@ class Collect {
 		this._upgradeCounts(contextIndex, targetContext, scope.getElementsByTagName('gw2object'), mode);
 	}
 	static _upgradeCounts(contextIndex : number, targetContext : Context, elements : Iterable<Element>, mode : CollectMode) {
-		const counts : Character['upgradeCounts'] = {
-			Rune   : {},
-			Default: {},
-		};
+		const counts : Character['upgradeCounts'] = {};
 
 		for(const element of elements) {
 			let id;
@@ -33,27 +30,8 @@ class Collect {
 				if(!(amountToAdd = +String(element.getAttribute('count')))) { // modern version just has the item count as attribute
 
 					if(window.gw2tooltips.config.legacyCompatibility) {
-						//NOTE(Rennorb): unfortunately this is a bit complicated as the count is next to the actual object, but within a stacked wrapper. so its
-						// <gw2obj />
-						// ... repeated for multiple infusions
-						// <div.gw2-build-equipment-info>
-						//   <span.item-name.noembed><strong.amount>{amount}x</strong>{name}</span>
-						//   ... repeated for multiple infusions
-						const ownIndex = Array.prototype.indexOf.call(element.parentElement!.children, element);
-						const amountEl = element.parentElement!.getElementsByClassName('amount')[ownIndex];
-						if(!amountEl){
-							console.warn("[gw2-tooltips] [collect] `legacyCompatibility` is active, but no amount element for infusion ", element, " could be found. Will not assume anything and just ignore the stack.");
-							continue
-						}
-						amountToAdd = +String(amountEl.textContent?.match(/\d+/)?.[0]);
-						if(!amountToAdd) {
-							console.warn("[gw2-tooltips] [collect] [legacyCompatibility] Amount element ", amountEl, " for infusion element ", element, " did not contain any readable amount. Will not assume anything and just ignore the stack.");
-							continue
-						}
-						if(amountToAdd < 1 || amountToAdd > 20) {
-							console.warn("[gw2-tooltips] [collect] [legacyCompatibility] Amount element ", amountEl, " for infusion element ", element, " did got interpreted as x", amountToAdd, " which is outside of the range of sensible values (amount in [1...20]). Will not assume anything and just ignore the stack.");
-							continue
-						}
+						amountToAdd = this._legacy_getInfusionCount(element)!;
+						if(!amountToAdd) continue;
 					}
 				}
 
@@ -63,7 +41,7 @@ class Collect {
 				}
 			}
 
-			counts[item.subtype][item.id] = (counts[item.subtype][item.id] || 0) + amountToAdd;
+			counts[item.id] = (counts[item.id] || 0) + amountToAdd;
 		}
 
 		switch(mode) {
@@ -126,12 +104,7 @@ class Collect {
 		};
 
 		//NOTE(Rennorb): We use the existing rune count if given.
-		let upgrades = Object.assign({
-			Default: {} as Record<number, number>,
-			Sigil  : {} as Record<number, number>,
-			Gem    : {} as Record<number, number>,
-			Rune   : {} as Record<number, number>,
-		}, targetContext.character.upgradeCounts);
+		let upgrades = Object.assign({}, targetContext.character.upgradeCounts);
 
 		for(const element of elements) {
 			let id;
@@ -140,39 +113,54 @@ class Collect {
 			const item = APICache.storage.items.get(id);
 			if(!item || !('subtype' in item)) continue;
 			
-			if(item.type === 'UpgradeComponent') {
+			let amountToAdd = 1;
+
+			if(item.type === 'UpgradeComponent' || item.type === 'Consumable') {
 				//NOTE(Rennorb): We count additional runes, but ignore those over the sensible amount.
-				const tierNumber = upgrades[item.subtype][item.id] = (upgrades[item.subtype][item.id] || 0) + 1;
+				const tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + 1;
 				let tier;
 				if(item.subtype === 'Rune') {
 					//TODO(Rennorb) @bug: this doesn't work if the runes are already collected / manually set. its already at 6 in that case and the value isn't properly processed.
 					if(tierNumber > 6) {
 						//NOTE(Rennorb): Only complain if we are manually counting runes. 
 						//TODO(Rennorb) @correctness: Is this the right way to do it? should we just complain when runes are specified but we find one that isn't?
-						if(!targetContext.character.upgradeCounts.Rune[item.id])
+						if(!targetContext.character.upgradeCounts[item.id])
 							console.warn("[gw2-tooltips] [collect] Found more than 6 runes of the same type. Here is the 7th rune element: ", element);
 						continue;
 					}
 					tier = item.tiers[tierNumber - 1];
 				}
 				else {
-					if(item.subtype === 'Sigil' && tierNumber > 1) {
+					if(item.subtype == "Default") {
+						if(!(amountToAdd = +String(element.getAttribute('count')))) { // modern version just has the item count as attribute
+		
+							if(window.gw2tooltips.config.legacyCompatibility) {
+								amountToAdd = this._legacy_getInfusionCount(element)!;
+								if(!amountToAdd) continue;
+							}
+						}
+		
+						if(!amountToAdd) {
+							console.warn("[gw2-tooltips] [collect] Could not figure how many infusions to add for sourceElement ", element, ". Will not assume anything and just ignore the stack.");
+									continue
+						}
+					}
+					else if(item.subtype === 'Sigil' && tierNumber > 1) {
 						//NOTE(Rennorb): We only process one sigil, since sigils are unique, but we start complaining at the third identical one since there might be the same sigil twice for different sets.
 						//TODO(Rennorb) @correctness: how to handle asymmetric sets? Right now we would assume all unique sigils are active at once, so if you do [A, B] [B, C] then A, B, C would be considered active.
 						if(tierNumber > 2)
 							console.warn("[gw2-tooltips] [collect] Found more than 2 sigils of the same type. Here is the 3th sigil element: ", element);
 						continue;
 					}
+
 					tier = item.tiers[0];
 				}
 
 
-				if(tier.modifiers) for(const mod of tier.modifiers!) {
-					if(!mod.attribute) continue;
+				if(tier.modifiers) for(const modifier of tier.modifiers!) {
+					if(!modifier.attribute) continue;
 
-					const amount = FactsProcessor.calculateModifier(mod, targetContext.character);
-					const type = mod.flags.includes('FormatPercent') ? 'Percent' : 'Flat';
-					sources[TUtilsV2.Uncapitalize(mod.attribute)].push({ amount, type, source: item.name })
+					sources[TUtilsV2.Uncapitalize(modifier.attribute)].push({ modifier, source: item.name, count: amountToAdd })
 				}
 			}
 		}
@@ -221,19 +209,50 @@ class Collect {
 				baseStats = Object.assign({}, GW2TooltipsV2.defaultContext.character.stats);
 			}
 
+			targetContext.character.stats = baseStats;
+
+			//TODO(Rennorb) @correctnes: 'for every x healing power' is not treated correctly by this approach.
 			for(const [attrib, sources] of Object.entries(targetContext.character.statSources)) {
-				let value = baseStats[attrib];
-				for(const { amount, source } of sources.filter(s => s.type === "Flat")) {
-					value += amount;
-					console.log(`[gw2-tooltips] [collect] ${source}: ${attrib} + ${amount} = ${value}`)
+				for(const { modifier, source, count } of sources.filter(s => !s.modifier.flags.includes('FormatPercent'))) {
+					targetContext.character.stats[attrib] += FactsProcessor.calculateModifier(modifier, targetContext.character) * count
+					console.log(`[gw2-tooltips] [collect] ${source}${count > 1 ? (' x '+count) : ''}: Flat ${attrib} => ${targetContext.character.stats[attrib]}`)
 				}
-				for(const { amount, source } of sources.filter(s => s.type === "Percent")) {
-					value *= amount;
-					console.log(`[gw2-tooltips] [collect] ${source}: ${attrib} * ${amount} = ${value}`)
+				for(const { modifier, source, count } of sources.filter(s => s.modifier.flags.includes('FormatPercent'))) {
+					const value = FactsProcessor.calculateModifier(modifier, targetContext.character);
+					targetContext.character.stats[attrib] += (modifier.formula == 'NoScaling'
+						? targetContext.character.stats[attrib] * value
+						: value)
+							* count; //TODO(Rennorb) @correctness
+					console.log(`[gw2-tooltips] [collect] ${source}${count > 1 ? (' x '+count) : ''}: Percent ${attrib} => ${targetContext.character.stats[attrib]}`)
 				}
-				targetContext.character.stats[attrib] = value;
 			}
 		}
+	}
+
+	static _legacy_getInfusionCount(element : Element) : number | undefined {
+		//NOTE(Rennorb): unfortunately this is a bit complicated as the count is next to the actual object, but within a stacked wrapper. so its
+		// <gw2obj />
+		// ... repeated for multiple infusions
+		// <div.gw2-build-equipment-info>
+		//   <span.item-name.noembed><strong.amount>{amount}x</strong>{name}</span>
+		//   ... repeated for multiple infusions
+		const ownIndex = Array.prototype.indexOf.call(element.parentElement!.children, element);
+		const amountEl = element.parentElement!.getElementsByClassName('amount')[ownIndex];
+		if(!amountEl){
+			console.warn("[gw2-tooltips] [collect] `legacyCompatibility` is active, but no amount element for infusion ", element, " could be found. Will not assume anything and just ignore the stack.");
+			return;
+		}
+		const amountToAdd = +String(amountEl.textContent?.match(/\d+/)?.[0]);
+		if(!amountToAdd) {
+			console.warn("[gw2-tooltips] [collect] [legacyCompatibility] Amount element ", amountEl, " for infusion element ", element, " did not contain any readable amount. Will not assume anything and just ignore the stack.");
+			return;
+		}
+		if(amountToAdd < 1 || amountToAdd > 20) {
+			console.warn("[gw2-tooltips] [collect] [legacyCompatibility] Amount element ", amountEl, " for infusion element ", element, " did got interpreted as x", amountToAdd, " which is outside of the range of sensible values (amount in [1...20]). Will not assume anything and just ignore the stack.");
+			return;
+		}
+
+		return amountToAdd;
 	}
 }
 

@@ -28,7 +28,7 @@ interface Character {
 	traits        : number[] //TODO(Rennorb): add a collect function that can take them from existing specialization objects
 	stats         : Stats
 	statSources   : { [k in keyof Stats]: StatSource[] }
-	upgradeCounts : UpgradeCounts
+	upgradeCounts : { [k : number]: number }
 }
 
 interface Stats {
@@ -44,17 +44,10 @@ interface Stats {
 	critDamage    : number
 }
 
-//TODO(Rennorb) @cleanup: is splitting this really necessary?
-interface UpgradeCounts {
-	// Capitalized to match enum names
-	Rune     : { [k : number]: number }
-	Default : { [k : number]: number }
-}
-
 interface StatSource {
-	amount : number
-	type   : 'Flat' | 'Percent'
-	source : string
+	source   : string
+	modifier : API.Modifier
+	count    : number
 }
 
 

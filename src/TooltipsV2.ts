@@ -70,16 +70,13 @@ class GW2TooltipsV2 {
 				healing       : [],
 				critDamage    : [],
 			},
-			upgradeCounts: {
-				Rune   : {},
-				Default: {}, // Infusions
-			},
+			upgradeCounts: {},
 		},
 	}
 	static createCompleteContext(partialContext : PartialContext) : Context {
 		const stats = Object.assign({}, this.defaultContext.character.stats, partialContext.character?.stats);
 		const statSources = Object.assign({}, this.defaultContext.character.statSources, partialContext.character?.statSources);
-		const upgradeCounts = Object.assign({}, this.defaultContext.character.upgradeCounts, partialContext.character?.upgradeCounts);
+		const upgradeCounts = Object.assign({}, partialContext.character?.upgradeCounts);
 		const character = Object.assign({}, this.defaultContext.character, partialContext.character, { stats, statSources, upgradeCounts });
 		return Object.assign({}, this.defaultContext, partialContext, { character });
 	}
@@ -600,7 +597,7 @@ class GW2TooltipsV2 {
 		return tooltip;
 	}
 
-	generateUpgradeItemGroup(item : API.ItemBase & API.UpgradeComponentDetail, context : Context) : HTMLElement {
+	generateUpgradeItemGroup(item : API.ItemBase & (API.UpgradeComponentDetail | API.ConsumableDetail), context : Context) : HTMLElement {
 		const group = TUtilsV2.newElm('div.group');
 		for(const [i, tier] of item.tiers.entries()) {
 			let tier_wrap = TUtilsV2.newElm('te');
@@ -630,7 +627,7 @@ class GW2TooltipsV2 {
 			*/
 			const w = TUtilsV2.newElm('te', tier_wrap);
 			if(item.subtype == "Rune") {
-				const colorClass = i < (context.character.upgradeCounts.Rune[item.id] || 0) ? '.color-stat-green' : '';
+				const colorClass = i < (context.character.upgradeCounts[item.id] || 0) ? '.color-stat-green' : '';
 				w.prepend(TUtilsV2.newElm('span'+colorClass, `(${i + 1})`));
 			}
 			group.append(w);
@@ -641,7 +638,15 @@ class GW2TooltipsV2 {
 
 	//TODO(Rennorb) @cleanup: probably move this
 	inferItemUpgrades(wrappers : Iterable<Element>) {
-		const remainingInfusionsByContext = this.context.map(ctx => Object.assign({}, ctx.character.upgradeCounts.Default));
+		const remainingInfusionsByContext = this.context.map(ctx => {
+			const counts : Character['upgradeCounts'] = {};
+			for(const [id, c] of Object.entries(ctx.character.upgradeCounts)) {
+				let item;
+				if((item = APICache.storage.items.get(id)) && 'subtype' in item && item.subtype == 'Default')
+					counts[id] = c;
+			}
+			return counts;
+		});
 
 		for(const wrapper of wrappers) {
 		if(wrapper.childElementCount < 2) return;

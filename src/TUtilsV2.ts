@@ -37,6 +37,7 @@ class TUtilsV2 {
 			.replace(/%%/g, '%')
 			.replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')
 			.replaceAll('[null]', '')
+			.replaceAll('\n', '<br />')
 		: '';
 
 	//TODO(Rennorb) @cleanup: we should jsut use consistent names.

@@ -176,11 +176,8 @@ class Collect {
         this._upgradeCounts(contextIndex, targetContext, scope.getElementsByTagName('gw2object'), mode);
     }
     static _upgradeCounts(contextIndex, targetContext, elements, mode) {
-        var _a, _b, _c, _d, _e, _f;
-        const counts = {
-            Rune: {},
-            Default: {},
-        };
+        var _a, _b, _c, _d;
+        const counts = {};
         for (const element of elements) {
             let id;
             if (element.getAttribute('type') !== 'item' || !(id = +String(element.getAttribute('objid'))))
@@ -192,21 +189,9 @@ class Collect {
             if (item.subtype == "Default") {
                 if (!(amountToAdd = +String(element.getAttribute('count')))) {
                     if (window.gw2tooltips.config.legacyCompatibility) {
-                        const ownIndex = Array.prototype.indexOf.call(element.parentElement.children, element);
-                        const amountEl = element.parentElement.getElementsByClassName('amount')[ownIndex];
-                        if (!amountEl) {
-                            console.warn("[gw2-tooltips] [collect] `legacyCompatibility` is active, but no amount element for infusion ", element, " could be found. Will not assume anything and just ignore the stack.");
+                        amountToAdd = this._legacy_getInfusionCount(element);
+                        if (!amountToAdd)
                             continue;
-                        }
-                        amountToAdd = +String((_b = (_a = amountEl.textContent) === null || _a === void 0 ? void 0 : _a.match(/\d+/)) === null || _b === void 0 ? void 0 : _b[0]);
-                        if (!amountToAdd) {
-                            console.warn("[gw2-tooltips] [collect] [legacyCompatibility] Amount element ", amountEl, " for infusion element ", element, " did not contain any readable amount. Will not assume anything and just ignore the stack.");
-                            continue;
-                        }
-                        if (amountToAdd < 1 || amountToAdd > 20) {
-                            console.warn("[gw2-tooltips] [collect] [legacyCompatibility] Amount element ", amountEl, " for infusion element ", element, " did got interpreted as x", amountToAdd, " which is outside of the range of sensible values (amount in [1...20]). Will not assume anything and just ignore the stack.");
-                            continue;
-                        }
                     }
                 }
                 if (!amountToAdd) {
@@ -214,7 +199,7 @@ class Collect {
                     continue;
                 }
             }
-            counts[item.subtype][item.id] = (counts[item.subtype][item.id] || 0) + amountToAdd;
+            counts[item.id] = (counts[item.id] || 0) + amountToAdd;
         }
         switch (mode) {
             case 0:
@@ -226,10 +211,10 @@ class Collect {
             case 1:
                 {
                     if (window.GW2TooltipsContext instanceof Array) {
-                        targetContext.character.upgradeCounts = Object.assign(counts, (_c = window.GW2TooltipsContext[contextIndex].character) === null || _c === void 0 ? void 0 : _c.upgradeCounts);
+                        targetContext.character.upgradeCounts = Object.assign(counts, (_a = window.GW2TooltipsContext[contextIndex].character) === null || _a === void 0 ? void 0 : _a.upgradeCounts);
                     }
                     else if (window.GW2TooltipsContext) {
-                        targetContext.character.upgradeCounts = Object.assign(counts, (_d = window.GW2TooltipsContext.character) === null || _d === void 0 ? void 0 : _d.upgradeCounts);
+                        targetContext.character.upgradeCounts = Object.assign(counts, (_b = window.GW2TooltipsContext.character) === null || _b === void 0 ? void 0 : _b.upgradeCounts);
                     }
                     else {
                         targetContext.character.upgradeCounts = counts;
@@ -239,10 +224,10 @@ class Collect {
             case 2:
                 {
                     if (window.GW2TooltipsContext instanceof Array) {
-                        targetContext.character.upgradeCounts = Object.assign({}, (_e = window.GW2TooltipsContext[contextIndex].character) === null || _e === void 0 ? void 0 : _e.upgradeCounts, counts);
+                        targetContext.character.upgradeCounts = Object.assign({}, (_c = window.GW2TooltipsContext[contextIndex].character) === null || _c === void 0 ? void 0 : _c.upgradeCounts, counts);
                     }
                     else if (window.GW2TooltipsContext) {
-                        targetContext.character.upgradeCounts = Object.assign({}, (_f = window.GW2TooltipsContext.character) === null || _f === void 0 ? void 0 : _f.upgradeCounts, counts);
+                        targetContext.character.upgradeCounts = Object.assign({}, (_d = window.GW2TooltipsContext.character) === null || _d === void 0 ? void 0 : _d.upgradeCounts, counts);
                     }
                     else {
                         targetContext.character.upgradeCounts = counts;
@@ -279,12 +264,7 @@ class Collect {
             healing: [],
             critDamage: [],
         };
-        let upgrades = Object.assign({
-            Default: {},
-            Sigil: {},
-            Gem: {},
-            Rune: {},
-        }, targetContext.character.upgradeCounts);
+        let upgrades = Object.assign({}, targetContext.character.upgradeCounts);
         for (const element of elements) {
             let id;
             if (element.getAttribute('type') !== 'item' || !(id = +String(element.getAttribute('objid'))))
@@ -292,19 +272,33 @@ class Collect {
             const item = APICache.storage.items.get(id);
             if (!item || !('subtype' in item))
                 continue;
-            if (item.type === 'UpgradeComponent') {
-                const tierNumber = upgrades[item.subtype][item.id] = (upgrades[item.subtype][item.id] || 0) + 1;
+            let amountToAdd = 1;
+            if (item.type === 'UpgradeComponent' || item.type === 'Consumable') {
+                const tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + 1;
                 let tier;
                 if (item.subtype === 'Rune') {
                     if (tierNumber > 6) {
-                        if (!targetContext.character.upgradeCounts.Rune[item.id])
+                        if (!targetContext.character.upgradeCounts[item.id])
                             console.warn("[gw2-tooltips] [collect] Found more than 6 runes of the same type. Here is the 7th rune element: ", element);
                         continue;
                     }
                     tier = item.tiers[tierNumber - 1];
                 }
                 else {
-                    if (item.subtype === 'Sigil' && tierNumber > 1) {
+                    if (item.subtype == "Default") {
+                        if (!(amountToAdd = +String(element.getAttribute('count')))) {
+                            if (window.gw2tooltips.config.legacyCompatibility) {
+                                amountToAdd = this._legacy_getInfusionCount(element);
+                                if (!amountToAdd)
+                                    continue;
+                            }
+                        }
+                        if (!amountToAdd) {
+                            console.warn("[gw2-tooltips] [collect] Could not figure how many infusions to add for sourceElement ", element, ". Will not assume anything and just ignore the stack.");
+                            continue;
+                        }
+                    }
+                    else if (item.subtype === 'Sigil' && tierNumber > 1) {
                         if (tierNumber > 2)
                             console.warn("[gw2-tooltips] [collect] Found more than 2 sigils of the same type. Here is the 3th sigil element: ", element);
                         continue;
@@ -312,12 +306,10 @@ class Collect {
                     tier = item.tiers[0];
                 }
                 if (tier.modifiers)
-                    for (const mod of tier.modifiers) {
-                        if (!mod.attribute)
+                    for (const modifier of tier.modifiers) {
+                        if (!modifier.attribute)
                             continue;
-                        const amount = FactsProcessor.calculateModifier(mod, targetContext.character);
-                        const type = mod.flags.includes('FormatPercent') ? 'Percent' : 'Flat';
-                        sources[TUtilsV2.Uncapitalize(mod.attribute)].push({ amount, type, source: item.name });
+                        sources[TUtilsV2.Uncapitalize(modifier.attribute)].push({ modifier, source: item.name, count: amountToAdd });
                     }
             }
         }
@@ -366,19 +358,41 @@ class Collect {
             else {
                 baseStats = Object.assign({}, GW2TooltipsV2.defaultContext.character.stats);
             }
+            targetContext.character.stats = baseStats;
             for (const [attrib, sources] of Object.entries(targetContext.character.statSources)) {
-                let value = baseStats[attrib];
-                for (const { amount, source } of sources.filter(s => s.type === "Flat")) {
-                    value += amount;
-                    console.log(`[gw2-tooltips] [collect] ${source}: ${attrib} + ${amount} = ${value}`);
+                for (const { modifier, source, count } of sources.filter(s => !s.modifier.flags.includes('FormatPercent'))) {
+                    targetContext.character.stats[attrib] += FactsProcessor.calculateModifier(modifier, targetContext.character) * count;
+                    console.log(`[gw2-tooltips] [collect] ${source}${count > 1 ? (' x ' + count) : ''}: Flat ${attrib} => ${targetContext.character.stats[attrib]}`);
                 }
-                for (const { amount, source } of sources.filter(s => s.type === "Percent")) {
-                    value *= amount;
-                    console.log(`[gw2-tooltips] [collect] ${source}: ${attrib} * ${amount} = ${value}`);
+                for (const { modifier, source, count } of sources.filter(s => s.modifier.flags.includes('FormatPercent'))) {
+                    const value = FactsProcessor.calculateModifier(modifier, targetContext.character);
+                    targetContext.character.stats[attrib] += (modifier.formula == 'NoScaling'
+                        ? targetContext.character.stats[attrib] * value
+                        : value)
+                        * count;
+                    console.log(`[gw2-tooltips] [collect] ${source}${count > 1 ? (' x ' + count) : ''}: Percent ${attrib} => ${targetContext.character.stats[attrib]}`);
                 }
-                targetContext.character.stats[attrib] = value;
             }
         }
+    }
+    static _legacy_getInfusionCount(element) {
+        var _a, _b;
+        const ownIndex = Array.prototype.indexOf.call(element.parentElement.children, element);
+        const amountEl = element.parentElement.getElementsByClassName('amount')[ownIndex];
+        if (!amountEl) {
+            console.warn("[gw2-tooltips] [collect] `legacyCompatibility` is active, but no amount element for infusion ", element, " could be found. Will not assume anything and just ignore the stack.");
+            return;
+        }
+        const amountToAdd = +String((_b = (_a = amountEl.textContent) === null || _a === void 0 ? void 0 : _a.match(/\d+/)) === null || _b === void 0 ? void 0 : _b[0]);
+        if (!amountToAdd) {
+            console.warn("[gw2-tooltips] [collect] [legacyCompatibility] Amount element ", amountEl, " for infusion element ", element, " did not contain any readable amount. Will not assume anything and just ignore the stack.");
+            return;
+        }
+        if (amountToAdd < 1 || amountToAdd > 20) {
+            console.warn("[gw2-tooltips] [collect] [legacyCompatibility] Amount element ", amountEl, " for infusion element ", element, " did got interpreted as x", amountToAdd, " which is outside of the range of sensible values (amount in [1...20]). Will not assume anything and just ignore the stack.");
+            return;
+        }
+        return amountToAdd;
     }
 }
 class FactsProcessor {
@@ -658,6 +672,7 @@ TUtilsV2.GW2Text2HTML = (text, tag = 'span') => text
         .replace(/%%/g, '%')
         .replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')
         .replaceAll('[null]', '')
+        .replaceAll('\n', '<br />')
     : '';
 TUtilsV2.Uncapitalize = (str) => str.charAt(0).toLowerCase() + str.slice(1);
 class GW2TooltipsV2 {
@@ -665,7 +680,7 @@ class GW2TooltipsV2 {
         var _a, _b, _c;
         const stats = Object.assign({}, this.defaultContext.character.stats, (_a = partialContext.character) === null || _a === void 0 ? void 0 : _a.stats);
         const statSources = Object.assign({}, this.defaultContext.character.statSources, (_b = partialContext.character) === null || _b === void 0 ? void 0 : _b.statSources);
-        const upgradeCounts = Object.assign({}, this.defaultContext.character.upgradeCounts, (_c = partialContext.character) === null || _c === void 0 ? void 0 : _c.upgradeCounts);
+        const upgradeCounts = Object.assign({}, (_c = partialContext.character) === null || _c === void 0 ? void 0 : _c.upgradeCounts);
         const character = Object.assign({}, this.defaultContext.character, partialContext.character, { stats, statSources, upgradeCounts });
         return Object.assign({}, this.defaultContext, partialContext, { character });
     }
@@ -1164,7 +1179,7 @@ class GW2TooltipsV2 {
                 tier_wrap.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(tier.description))));
             const w = TUtilsV2.newElm('te', tier_wrap);
             if (item.subtype == "Rune") {
-                const colorClass = i < (context.character.upgradeCounts.Rune[item.id] || 0) ? '.color-stat-green' : '';
+                const colorClass = i < (context.character.upgradeCounts[item.id] || 0) ? '.color-stat-green' : '';
                 w.prepend(TUtilsV2.newElm('span' + colorClass, `(${i + 1})`));
             }
             group.append(w);
@@ -1172,7 +1187,15 @@ class GW2TooltipsV2 {
         return group;
     }
     inferItemUpgrades(wrappers) {
-        const remainingInfusionsByContext = this.context.map(ctx => Object.assign({}, ctx.character.upgradeCounts.Default));
+        const remainingInfusionsByContext = this.context.map(ctx => {
+            const counts = {};
+            for (const [id, c] of Object.entries(ctx.character.upgradeCounts)) {
+                let item;
+                if ((item = APICache.storage.items.get(id)) && 'subtype' in item && item.subtype == 'Default')
+                    counts[id] = c;
+            }
+            return counts;
+        });
         for (const wrapper of wrappers) {
             if (wrapper.childElementCount < 2)
                 return;
@@ -1305,10 +1328,7 @@ GW2TooltipsV2.defaultContext = {
             healing: [],
             critDamage: [],
         },
-        upgradeCounts: {
-            Rune: {},
-            Default: {},
-        },
+        upgradeCounts: {},
     },
 };
 GW2TooltipsV2.defaultConfig = {

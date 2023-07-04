@@ -279,7 +279,17 @@ namespace API {
 	} | {
 		type  : 'TraitGuide'
 		trait : 'todo'
-	} | UpgradeComponentDetail
+	} | ConsumableDetail | UpgradeComponentDetail
+
+	type ConsumableDetail = {
+		type    : 'Consumable'
+		subtype : 'AppearanceChange' | 'Booze' | 'ContractNpc' | 'Food' | 'Generic' | 'Halloween' | 'Immediate' | 'Megaphone' | 'TeleportToFriend' | 'Transmutation' | 'Unlock' | 'RandomUnlock' | 'UpgradeRemoval' | 'Utility' | 'MountRandomUnlock' | 'Currency'
+		tiers   : {
+			description? : string
+			facts?       : Fact[]
+			modifiers?   : Modifier[]
+		}[]
+	}
 
 	type UpgradeComponentDetail = {
 		type    : 'UpgradeComponent'
