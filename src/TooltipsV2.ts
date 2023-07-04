@@ -642,7 +642,7 @@ class GW2TooltipsV2 {
 			const counts : Character['upgradeCounts'] = {};
 			for(const [id, c] of Object.entries(ctx.character.upgradeCounts)) {
 				let item;
-				if((item = APICache.storage.items.get(id)) && 'subtype' in item && item.subtype == 'Default')
+				if((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Default')
 					counts[id] = c;
 			}
 			return counts;
