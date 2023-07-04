@@ -161,62 +161,91 @@ APICache.storage = {
     itemstats: new Map(),
 };
 class Collect {
-    static allRuneCounts(contexts, scope, mode = 1) {
+    static allUpgradeCounts(contexts, scope, mode = 1) {
         const elements = scope.getElementsByTagName('gw2object');
         for (const pair of contexts.entries()) {
             const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('statSet')) || 0) == pair[0]);
-            this._runeCounts(...pair, elsInCorrectCtx, mode);
+            this._upgradeCounts(...pair, elsInCorrectCtx, mode);
         }
         const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('statSet')) || 0) >= contexts.length);
         if (elsWithWrongCtx.length) {
             console.warn("[gw2-tooltips] [collect] Some targets in scope ", scope, " have the wrong context: ", elsWithWrongCtx);
         }
     }
-    static specificRuneCounts(contextIndex, targetContext, scope, mode = 1) {
-        this._runeCounts(contextIndex, targetContext, scope.getElementsByTagName('gw2object'), mode);
+    static specificUpgradeCounts(contextIndex, targetContext, scope, mode = 1) {
+        this._upgradeCounts(contextIndex, targetContext, scope.getElementsByTagName('gw2object'), mode);
     }
-    static _runeCounts(contextIndex, targetContext, elements, mode = 1) {
-        var _a, _b, _c, _d;
-        const counts = {};
+    static _upgradeCounts(contextIndex, targetContext, elements, mode) {
+        var _a, _b, _c, _d, _e, _f;
+        const counts = {
+            Rune: {},
+            Default: {},
+        };
         for (const element of elements) {
             let id;
             if (element.getAttribute('type') !== 'item' || !(id = +String(element.getAttribute('objid'))))
                 continue;
             const item = APICache.storage.items.get(id);
-            if (!item || !('subtype' in item) || item.subtype !== 'Rune')
+            if (!item || !('subtype' in item) || (item.subtype != 'Rune' && item.subtype != 'Default'))
                 continue;
-            counts[item.id] = (counts[item.id] || 0) + 1;
+            let amountToAdd = 1;
+            if (item.subtype == "Default") {
+                if (!(amountToAdd = +String(element.getAttribute('count')))) {
+                    if (window.gw2tooltips.config.legacyCompatibility) {
+                        const ownIndex = Array.prototype.indexOf.call(element.parentElement.children, element);
+                        const amountEl = element.parentElement.getElementsByClassName('amount')[ownIndex];
+                        if (!amountEl) {
+                            console.warn("[gw2-tooltips] [collect] `legacyCompatibility` is active, but no amount element for infusion ", element, " could be found. Will not assume anything and just ignore the stack.");
+                            continue;
+                        }
+                        amountToAdd = +String((_b = (_a = amountEl.textContent) === null || _a === void 0 ? void 0 : _a.match(/\d+/)) === null || _b === void 0 ? void 0 : _b[0]);
+                        if (!amountToAdd) {
+                            console.warn("[gw2-tooltips] [collect] [legacyCompatibility] Amount element ", amountEl, " for infusion element ", element, " did not contain any readable amount. Will not assume anything and just ignore the stack.");
+                            continue;
+                        }
+                        if (amountToAdd < 1 || amountToAdd > 20) {
+                            console.warn("[gw2-tooltips] [collect] [legacyCompatibility] Amount element ", amountEl, " for infusion element ", element, " did got interpreted as x", amountToAdd, " which is outside of the range of sensible values (amount in [1...20]). Will not assume anything and just ignore the stack.");
+                            continue;
+                        }
+                    }
+                }
+                if (!amountToAdd) {
+                    console.warn("[gw2-tooltips] [collect] Could not figure how many infusions to add for sourceElement ", element, ". Will not assume anything and just ignore the stack.");
+                    continue;
+                }
+            }
+            counts[item.subtype][item.id] = (counts[item.subtype][item.id] || 0) + amountToAdd;
         }
         switch (mode) {
             case 0:
-                targetContext.character.runeCounts = counts;
+                targetContext.character.upgradeCounts = counts;
                 break;
             case 3:
-                targetContext.character.runeCounts = Object.assign(targetContext.character.runeCounts, counts);
+                targetContext.character.upgradeCounts = Object.assign(targetContext.character.upgradeCounts, counts);
                 break;
             case 1:
                 {
                     if (window.GW2TooltipsContext instanceof Array) {
-                        targetContext.character.runeCounts = Object.assign(counts, (_a = window.GW2TooltipsContext[contextIndex].character) === null || _a === void 0 ? void 0 : _a.runeCounts);
+                        targetContext.character.upgradeCounts = Object.assign(counts, (_c = window.GW2TooltipsContext[contextIndex].character) === null || _c === void 0 ? void 0 : _c.upgradeCounts);
                     }
                     else if (window.GW2TooltipsContext) {
-                        targetContext.character.runeCounts = Object.assign(counts, (_b = window.GW2TooltipsContext.character) === null || _b === void 0 ? void 0 : _b.runeCounts);
+                        targetContext.character.upgradeCounts = Object.assign(counts, (_d = window.GW2TooltipsContext.character) === null || _d === void 0 ? void 0 : _d.upgradeCounts);
                     }
                     else {
-                        targetContext.character.runeCounts = counts;
+                        targetContext.character.upgradeCounts = counts;
                     }
                 }
                 break;
             case 2:
                 {
                     if (window.GW2TooltipsContext instanceof Array) {
-                        targetContext.character.runeCounts = Object.assign({}, (_c = window.GW2TooltipsContext[contextIndex].character) === null || _c === void 0 ? void 0 : _c.runeCounts, counts);
+                        targetContext.character.upgradeCounts = Object.assign({}, (_e = window.GW2TooltipsContext[contextIndex].character) === null || _e === void 0 ? void 0 : _e.upgradeCounts, counts);
                     }
                     else if (window.GW2TooltipsContext) {
-                        targetContext.character.runeCounts = Object.assign({}, (_d = window.GW2TooltipsContext.character) === null || _d === void 0 ? void 0 : _d.runeCounts, counts);
+                        targetContext.character.upgradeCounts = Object.assign({}, (_f = window.GW2TooltipsContext.character) === null || _f === void 0 ? void 0 : _f.upgradeCounts, counts);
                     }
                     else {
-                        targetContext.character.runeCounts = counts;
+                        targetContext.character.upgradeCounts = counts;
                     }
                 }
                 break;
@@ -250,7 +279,12 @@ class Collect {
             healing: [],
             critDamage: [],
         };
-        let upgrades = Object.assign({}, targetContext.character.runeCounts);
+        let upgrades = Object.assign({
+            Default: {},
+            Sigil: {},
+            Gem: {},
+            Rune: {},
+        }, targetContext.character.upgradeCounts);
         for (const element of elements) {
             let id;
             if (element.getAttribute('type') !== 'item' || !(id = +String(element.getAttribute('objid'))))
@@ -259,11 +293,11 @@ class Collect {
             if (!item || !('subtype' in item))
                 continue;
             if (item.type === 'UpgradeComponent') {
-                const tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + 1;
+                const tierNumber = upgrades[item.subtype][item.id] = (upgrades[item.subtype][item.id] || 0) + 1;
                 let tier;
                 if (item.subtype === 'Rune') {
                     if (tierNumber > 6) {
-                        if (!targetContext.character.runeCounts[item.id])
+                        if (!targetContext.character.upgradeCounts.Rune[item.id])
                             console.warn("[gw2-tooltips] [collect] Found more than 6 runes of the same type. Here is the 7th rune element: ", element);
                         continue;
                     }
@@ -631,8 +665,8 @@ class GW2TooltipsV2 {
         var _a, _b, _c;
         const stats = Object.assign({}, this.defaultContext.character.stats, (_a = partialContext.character) === null || _a === void 0 ? void 0 : _a.stats);
         const statSources = Object.assign({}, this.defaultContext.character.statSources, (_b = partialContext.character) === null || _b === void 0 ? void 0 : _b.statSources);
-        const runeCounts = Object.assign({}, (_c = partialContext.character) === null || _c === void 0 ? void 0 : _c.runeCounts);
-        const character = Object.assign({}, this.defaultContext.character, partialContext.character, { stats, statSources, runeCounts });
+        const upgradeCounts = Object.assign({}, this.defaultContext.character.upgradeCounts, (_c = partialContext.character) === null || _c === void 0 ? void 0 : _c.upgradeCounts);
+        const character = Object.assign({}, this.defaultContext.character, partialContext.character, { stats, statSources, upgradeCounts });
         return Object.assign({}, this.defaultContext, partialContext, { character });
     }
     constructor() {
@@ -1130,26 +1164,46 @@ class GW2TooltipsV2 {
                 tier_wrap.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(tier.description))));
             const w = TUtilsV2.newElm('te', tier_wrap);
             if (item.subtype == "Rune") {
-                const colorClass = i < (context.character.runeCounts[item.id] || 0) ? '.color-stat-green' : '';
+                const colorClass = i < (context.character.upgradeCounts.Rune[item.id] || 0) ? '.color-stat-green' : '';
                 w.prepend(TUtilsV2.newElm('span' + colorClass, `(${i + 1})`));
             }
             group.append(w);
         }
         return group;
     }
-    inferItemUpgrades(wrapper) {
-        if (wrapper.childElementCount < 2)
-            return;
-        const [item, ...upgrades] = wrapper.children;
-        if (item.getAttribute('type') !== 'item')
-            return;
-        const itemCtx = +String(item.getAttribute('contextSet')) || 0;
-        const attrString = upgrades
-            .filter(u => u.getAttribute('type') === 'item' && u.getAttribute('objid')
-            && (+String(item.getAttribute('contextSet')) || 0) === itemCtx)
-            .map(u => u.getAttribute('objid')).join(',');
-        if (attrString)
-            item.setAttribute('slotted', attrString);
+    inferItemUpgrades(wrappers) {
+        const remainingInfusionsByContext = this.context.map(ctx => Object.assign({}, ctx.character.upgradeCounts.Default));
+        for (const wrapper of wrappers) {
+            if (wrapper.childElementCount < 2)
+                return;
+            const [itemEl, ...upgradeEls] = wrapper.children;
+            if (itemEl.getAttribute('type') !== 'item')
+                return;
+            const itemCtx = +String(itemEl.getAttribute('contextSet')) || 0;
+            const upgradeIds = upgradeEls.filter(u => u.getAttribute('type') === 'item' && u.getAttribute('objid')
+                && (+String(itemEl.getAttribute('contextSet')) || 0) === itemCtx)
+                .map(u => u.getAttribute('objid'));
+            {
+                let id, item;
+                if ((id = +String(itemEl.getAttribute('objid'))) && (item = APICache.storage.items.get(id)) && 'slots' in item) {
+                    for (const s of item.slots) {
+                        if (s == 'Infusion') {
+                            const remainingInfusions = remainingInfusionsByContext[itemCtx];
+                            for (const infusionId of Object.keys(remainingInfusions)) {
+                                upgradeIds.push(infusionId);
+                                if (--remainingInfusions[infusionId] < 1) {
+                                    delete remainingInfusions[infusionId];
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            const attrString = upgradeIds.join(',');
+            if (attrString)
+                itemEl.setAttribute('slotted', attrString);
+        }
     }
     formatItemName(item, context, statSet, upgradeComponent, stackSize = 1) {
         let name;
@@ -1251,7 +1305,10 @@ GW2TooltipsV2.defaultContext = {
             healing: [],
             critDamage: [],
         },
-        runeCounts: {},
+        upgradeCounts: {
+            Rune: {},
+            Default: {},
+        },
     },
 };
 GW2TooltipsV2.defaultConfig = {
@@ -1260,36 +1317,36 @@ GW2TooltipsV2.defaultConfig = {
     autoCollectStatSources: true,
     adjustIncorrectStatIds: true,
     autoInferEquipmentUpgrades: true,
+    legacyCompatibility: true,
 };
 window.gw2tooltips = new GW2TooltipsV2();
 if (window.gw2tooltips.config.autoInitialize) {
     window.gw2tooltips.hookDocument(document)
         .then(_ => {
         if (window.gw2tooltips.config.autoCollectRuneCounts) {
-            const targets = document.getElementsByClassName('armors');
+            const targets = document.getElementsByClassName('gw2-build');
             if (targets.length)
                 for (const target of targets)
-                    Collect.allRuneCounts(window.gw2tooltips.context, target);
+                    Collect.allUpgradeCounts(window.gw2tooltips.context, target);
             else {
-                console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `armors` could be found to use as source. Runes will not be collected as there is no way to tell which rune belongs to the build and which one is just in some arbitrary text.");
+                console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `gw2-build` could be found to use as source. Upgrades will not be collected as there is no way to tell which upgrades belongs to the build and which ones are just in some arbitrary text.");
             }
         }
         if (window.gw2tooltips.config.autoCollectStatSources) {
-            const targets = document.getElementsByClassName('gw2-build-wrapper');
+            const targets = document.getElementsByClassName('gw2-build');
             if (targets.length)
                 for (const target of targets)
                     Collect.allStatSources(window.gw2tooltips.context, target);
             else {
-                console.warn("[gw2-tooltips] [collect] `config.autoCollectStatSources` is active, but no element with class `gw2-build-wrapper` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
+                console.warn("[gw2-tooltips] [collect] `config.autoCollectStatSources` is active, but no element with class `gw2-build` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
             }
         }
         if (window.gw2tooltips.config.autoInferEquipmentUpgrades) {
             const targets = document.querySelectorAll('.weapon, .armor, .trinket');
             if (targets.length)
-                for (const target of targets)
-                    window.gw2tooltips.inferItemUpgrades(target);
+                window.gw2tooltips.inferItemUpgrades(targets);
             else {
-                console.warn("[gw2-tooltips] [collect] `config.autoInferEquipmentUpgrades` is active, but no wrapper elements element with class `'.weapon`, `.armor` or `.trinket` could be found to use as source. No elements will be updated");
+                console.warn("[gw2-tooltips] [collect] `config.autoInferEquipmentUpgrades` is active, but no wrapper elements element with class `'weapon`, `armor` or `trinket` could be found to use as source. No elements will be updated");
             }
         }
     });

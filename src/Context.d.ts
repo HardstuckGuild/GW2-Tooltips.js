@@ -22,13 +22,13 @@ interface Context {
 type GameMode = 'Pve' | 'Pvp' | 'Wvw';
 
 interface Character {
-	level       : number
-	isPlayer    : bool
-	sex         : 'Male' | 'Female'
-	traits      : number[] //TODO(Rennorb): add a collect function that can take them from existing specialization objects
-	stats       : Stats
-	statSources : { [k in keyof Stats]: StatSource[] } //TODO(Rennorb): add a collect function that can take from existing gw2objects
-	runeCounts  : { [k : number]: number } //TODO(Rennorb): add a collect function that can take from existing gw2objects
+	level         : number
+	isPlayer      : bool
+	sex           : 'Male' | 'Female'
+	traits        : number[] //TODO(Rennorb): add a collect function that can take them from existing specialization objects
+	stats         : Stats
+	statSources   : { [k in keyof Stats]: StatSource[] }
+	upgradeCounts : UpgradeCounts
 }
 
 interface Stats {
@@ -42,6 +42,13 @@ interface Stats {
 	concentration : number
 	healing       : number
 	critDamage    : number
+}
+
+//TODO(Rennorb) @cleanup: is splitting this really necessary?
+interface UpgradeCounts {
+	// Capitalized to match enum names
+	Rune     : { [k : number]: number }
+	Default : { [k : number]: number }
 }
 
 interface StatSource {
@@ -61,6 +68,7 @@ interface Config {
 	 // only works if auto initialize is turned on
 	 autoInferEquipmentUpgrades : bool
 	 adjustIncorrectStatIds : bool
+	 legacyCompatibility    : bool
 
 	 apiImpl?               : () => APIImplementation
 }
