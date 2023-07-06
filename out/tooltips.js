@@ -1012,7 +1012,23 @@ class GW2TooltipsV2 {
             }
         };
         addObjectsToChain(initialAPIObject);
-        const tooltipChain = objectChain.map(obj => this.generateToolTip(obj, context));
+        let context_ = context;
+        {
+            let traitOverrides;
+            if (gw2Object.getAttribute('type') === 'skill' && (traitOverrides = gw2Object.getAttribute('with-traits'))) {
+                context_ = structuredClone(context);
+                const invalid = [];
+                context_.character.traits = traitOverrides.split(',').map(t => {
+                    const v = +t;
+                    if (!v)
+                        invalid.push(t);
+                    return v;
+                }).filter(t => t);
+                if (invalid.length)
+                    console.warn("[gw2-tooltips] [tooltip engine] Inline trait-override for element ", gw2Object, " has misformed overrides: ", invalid);
+            }
+        }
+        const tooltipChain = objectChain.map(obj => this.generateToolTip(obj, context_));
         this.tooltip.append(...tooltipChain);
         if (tooltipChain.length > 1) {
             gw2Object.classList.add('cycler');
