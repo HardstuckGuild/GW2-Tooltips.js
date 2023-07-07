@@ -558,6 +558,8 @@ class FactsProcessor {
         const data = { fact, buff, weaponStrength: weapon_strength };
         const text = TUtilsV2.fromHTML(factInflators[fact.type](data));
         const wrapper = TUtilsV2.newElm('te');
+        if (fact.requires_trait)
+            wrapper.classList.add('color-traited-fact');
         if (iconSlug)
             wrapper.append(TUtilsV2.newImg(iconSlug, 'iconmed'));
         wrapper.append(text);
