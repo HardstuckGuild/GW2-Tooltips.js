@@ -2,11 +2,11 @@ class Collect {
 	static allUpgradeCounts(contexts : Context[], scope : ScopeElement, mode : CollectMode = CollectMode.PrioritizeGlobal) {
 		const elements = scope.getElementsByTagName('gw2object');
 		for(const pair of contexts.entries()) {
-			const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('statSet')) || 0) == pair[0]);
+			const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == pair[0]);
 			this._upgradeCounts(...pair, elsInCorrectCtx, mode);
 		}
 		//TODO(Rennorb): rethink this or at least make it uniform
-		const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('statSet')) || 0) >= contexts.length);
+		const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) >= contexts.length);
 		if(elsWithWrongCtx.length) {
 			console.warn("[gw2-tooltips] [collect] Some targets in scope ", scope, " have the wrong context: ", elsWithWrongCtx);
 		}
@@ -78,10 +78,10 @@ class Collect {
 	static allStatSources(contexts : Context[], scope : ScopeElement, mode : CollectMode = CollectMode.PrioritizeGlobal) {
 		const elements = scope.getElementsByTagName('gw2object');
 		for(const pair of contexts.entries()) {
-			const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('statSet')) || 0) == pair[0]);
+			const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == pair[0]);
 			this._statSources(...pair, elsInCorrectCtx, mode);
 		}
-		const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('statSet')) || 0) >= contexts.length);
+		const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) >= contexts.length);
 		if(elsWithWrongCtx.length) {
 			console.warn("[gw2-tooltips] [collect] Some targets in scope ", scope, " have the wrong context: ", elsWithWrongCtx);
 		}
