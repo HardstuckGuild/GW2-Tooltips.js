@@ -41,69 +41,20 @@ class FactsProcessor {
 		return base_amount; //TODO(Rennorb) @correctness
 	}
 
-	static getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) : number {
-		let weaponStrength = {
-			None       : 0,
-			BundleLarge: 0,
-			Standard   : 690.5,
-			Focus      : 900,
-			Shield     : 900,
-			Torch      : 900,
-			Warhorn    : 900,
-			Greatsword : 1100,
-			Hammer     : 1100,
-			Staff      : 1100,
-			BowLong    : 1050,
-			Rifle      : 1150,
-			BowShort   : 1000,
-			Axe        : 1000,
-			Sword      : 1000,
-			Dagger     : 1000,
-			Pistol     : 1000,
-			Scepter    : 1000,
-			Mace       : 1000,
-			Spear      : 1000,
-			Speargun   : 1000,
-			Trident    : 1000,
-		}[weapon_type]
-
-		if(weapon_type === 'None') {
-			if(palette_type === 'Standard' || palette_type === 'Toolbelt') {
-				weaponStrength = 690.5
-			} else if(palette_type === 'Bundle') {
-				weaponStrength = 922.5
-			}
-		}
-
-		return weaponStrength
-	}
-
-	static generateFacts(apiObject : SupportedTTTypes & { facts? : API.Fact[], facts_override? : API.ContextInformation['override_groups'] }, context : Context) : HTMLElement[] {
+	/** @param facts should already be context resolved */
+	static generateFacts(facts : API.Fact[], weaponStrength : number, context : Context) : HTMLElement[] {
 		let totalDefianceBreak = 0
 
-		//TODO(Rennorb): this sorting is utterly wrong.. 
-		const factWraps = 
-			(apiObject.facts || [])
-				.sort((a, b) => a.order - b.order)
-				.map(fact => {
-					const { wrapper, defiance_break } = this.generateFact(fact, apiObject, context);
-					totalDefianceBreak += defiance_break;
-					return wrapper;
-				})
-				.filter(d => d) as HTMLElement[] // ts doesn't understand what the predicate does
+		const factWraps = facts
+			.sort((a, b) => a.order - b.order)
+			.map(fact => {
+				const { wrapper, defiance_break } = this.generateFact(fact, weaponStrength, context);
+				totalDefianceBreak += defiance_break;
+				return wrapper;
+			})
+			.filter(d => d) as HTMLElement[] // ts doesn't understand what the predicate does
 
-		if((!apiObject.facts?.length || context.gameMode !== 'Pve') && apiObject.facts_override) { //TODO(Rennorb) @cleanup
-			for(const override of apiObject.facts_override) {
-				if(override.context.includes(context.gameMode) && override.facts) {
-					const sortedOverrideFacts = [...override.facts].sort((a, b) => a.order - b.order)
-					sortedOverrideFacts.forEach(fact => {
-						const { wrapper } = this.generateFact(fact, apiObject, context);
-						if(wrapper)  factWraps.push(wrapper);
-					})
-				}
-			}
-		}
-
+		//TODO(Rennorb): This should use order 1003
 		if(totalDefianceBreak > 0) {
 			const defianceWrap = TUtilsV2.newElm('te.defiance',
 				TUtilsV2.newImg('1938788.png', 'iconmed'),
@@ -115,11 +66,8 @@ class FactsProcessor {
 		return factWraps
 	}
 
-	static generateFact(fact : API.Fact, skill : SupportedTTTypes & { facts? : API.Fact[], override_groups? : API.ContextInformation['override_groups'] }, context : Context) : { wrapper? : HTMLElement, defiance_break : number } {
-		if(fact.requires_trait && (!context.character.traits || !fact.requires_trait.some(reqTrait => context.character.traits.includes(reqTrait)))) {
-			return { defiance_break: 0 }
-		}
-
+	/** @param fact should already be context resolved */
+	static generateFact(fact : API.Fact, weapon_strength : number, context : Context) : { wrapper? : HTMLElement, defiance_break : number } {
 		let iconSlug = fact.icon
 
 		const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => string } = {
@@ -207,7 +155,7 @@ class FactsProcessor {
 				const seconds = fact.duration / 1000
 				const durationText =  seconds ? `(${seconds}s)` : ''
 
-				let htmlContent = `<tem> ${buff.name_brief || buff.name} ${durationText} ${description} </tem>`
+				let htmlContent = `<tem> ${fact.text || buff.name_brief || buff.name} ${durationText} ${description} </tem>`
 
 				if(fact.apply_count && fact.apply_count > 1) {
 					htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML
@@ -222,21 +170,9 @@ class FactsProcessor {
 				let text = TUtilsV2.GW2Text2HTML(fact.text).replace("%str1%", buff.name);
 				return `<tem> ${text} </tem> `
 			},
-			Damage: ({ fact, skill }) => {
-				//NOTE(Rennorb) The default formula is: weapon_strength * factor * power / target_armor.
-				// 690.5 is the midpoint weapon strength for slot skills (except bundles).
-				//TODO(Rennorb) @hardcoded @correctness: This value is hardcoded for usage with traits as they currently don't have any pointer that would provide weapon strength information.
-				// This will probably fail in some cases where damage facts on traits reference bundle skills (e.g. kits).
-				let weaponStrength = 690.5;
-				if(skill.palettes?.length) {
-					const relevantPalette = skill.palettes.find(palette => palette.slots.some(slot => slot.profession !== 'None'))
-
-					if(relevantPalette) {
-						weaponStrength = this.getWeaponStrength(relevantPalette)
-					}
-				}
-
+			Damage: ({ fact, weaponStrength }) => {
 				let hitCountLabel = '';
+				//NOTE(Rennorb) The default formula is: weapon_strength * factor * power / target_armor.
 				let damage = weaponStrength * fact.hit_count * fact.dmg_multiplier * context.character.stats.power / context.targetArmor;
 				if(!fact.hit_count) console.warn("[gw2-tooltips] [facts processor] 0 hit count: ", fact); //TODO(Rennorb) @debug
 				if(fact.hit_count > 1) {
@@ -260,9 +196,9 @@ class FactsProcessor {
 		}
 
 		const buff = APICache.storage.skills.get(fact.buff || 0)
-		const data : HandlerParams = { fact, buff, skill } as any //TODO(Rennorb) @hammer
-		const wrapper = TUtilsV2.newElm('te')
+		const data : HandlerParams = { fact, buff, weaponStrength: weapon_strength }
 		const text = TUtilsV2.fromHTML(factInflators[fact.type](data as any))
+		const wrapper = TUtilsV2.newElm('te')
 		if(iconSlug) wrapper.append(TUtilsV2.newImg(iconSlug, 'iconmed'))
 		wrapper.append(text)
 

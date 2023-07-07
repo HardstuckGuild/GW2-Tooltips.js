@@ -349,7 +349,7 @@ class GW2TooltipsV2 {
 
 		headerElements.push(TUtilsV2.newElm('div.flexbox-fill')); // split, now the right side
 
-		const currentContextInformation = this.collect_overridable(apiObject, context);
+		const currentContextInformation = this.resolveTraitsAndOverrides(apiObject, context);
 
 		if(currentContextInformation.resource_cost) {
 			headerElements.push(TUtilsV2.newElm('ter', 
@@ -382,8 +382,22 @@ class GW2TooltipsV2 {
 			parts.push(description)
 		}
 
-		if('facts' in apiObject) {
-			parts.push(...FactsProcessor.generateFacts(apiObject, context))
+		if(currentContextInformation.facts) {
+			//NOTE(Rennorb): 690.5 is the midpoint weapon strength for slot skills (except bundles).
+			//TODO(Rennorb) @hardcoded @correctness: This value is hardcoded for usage with traits as they currently don't have any pointer that would provide weapon strength information.
+			// This will probably fail in some cases where damage facts on traits reference bundle skills (e.g. kits).
+			let weaponStrength = 690.5;
+			if('palettes' in apiObject && apiObject.palettes.length) {
+				const criteria = context.character.profession
+					? ((s : API.Slot) => s.profession === context.character.profession)
+					: ((s : API.Slot) => s.profession !== 'None');
+				const relevantPalette = apiObject.palettes.find(p => p.slots.some(criteria));
+
+				if(relevantPalette) {
+					weaponStrength = this.getWeaponStrength(relevantPalette)
+				}
+			}
+			parts.push(...FactsProcessor.generateFacts(currentContextInformation.facts, weaponStrength, context))
 		}
 
 		const tooltip = TUtilsV2.newElm('div.tooltip', ...parts)
@@ -393,13 +407,59 @@ class GW2TooltipsV2 {
 		return tooltip;
 	}
 
-	collect_overridable(apiObject : SupportedTTTypes & { override_groups? : API.ContextInformation['override_groups'] }, context : Context) : API.ContextInformation {
+	resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { override_groups? : API.ContextInformation['override_groups'] }, context : Context) : API.ContextInformation {
 		let override = apiObject.override_groups?.find(g => g.context.includes(context.gameMode));
 		let info = Object.assign({}, apiObject, override);
-		if(override && override.facts && apiObject.facts) {
-			info.facts = [...apiObject.facts, ...override.facts];
+		if(apiObject.facts && override && override.facts) {
+			info.facts = apiObject.facts.slice(); //clone the array
+			for(const fact of override.facts) {
+				if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
+
+				if(fact.overrides) info.facts[fact.overrides] = fact;
+				else info.facts.push(fact);
+			}
+		}
+		if(info.facts) {
+			info.facts = info.facts.filter(f => !f.requires_trait || !f.requires_trait.some(t => !context.character.traits.includes(t)));
 		}
 		return info;
+	}
+
+	getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) : number {
+		let weaponStrength = {
+			None       : 0,
+			BundleLarge: 0,
+			Standard   : 690.5,
+			Focus      : 900,
+			Shield     : 900,
+			Torch      : 900,
+			Warhorn    : 900,
+			Greatsword : 1100,
+			Hammer     : 1100,
+			Staff      : 1100,
+			BowLong    : 1050,
+			Rifle      : 1150,
+			BowShort   : 1000,
+			Axe        : 1000,
+			Sword      : 1000,
+			Dagger     : 1000,
+			Pistol     : 1000,
+			Scepter    : 1000,
+			Mace       : 1000,
+			Spear      : 1000,
+			Speargun   : 1000,
+			Trident    : 1000,
+		}[weapon_type]
+
+		if(weapon_type === 'None') {
+			if(palette_type === 'Standard' || palette_type === 'Toolbelt') {
+				weaponStrength = 690.5
+			} else if(palette_type === 'Bundle') {
+				weaponStrength = 922.5
+			}
+		}
+
+		return weaponStrength
 	}
 
 	generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTMLElement, context : Context) : HTMLElement[] {

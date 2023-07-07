@@ -20,11 +20,13 @@ interface Context {
 }
 
 type GameMode = 'Pve' | 'Pvp' | 'Wvw';
+type Profession = 'Guardia' | 'Warrio' | 'Enginee' | 'Range' | 'Thie' | 'Elementalis' | 'Mesme' | 'Necromance' | 'Revenant'
 
 interface Character {
 	level         : number
 	isPlayer      : bool
 	sex           : 'Male' | 'Female'
+	profession?   : Profession
 	traits        : number[] //TODO(Rennorb): add a collect function that can take them from existing specialization objects
 	stats         : Stats
 	statSources   : { [k in keyof Stats]: StatSource[] }

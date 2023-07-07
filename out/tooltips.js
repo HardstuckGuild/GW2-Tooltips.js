@@ -424,74 +424,23 @@ class FactsProcessor {
         console.warn('[gw2-tooltips] [facts processor] Could not find formula #', formula, ', using base amount for now!');
         return base_amount;
     }
-    static getWeaponStrength({ weapon_type, type: palette_type }) {
-        let weaponStrength = {
-            None: 0,
-            BundleLarge: 0,
-            Standard: 690.5,
-            Focus: 900,
-            Shield: 900,
-            Torch: 900,
-            Warhorn: 900,
-            Greatsword: 1100,
-            Hammer: 1100,
-            Staff: 1100,
-            BowLong: 1050,
-            Rifle: 1150,
-            BowShort: 1000,
-            Axe: 1000,
-            Sword: 1000,
-            Dagger: 1000,
-            Pistol: 1000,
-            Scepter: 1000,
-            Mace: 1000,
-            Spear: 1000,
-            Speargun: 1000,
-            Trident: 1000,
-        }[weapon_type];
-        if (weapon_type === 'None') {
-            if (palette_type === 'Standard' || palette_type === 'Toolbelt') {
-                weaponStrength = 690.5;
-            }
-            else if (palette_type === 'Bundle') {
-                weaponStrength = 922.5;
-            }
-        }
-        return weaponStrength;
-    }
-    static generateFacts(apiObject, context) {
-        var _a;
+    static generateFacts(facts, weaponStrength, context) {
         let totalDefianceBreak = 0;
-        const factWraps = (apiObject.facts || [])
+        const factWraps = facts
             .sort((a, b) => a.order - b.order)
             .map(fact => {
-            const { wrapper, defiance_break } = this.generateFact(fact, apiObject, context);
+            const { wrapper, defiance_break } = this.generateFact(fact, weaponStrength, context);
             totalDefianceBreak += defiance_break;
             return wrapper;
         })
             .filter(d => d);
-        if ((!((_a = apiObject.facts) === null || _a === void 0 ? void 0 : _a.length) || context.gameMode !== 'Pve') && apiObject.facts_override) {
-            for (const override of apiObject.facts_override) {
-                if (override.context.includes(context.gameMode) && override.facts) {
-                    const sortedOverrideFacts = [...override.facts].sort((a, b) => a.order - b.order);
-                    sortedOverrideFacts.forEach(fact => {
-                        const { wrapper } = this.generateFact(fact, apiObject, context);
-                        if (wrapper)
-                            factWraps.push(wrapper);
-                    });
-                }
-            }
-        }
         if (totalDefianceBreak > 0) {
             const defianceWrap = TUtilsV2.newElm('te.defiance', TUtilsV2.newImg('1938788.png', 'iconmed'), TUtilsV2.newElm('tem.color-defiance-fact', `Defiance Break: ${totalDefianceBreak}`));
             factWraps.push(defianceWrap);
         }
         return factWraps;
     }
-    static generateFact(fact, skill, context) {
-        if (fact.requires_trait && (!context.character.traits || !fact.requires_trait.some(reqTrait => context.character.traits.includes(reqTrait)))) {
-            return { defiance_break: 0 };
-        }
+    static generateFact(fact, weapon_strength, context) {
         let iconSlug = fact.icon;
         const factInflators = {
             Time: ({ fact }) => `<tem> ${fact.text}: ${fact.duration / 1000}s </tem>`,
@@ -569,7 +518,7 @@ class FactsProcessor {
                 const description = TUtilsV2.GW2Text2HTML(buff.description_brief || buff.description || modifiers);
                 const seconds = fact.duration / 1000;
                 const durationText = seconds ? `(${seconds}s)` : '';
-                let htmlContent = `<tem> ${buff.name_brief || buff.name} ${durationText} ${description} </tem>`;
+                let htmlContent = `<tem> ${fact.text || buff.name_brief || buff.name} ${durationText} ${description} </tem>`;
                 if (fact.apply_count && fact.apply_count > 1) {
                     htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML;
                 }
@@ -583,15 +532,7 @@ class FactsProcessor {
                 let text = TUtilsV2.GW2Text2HTML(fact.text).replace("%str1%", buff.name);
                 return `<tem> ${text} </tem> `;
             },
-            Damage: ({ fact, skill }) => {
-                var _a;
-                let weaponStrength = 690.5;
-                if ((_a = skill.palettes) === null || _a === void 0 ? void 0 : _a.length) {
-                    const relevantPalette = skill.palettes.find(palette => palette.slots.some(slot => slot.profession !== 'None'));
-                    if (relevantPalette) {
-                        weaponStrength = this.getWeaponStrength(relevantPalette);
-                    }
-                }
+            Damage: ({ fact, weaponStrength }) => {
                 let hitCountLabel = '';
                 let damage = weaponStrength * fact.hit_count * fact.dmg_multiplier * context.character.stats.power / context.targetArmor;
                 if (!fact.hit_count)
@@ -614,9 +555,9 @@ class FactsProcessor {
             }
         };
         const buff = APICache.storage.skills.get(fact.buff || 0);
-        const data = { fact, buff, skill };
-        const wrapper = TUtilsV2.newElm('te');
+        const data = { fact, buff, weaponStrength: weapon_strength };
         const text = TUtilsV2.fromHTML(factInflators[fact.type](data));
+        const wrapper = TUtilsV2.newElm('te');
         if (iconSlug)
             wrapper.append(TUtilsV2.newImg(iconSlug, 'iconmed'));
         wrapper.append(text);
@@ -952,7 +893,7 @@ class GW2TooltipsV2 {
             headerElements.push(TUtilsV2.newElm('tes', '( ', TUtilsV2.fromHTML(splits.join(' | ')), ' )'));
         }
         headerElements.push(TUtilsV2.newElm('div.flexbox-fill'));
-        const currentContextInformation = this.collect_overridable(apiObject, context);
+        const currentContextInformation = this.resolveTraitsAndOverrides(apiObject, context);
         if (currentContextInformation.resource_cost) {
             headerElements.push(TUtilsV2.newElm('ter', String(currentContextInformation.resource_cost), TUtilsV2.newImg(this.ICONS.RESOURCE, 'iconsmall')));
         }
@@ -971,22 +912,78 @@ class GW2TooltipsV2 {
             description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`;
             parts.push(description);
         }
-        if ('facts' in apiObject) {
-            parts.push(...FactsProcessor.generateFacts(apiObject, context));
+        if (currentContextInformation.facts) {
+            let weaponStrength = 690.5;
+            if ('palettes' in apiObject && apiObject.palettes.length) {
+                const criteria = context.character.profession
+                    ? ((s) => s.profession === context.character.profession)
+                    : ((s) => s.profession !== 'None');
+                const relevantPalette = apiObject.palettes.find(p => p.slots.some(criteria));
+                if (relevantPalette) {
+                    weaponStrength = this.getWeaponStrength(relevantPalette);
+                }
+            }
+            parts.push(...FactsProcessor.generateFacts(currentContextInformation.facts, weaponStrength, context));
         }
         const tooltip = TUtilsV2.newElm('div.tooltip', ...parts);
         tooltip.dataset.id = String(apiObject.id);
         tooltip.style.marginTop = '5px';
         return tooltip;
     }
-    collect_overridable(apiObject, context) {
-        var _a;
+    resolveTraitsAndOverrides(apiObject, context) {
+        var _a, _b;
         let override = (_a = apiObject.override_groups) === null || _a === void 0 ? void 0 : _a.find(g => g.context.includes(context.gameMode));
         let info = Object.assign({}, apiObject, override);
-        if (override && override.facts && apiObject.facts) {
-            info.facts = [...apiObject.facts, ...override.facts];
+        if (apiObject.facts && override && override.facts) {
+            info.facts = apiObject.facts.slice();
+            for (const fact of override.facts) {
+                if ((_b = fact.requires_trait) === null || _b === void 0 ? void 0 : _b.some(t => !context.character.traits.includes(t)))
+                    continue;
+                if (fact.overrides)
+                    info.facts[fact.overrides] = fact;
+                else
+                    info.facts.push(fact);
+            }
+        }
+        if (info.facts) {
+            info.facts = info.facts.filter(f => !f.requires_trait || !f.requires_trait.some(t => !context.character.traits.includes(t)));
         }
         return info;
+    }
+    getWeaponStrength({ weapon_type, type: palette_type }) {
+        let weaponStrength = {
+            None: 0,
+            BundleLarge: 0,
+            Standard: 690.5,
+            Focus: 900,
+            Shield: 900,
+            Torch: 900,
+            Warhorn: 900,
+            Greatsword: 1100,
+            Hammer: 1100,
+            Staff: 1100,
+            BowLong: 1050,
+            Rifle: 1150,
+            BowShort: 1000,
+            Axe: 1000,
+            Sword: 1000,
+            Dagger: 1000,
+            Pistol: 1000,
+            Scepter: 1000,
+            Mace: 1000,
+            Spear: 1000,
+            Speargun: 1000,
+            Trident: 1000,
+        }[weapon_type];
+        if (weapon_type === 'None') {
+            if (palette_type === 'Standard' || palette_type === 'Toolbelt') {
+                weaponStrength = 690.5;
+            }
+            else if (palette_type === 'Bundle') {
+                weaponStrength = 922.5;
+            }
+        }
+        return weaponStrength;
     }
     generateToolTipList(initialAPIObject, gw2Object, context) {
         const objectChain = [];

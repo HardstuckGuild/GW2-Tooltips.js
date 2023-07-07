@@ -33,8 +33,8 @@ namespace API {
 	}
 
 	interface Slot {
-		profession  : 'None' | string // todo
-		slot        : `${'Main'|'Offhand'|'Main'}${1|2|3|4|5}` | `Offhand${1|2}` 
+		profession  : 'None' | Profession
+		slot        : `${'Main'|'Offhand'}${1|2|3|4|5}` | `Offhand${1|2}` 
 			| 'Heal' | 'Standard' | 'Elite'
 			| 'Pet' | `Transformation${1|2|3|4|5}`
 		prev_chain? : number
@@ -68,6 +68,7 @@ namespace API {
 	}
 	
 	interface BuffFact extends BasicFact<'Buff'> {
+		text?       : string
 		icon?       : string
 		buff        : number
 		apply_count : number
@@ -342,9 +343,9 @@ type ObjectsToFetch = {
 }
 
 interface HandlerParams<TFact = API.Fact> {
-	fact    : TFact
-	buff    : (TFact extends { buff : number } ? API.Skill : undefined) | undefined
-	skill   : API.Skill | API.Trait & { [k : string] : undefined  } //to allow for conditional chaining for unknown props. 
+	fact           : TFact
+	buff           : (TFact extends { buff : number } ? API.Skill : undefined) | undefined
+	weaponStrength : TFact extends API.DamageFact ? number : undefined
 }
 
 type APIResponseTypeMap = {
