@@ -10,6 +10,14 @@
 	var GW2TooltipsConfig = {
 		apiImpl: () => new FakeAPI(),
 	}
+	var GW2TooltipsContext = {
+		gameMode: 'Pve',
+		character: {
+			stats: {
+				vitality: 1324
+			}
+		}
+	}
 </script>
 <link rel="stylesheet" href="../out/tooltips.css" />
 <head>
@@ -30,5 +38,16 @@
 	<p>The base version should not have distort.</p>
 	<p>This should display all buffs and not loose its duration increase with the trait.</p>
 	<p>Loosing the duration might actually be a bug in game.</p>
+
+	<gw2object objid="14518" type="skill" with-traits="1453"></gw2object>
+	<p>Demonstrates how multiple modifiers can be added together if they do not overwrite each other.</p>
+	<gw2object objid="1682" type="trait"></gw2object>
+	<p>Special case "HealEffectivenessOtherPercentPerAttribute".</p>
+	</p><gw2object objid="62687" type="skill"></gw2object>
+	<p>Clamping duration to one.</p>	
+	</p><gw2object objid="11929" type="skill" with-traits="2255"></gw2object>
+	<p>Modifiers can skip other modifiers, see: Vigor.</p>
+	</p><gw2object objid="43638" type="skill" with-traits="2255"></gw2object>
+	<p>PrefixedBuff and Buff in one skill.</p>	
 </body>
 </html>
