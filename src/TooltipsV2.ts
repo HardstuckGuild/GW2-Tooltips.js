@@ -1,22 +1,17 @@
 //TODO(Rennorb) @issues:
-// The way that affecting traits are captures also seems wrong, but i haven't looked into that yet. 
-// The user needs to specify what traits should be used or we may provide a capture function for them that can be called on a trait object, but we should never to it automagically.
 //TODO(Rennorb): Provide a clean way to construct custom tooltips. Currently with the old version we manipulate the cache before the hook function gets called, which really isn't the the best.
 //TODO(Rennorb): Think about bundling everything with something like rollup so way we can also easily produce minified versions, although we will have to introduce node-modules for that which i strongly dislike.
 //TODO(Rennorb): Multi skill tooltips (multiple boxes) (kindof works nit not complete)
 //TODO(Rennorb): Option to show whole skill-chain (maybe on button hold)?
 //TODO(Rennorb): Stop using these jank custom tags. There is no reason to do so and its technically not legal per html spec.
-//TODO(Rennorb): The positioning code seems a bit wired, it tends to 'stick' to the borders more than it should.
+//TODO(Rennorb): The positioning code seems a bit wired,it doesnt respect margins when checking for oob, only when positioning the thing.
 //TODO(Rennorb) @fixme: impale: the impale buff doesn't have a name, only shows duration
 //TODO(Rennorb): Figure out how to handle boon descriptions. Have a toggle between 'realistic as in game' and 'full information'
-//TODO(Rennorb) @correctness: Some of the code uses very aggressive rounding resulting in wrong numbers in some places. Look over this again.
-// In general only round right before displaying a number, calculations always happen with non rounded values.
-//TODO(Rennorb): Trait game-mode splits
 //TODO(Rennorb): Link minion skills to minion summon skill.
-//TODO(Rennorb) @cleanup: go over gamemode splitting again, currently ist a huge mess. 
 //TODO(Rennorb): specs, pets, and amulets endpoints.
-//TODO(Rennorb): item defense / weapon power (scaling)
 //TODO(Rennorb): translation for attributes into 'human readable' (in game) names
+//TODO(Rennorb): Something with the traits is funky, the facts are clearly incomplete for some of them.
+//TODO(Rennorb): Amulet enrichment slot if not there.
 
 /// <reference path="Collect.ts" />
 
@@ -312,55 +307,34 @@ class GW2TooltipsV2 {
 		return skillSlot
 	}
 
-	getRecharge(apiObject : { facts : API.Fact[], facts_override? : API.FactsOverride[] }, gameMode : GameMode) : Milliseconds | undefined {
-		let recharge = apiObject.facts.find(f => f.type === 'Recharge');
-		let override = apiObject.facts_override?.find(f => f.mode === gameMode)?.facts.find(f => f.type === 'Recharge');
-		return (override || recharge)?.duration;
-	}
-
 	// TODO(Rennorb) @cleanup: split this into the inflator system aswell. its getting to convoluted already
 	generateToolTip(apiObject : SupportedTTTypes, context : Context) : HTMLElement {
-		let recharge : HTMLElement | '' = ''
-		if('facts' in apiObject) {
-			const _recharge = this.getRecharge(apiObject, context.gameMode);
-			if(_recharge) {
-				recharge = TUtilsV2.newElm('ter', 
-					(_recharge / 1000)+'s', 
-					TUtilsV2.newImg('156651.png', 'iconsmall')
-				);
-			}
-		}
-
 		const headerElements = [TUtilsV2.newElm('teb', TUtilsV2.GW2Text2HTML(apiObject.name))];
 		
 		//TODO(Rennorb): slots stuff might not be doable serverside since the server is missing context. this is at least a case of @cleanup
 		if('palettes' in apiObject) headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
 		else if('slot' in apiObject) headerElements.push(TUtilsV2.newElm('tes', `( ${apiObject.slot} )`));
 
-		if('facts_override' in apiObject && apiObject.facts_override) {
-			//TODO(Rennorb) @cleanup: this section
-			const remainder = new Set<GameMode>(['Pve', 'Pvp', 'Wvw']);
-			const allModes = ['Pve', 'Pvp', 'Wvw'] as GameMode[];
-			for(const mode of allModes) { //better not iterate the set here while removing elements
-				for(const override of apiObject.facts_override) {
-					if(mode == override.mode) {
-						remainder.delete(mode);
-					}
+		if('override_groups' in apiObject && apiObject.override_groups) {
+			const baseContext = new Set<GameMode>(['Pve', 'Pvp', 'Wvw']);
+			for(const override of apiObject.override_groups) {
+				for(const context of override.context) {
+					baseContext.delete(context as GameMode);
 				}
 			}
 
 			const splits : string[] = [];
-			let pushedRemainder = false;
-			for(const mode of allModes) { //loop to keep sorting vaguely correct
-				if(remainder.has(mode)) {
-					if(pushedRemainder) continue;
+			let pushedBase = false;
+			for(const mode of ['Pve', 'Pvp', 'Wvw'] as GameMode[]) { //loop to keep sorting vaguely correct
+				if(baseContext.has(mode)) {
+					if(pushedBase) continue;
 
-					const text = Array.from(remainder).join('/');
-					if(remainder.has(context.gameMode))
+					const text = Array.from(baseContext).join('/');
+					if(baseContext.has(context.gameMode))
 						splits.push(`<span style="color: var(--gw2-tt-color-text-accent) !important;">${text}</span>`);
 					else
 						splits.push(text);
-					pushedRemainder = true;
+					pushedBase = true;
 				}
 				else {
 					if(mode == context.gameMode)
@@ -372,14 +346,35 @@ class GW2TooltipsV2 {
 
 			headerElements.push(TUtilsV2.newElm('tes', '( ', TUtilsV2.fromHTML(splits.join(' | ')), ' )'));
 		}
+
+		headerElements.push(TUtilsV2.newElm('div.flexbox-fill')); // split, now the right side
+
+		const currentContextInformation = this.collect_overridable(apiObject, context);
+
+		if(currentContextInformation.resource_cost) {
+			headerElements.push(TUtilsV2.newElm('ter', 
+				String(currentContextInformation.resource_cost),
+				TUtilsV2.newImg(this.ICONS.RESOURCE, 'iconsmall')
+			));
+		}
+
+		if(currentContextInformation.activation) {
+			let value = (currentContextInformation.activation / 1000).toPrecision(3);
+			while(value.charAt(value.length - 1) === '0' || value.charAt(value.length - 1) === '.') value = value.slice(0, -1);
+			headerElements.push(TUtilsV2.newElm('ter', 
+				value+'s', 
+				TUtilsV2.newImg(this.ICONS.ACTIVATION, 'iconsmall')
+			));
+		}
+
+		if(currentContextInformation.recharge) {
+			headerElements.push(TUtilsV2.newElm('ter', 
+				(currentContextInformation.recharge / 1000)+'s', 
+				TUtilsV2.newImg(this.ICONS.RECHARGE, 'iconsmall')
+			));
+		}
 		
-		const parts : HTMLElement[] = [
-			TUtilsV2.newElm('tet',
-				...headerElements,
-				TUtilsV2.newElm('div.flexbox-fill'),
-				recharge
-			)
-		];
+		const parts : HTMLElement[] = [TUtilsV2.newElm('tet', ...headerElements)];
 		
 		if('description' in apiObject && apiObject.description) {
 			const description = document.createElement('ted')
@@ -396,6 +391,15 @@ class GW2TooltipsV2 {
 		tooltip.style.marginTop = '5px' //TODO(Rennorb) @cleanup
 
 		return tooltip;
+	}
+
+	collect_overridable(apiObject : SupportedTTTypes & { override_groups? : API.ContextInformation['override_groups'] }, context : Context) : API.ContextInformation {
+		let override = apiObject.override_groups?.find(g => g.context.includes(context.gameMode));
+		let info = Object.assign({}, apiObject, override);
+		if(override && override.facts && apiObject.facts) {
+			info.facts = [...apiObject.facts, ...override.facts];
+		}
+		return info;
 	}
 
 	generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTMLElement, context : Context) : HTMLElement[] {
@@ -808,6 +812,12 @@ class GW2TooltipsV2 {
 		SLOT_Upgrade    : 517197,
 		SLOT_Infusion   : 517202,
 		SLOT_Enrichment : 517204,
+
+		RESOURCE        : 156649,
+		RECHARGE        : 156651,
+		ACTIVATION      : 496252,
+		RANGE           : 156666,
+		DEFIANCE_BREAK  : 1938788,
 	}
 }
 

@@ -3,15 +3,13 @@ namespace LegacyCompat {
 }
 
 namespace API {
-	interface Skill {
+	type Skill = ContextInformation & {
 		id                 : number
 		name               : string
 		name_brief?        : string
 		description?       : string
 		description_brief? : string
 		icon?              : string
-		facts              : Fact[]
-		facts_override?    : FactsOverride[]
 		categories         : any[]
 		palettes           : Palette[]
 		sub_skills?        : number[]
@@ -19,11 +17,6 @@ namespace API {
 	}
 
 	type Fact = FactMap[keyof FactMap];
-
-	interface FactsOverride {
-		mode  : string
-		facts : Fact[]
-	}
 
 	type Attributes = 'None' | Capitalize<Exclude<keyof Stats, 'level'>>;
 	type ArmorType  = 'HelmAquatic' | 'Helm' | 'Shoulders' | 'Coat' | 'Gloves' | 'Leggings' | 'Boots';
@@ -111,14 +104,10 @@ namespace API {
 		value : number
 	}
 	interface RangeFact extends BasicFact<'Range'> {
-		text  : string
+		text? : string
 		icon? : string
-		value : number
-	}
-	interface RechargeFact extends BasicFact<'Recharge'> {
-		text  : string
-		icon? : string
-		value : Milliseconds
+		min?  : number
+		max   : number
 	}
 	interface TimeFact extends BasicFact<'Time'> {
 		text     : string
@@ -209,7 +198,6 @@ namespace API {
 		PrefixedBuffBrief : PrefixedBuffBriefFact
 		Radius            : RadiusFact
 		Range             : RangeFact
-		Recharge          : RechargeFact
 		StunBreak         : StunBreakFact
 		Time              : TimeFact
 		Unblockable       : BasicFact<'Unblockable'>
@@ -217,22 +205,26 @@ namespace API {
 
 	type FactType = keyof FactMap;
 	
-	interface RechargeOverride {
-		mode     : string
-		recharge : Milliseconds
-	}
-
-	interface Trait {
+	type Trait = ContextInformation & {
 		id                 : number
 		icon               : string
 		name               : string
 		name_brief?        : string
 		description?       : string
 		description_brief? : string
-		facts              : Fact[]
 		slot               : 'Minor' | 'Major' | 'MadLib' | 'Automatic'; //TODO(Rennorb): fix this on the api side lol
-		facts_override     : undefined //TODO(Rennorb): not exported yet
 		provides_weapon_access? : WeaponAccess []
+	}
+
+	type ContextInformation = ContextGroup & {
+		override_groups? : ({ context : ('Pve' | 'Pvp' | 'Wvw' | 'Any')[] } & ContextGroup)[]
+	}
+
+	type ContextGroup = {
+		recharge?      : number
+		activation?    : number
+		resource_cost? : number
+		facts?         : Fact[]
 	}
 
 	type Item = ItemDetail & ItemBase

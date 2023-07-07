@@ -138,12 +138,13 @@ class APICache {
                         connectedIdsStorage.skills.add(subSkill);
             }
         }
-        if ('facts' in datum) {
+        if ('facts' in datum && datum.facts) {
             addFacts(datum.facts);
         }
-        if ('facts_override' in datum && datum.facts_override) {
-            for (const { facts } of datum.facts_override)
-                addFacts(facts);
+        if ('override_groups' in datum && datum.override_groups) {
+            for (const { facts } of datum.override_groups)
+                if (facts)
+                    addFacts(facts);
         }
         if ('attribute_set' in datum && datum.attribute_set) {
             if (!this.storage.itemstats.has(datum.attribute_set))
@@ -471,7 +472,7 @@ class FactsProcessor {
             .filter(d => d);
         if ((!((_a = apiObject.facts) === null || _a === void 0 ? void 0 : _a.length) || context.gameMode !== 'Pve') && apiObject.facts_override) {
             for (const override of apiObject.facts_override) {
-                if (override.mode === context.gameMode) {
+                if (override.context.includes(context.gameMode) && override.facts) {
                     const sortedOverrideFacts = [...override.facts].sort((a, b) => a.order - b.order);
                     sortedOverrideFacts.forEach(fact => {
                         const { wrapper } = this.generateFact(fact, apiObject, context);
@@ -482,19 +483,12 @@ class FactsProcessor {
             }
         }
         if (totalDefianceBreak > 0) {
-            const defianceWrap = TUtilsV2.newElm('te.defiance', TUtilsV2.newImg('1938788.png', 'iconmed'), TUtilsV2.newElm('tem', `Defiance Break: ${totalDefianceBreak}`));
+            const defianceWrap = TUtilsV2.newElm('te.defiance', TUtilsV2.newImg('1938788.png', 'iconmed'), TUtilsV2.newElm('tem.color-defiance-fact', `Defiance Break: ${totalDefianceBreak}`));
             factWraps.push(defianceWrap);
-        }
-        if ('range' in apiObject && apiObject.range) {
-            const rangeWrap = TUtilsV2.newElm('te', TUtilsV2.newImg('156666.png', 'iconmed'), TUtilsV2.newElm('tem', `Range: ${apiObject.range}`));
-            factWraps.push(rangeWrap);
         }
         return factWraps;
     }
     static generateFact(fact, skill, context) {
-        if (fact.type === 'Recharge') {
-            return { defiance_break: 0 };
-        }
         if (fact.requires_trait && (!context.character.traits || !fact.requires_trait.some(reqTrait => context.character.traits.includes(reqTrait)))) {
             return { defiance_break: 0 };
         }
@@ -507,9 +501,9 @@ class FactsProcessor {
             ComboFinisher: ({ fact }) => `<tem> ${fact.text}: ${fact.finisher_type} </tem>`,
             NoData: ({ fact }) => `<tem> ${fact.text} </tem>`,
             Percent: ({ fact }) => `<tem> ${TUtilsV2.GW2Text2HTML(fact.text)}: ${fact.percent}% </tem>`,
-            Radius: ({ fact }) => `<tem> ${fact.text} </tem>`,
-            Range: ({ fact }) => `<tem> ${fact.text} </tem>`,
-            HealingAdjust: ({ fact }) => `<tem> ${fact.text} </tem>`,
+            Radius: ({ fact }) => `<tem> ${fact.value} ${fact.text} </tem>`,
+            Range: ({ fact }) => `<tem> ${fact.min ? fact.min + ' - ' : ''}${fact.max} ${fact.text || 'Range'} </tem>`,
+            HealingAdjust: ({ fact }) => `<tem> ${fact.text || '<HA text undefined>'} </tem>`,
             Heal: () => `<tem> !!Heal </tem>`,
             Duration: () => `<tem> !!Duration </tem>`,
             StunBreak: () => `<tem> Breaks Stun </tem>`,
@@ -633,7 +627,6 @@ FactsProcessor.MissingBuff = {
     id: 0,
     name: 'Missing Buff',
     description: 'This Buff failed to load',
-    facts: [],
     categories: [],
     palettes: [],
     modifiers: [],
@@ -713,6 +706,11 @@ class GW2TooltipsV2 {
             SLOT_Upgrade: 517197,
             SLOT_Infusion: 517202,
             SLOT_Enrichment: 517204,
+            RESOURCE: 156649,
+            RECHARGE: 156651,
+            ACTIVATION: 496252,
+            RANGE: 156666,
+            DEFIANCE_BREAK: 1938788,
         };
         if (window.GW2TooltipsContext instanceof Array) {
             for (const partialContext of window.GW2TooltipsContext)
@@ -918,47 +916,31 @@ class GW2TooltipsV2 {
         }
         return skillSlot;
     }
-    getRecharge(apiObject, gameMode) {
-        var _a, _b, _c;
-        let recharge = apiObject.facts.find(f => f.type === 'Recharge');
-        let override = (_b = (_a = apiObject.facts_override) === null || _a === void 0 ? void 0 : _a.find(f => f.mode === gameMode)) === null || _b === void 0 ? void 0 : _b.facts.find(f => f.type === 'Recharge');
-        return (_c = (override || recharge)) === null || _c === void 0 ? void 0 : _c.duration;
-    }
     generateToolTip(apiObject, context) {
-        let recharge = '';
-        if ('facts' in apiObject) {
-            const _recharge = this.getRecharge(apiObject, context.gameMode);
-            if (_recharge) {
-                recharge = TUtilsV2.newElm('ter', (_recharge / 1000) + 's', TUtilsV2.newImg('156651.png', 'iconsmall'));
-            }
-        }
         const headerElements = [TUtilsV2.newElm('teb', TUtilsV2.GW2Text2HTML(apiObject.name))];
         if ('palettes' in apiObject)
             headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
         else if ('slot' in apiObject)
             headerElements.push(TUtilsV2.newElm('tes', `( ${apiObject.slot} )`));
-        if ('facts_override' in apiObject && apiObject.facts_override) {
-            const remainder = new Set(['Pve', 'Pvp', 'Wvw']);
-            const allModes = ['Pve', 'Pvp', 'Wvw'];
-            for (const mode of allModes) {
-                for (const override of apiObject.facts_override) {
-                    if (mode == override.mode) {
-                        remainder.delete(mode);
-                    }
+        if ('override_groups' in apiObject && apiObject.override_groups) {
+            const baseContext = new Set(['Pve', 'Pvp', 'Wvw']);
+            for (const override of apiObject.override_groups) {
+                for (const context of override.context) {
+                    baseContext.delete(context);
                 }
             }
             const splits = [];
-            let pushedRemainder = false;
-            for (const mode of allModes) {
-                if (remainder.has(mode)) {
-                    if (pushedRemainder)
+            let pushedBase = false;
+            for (const mode of ['Pve', 'Pvp', 'Wvw']) {
+                if (baseContext.has(mode)) {
+                    if (pushedBase)
                         continue;
-                    const text = Array.from(remainder).join('/');
-                    if (remainder.has(context.gameMode))
+                    const text = Array.from(baseContext).join('/');
+                    if (baseContext.has(context.gameMode))
                         splits.push(`<span style="color: var(--gw2-tt-color-text-accent) !important;">${text}</span>`);
                     else
                         splits.push(text);
-                    pushedRemainder = true;
+                    pushedBase = true;
                 }
                 else {
                     if (mode == context.gameMode)
@@ -969,9 +951,21 @@ class GW2TooltipsV2 {
             }
             headerElements.push(TUtilsV2.newElm('tes', '( ', TUtilsV2.fromHTML(splits.join(' | ')), ' )'));
         }
-        const parts = [
-            TUtilsV2.newElm('tet', ...headerElements, TUtilsV2.newElm('div.flexbox-fill'), recharge)
-        ];
+        headerElements.push(TUtilsV2.newElm('div.flexbox-fill'));
+        const currentContextInformation = this.collect_overridable(apiObject, context);
+        if (currentContextInformation.resource_cost) {
+            headerElements.push(TUtilsV2.newElm('ter', String(currentContextInformation.resource_cost), TUtilsV2.newImg(this.ICONS.RESOURCE, 'iconsmall')));
+        }
+        if (currentContextInformation.activation) {
+            let value = (currentContextInformation.activation / 1000).toPrecision(3);
+            while (value.charAt(value.length - 1) === '0' || value.charAt(value.length - 1) === '.')
+                value = value.slice(0, -1);
+            headerElements.push(TUtilsV2.newElm('ter', value + 's', TUtilsV2.newImg(this.ICONS.ACTIVATION, 'iconsmall')));
+        }
+        if (currentContextInformation.recharge) {
+            headerElements.push(TUtilsV2.newElm('ter', (currentContextInformation.recharge / 1000) + 's', TUtilsV2.newImg(this.ICONS.RECHARGE, 'iconsmall')));
+        }
+        const parts = [TUtilsV2.newElm('tet', ...headerElements)];
         if ('description' in apiObject && apiObject.description) {
             const description = document.createElement('ted');
             description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`;
@@ -984,6 +978,15 @@ class GW2TooltipsV2 {
         tooltip.dataset.id = String(apiObject.id);
         tooltip.style.marginTop = '5px';
         return tooltip;
+    }
+    collect_overridable(apiObject, context) {
+        var _a;
+        let override = (_a = apiObject.override_groups) === null || _a === void 0 ? void 0 : _a.find(g => g.context.includes(context.gameMode));
+        let info = Object.assign({}, apiObject, override);
+        if (override && override.facts && apiObject.facts) {
+            info.facts = [...apiObject.facts, ...override.facts];
+        }
+        return info;
     }
     generateToolTipList(initialAPIObject, gw2Object, context) {
         const objectChain = [];

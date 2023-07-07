@@ -99,13 +99,14 @@ class APICache {
 			}
 		}
 
-		if('facts' in datum) {
+		if('facts' in datum && datum.facts) {
 			addFacts(datum.facts);
 		}
 
-		if('facts_override' in datum && datum.facts_override) {
-			for(const { facts } of datum.facts_override)
-				addFacts(facts);
+		if('override_groups' in datum && datum.override_groups) {
+			for(const { facts } of datum.override_groups)
+				if(facts)
+					addFacts(facts);
 		}
 
 		if('attribute_set' in datum && datum.attribute_set) {

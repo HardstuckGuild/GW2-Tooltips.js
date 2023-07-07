@@ -25,6 +25,9 @@
 .color-warning { color: #ED0002FF }
 .color-event { color: #CC6633FF }
 
+.color-traited-fact { color: #6699CCFF }
+.color-defiance-fact { color: #53A698FF }
+
 .color-rarity-Junk { color: #A9A9A9FF }
 .color-rarity-Basic { color: #FFFFFFFF }
 .color-rarity-Common { color: #4F9DFEFF }
@@ -145,6 +148,11 @@
 	margin-left: .5ch;
 	vertical-align: bottom;
 }
+
+.tooltipWrapper te tem {
+	align-self: center;
+}
+
 
 
 gw2object {

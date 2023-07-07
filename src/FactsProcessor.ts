@@ -3,7 +3,6 @@ class FactsProcessor {
 		id               : 0,
 		name             : 'Missing Buff',
 		description      : 'This Buff failed to load',
-		facts            : [],
 		categories       : [],
 		palettes         : [],
 		modifiers        : [],
@@ -79,9 +78,10 @@ class FactsProcessor {
 		return weaponStrength
 	}
 
-	static generateFacts(apiObject : SupportedTTTypes & { facts? : API.Fact[], facts_override? : API.FactsOverride[] }, context : Context) : HTMLElement[] {
+	static generateFacts(apiObject : SupportedTTTypes & { facts? : API.Fact[], facts_override? : API.ContextInformation['override_groups'] }, context : Context) : HTMLElement[] {
 		let totalDefianceBreak = 0
 
+		//TODO(Rennorb): this sorting is utterly wrong.. 
 		const factWraps = 
 			(apiObject.facts || [])
 				.sort((a, b) => a.order - b.order)
@@ -94,7 +94,7 @@ class FactsProcessor {
 
 		if((!apiObject.facts?.length || context.gameMode !== 'Pve') && apiObject.facts_override) { //TODO(Rennorb) @cleanup
 			for(const override of apiObject.facts_override) {
-				if(override.mode === context.gameMode) {
+				if(override.context.includes(context.gameMode) && override.facts) {
 					const sortedOverrideFacts = [...override.facts].sort((a, b) => a.order - b.order)
 					sortedOverrideFacts.forEach(fact => {
 						const { wrapper } = this.generateFact(fact, apiObject, context);
@@ -107,27 +107,15 @@ class FactsProcessor {
 		if(totalDefianceBreak > 0) {
 			const defianceWrap = TUtilsV2.newElm('te.defiance',
 				TUtilsV2.newImg('1938788.png', 'iconmed'),
-				TUtilsV2.newElm('tem', `Defiance Break: ${totalDefianceBreak}`)
+				TUtilsV2.newElm('tem.color-defiance-fact', `Defiance Break: ${totalDefianceBreak}`)
 			)
 			factWraps.push(defianceWrap)
-		}
-
-		//TODO(Rennorb) @cleanup: this is now also in facts
-		if('range' in apiObject && apiObject.range) {
-			const rangeWrap = TUtilsV2.newElm('te',
-				TUtilsV2.newImg('156666.png', 'iconmed'),
-				TUtilsV2.newElm('tem', `Range: ${apiObject.range}`)
-			)
-			factWraps.push(rangeWrap)
 		}
 
 		return factWraps
 	}
 
-	static generateFact(fact : API.Fact, skill : SupportedTTTypes & { facts? : API.Fact[], facts_override? : API.FactsOverride[] }, context : Context) : { wrapper? : HTMLElement, defiance_break : number } {
-		if(fact.type === 'Recharge') { //meta facts
-			return { defiance_break: 0 };
-		}
+	static generateFact(fact : API.Fact, skill : SupportedTTTypes & { facts? : API.Fact[], override_groups? : API.ContextInformation['override_groups'] }, context : Context) : { wrapper? : HTMLElement, defiance_break : number } {
 		if(fact.requires_trait && (!context.character.traits || !fact.requires_trait.some(reqTrait => context.character.traits.includes(reqTrait)))) {
 			return { defiance_break: 0 }
 		}
@@ -142,9 +130,9 @@ class FactsProcessor {
 			ComboFinisher: ({ fact }) => `<tem> ${fact.text}: ${fact.finisher_type} </tem>`,
 			NoData       : ({ fact }) => `<tem> ${fact.text} </tem>`,
 			Percent      : ({ fact }) => `<tem> ${TUtilsV2.GW2Text2HTML(fact.text)}: ${fact.percent}% </tem>`,
-			Radius       : ({ fact }) => `<tem> ${fact.text} </tem>`, //TODO(Rennorb) @completeness
-			Range        : ({ fact }) => `<tem> ${fact.text} </tem>`, //TODO(Rennorb) @completeness
-			HealingAdjust: ({ fact }) => `<tem> ${fact.text} </tem>`, //TODO(Rennorb) @completeness
+			Radius       : ({ fact }) => `<tem> ${fact.value} ${fact.text} </tem>`, //TODO(Rennorb) @completeness
+			Range        : ({ fact }) => `<tem> ${fact.min ? fact.min + ' - ' : ''}${fact.max} ${fact.text || 'Range'} </tem>`,
+			HealingAdjust: ({ fact }) => `<tem> ${fact.text || '<HA text undefined>'} </tem>`, //TODO(Rennorb) @completeness
 			Heal         : () => `<tem> !!Heal </tem>`, //TODO(Rennorb) @completeness
 			Duration     : () => `<tem> !!Duration </tem>`, //TODO(Rennorb) @completeness
 			StunBreak    : () => `<tem> Breaks Stun </tem>`,
