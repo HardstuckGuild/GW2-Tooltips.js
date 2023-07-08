@@ -518,11 +518,11 @@ class FactsProcessor {
                 }
                 const seconds = fact.duration / 1000;
                 const durationText = seconds ? `(${seconds}s)` : '';
-                let htmlContent = `<te>${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML}<tem> ${buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} </tem></te>`;
-                if (fact.apply_count && fact.apply_count > 1) {
-                    htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML;
+                let node = TUtilsV2.newElm('te', TUtilsV2.newImg(buff.icon, 'iconmed'), TUtilsV2.newElm('tem', ` ${buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} `));
+                if (fact.apply_count > 1) {
+                    node.append(TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()));
                 }
-                return htmlContent;
+                return node.outerHTML;
             },
             PrefixedBuffBrief: ({ fact, buff }) => {
                 let prefix = APICache.storage.skills.get(fact.prefix);
@@ -546,7 +546,7 @@ class FactsProcessor {
                 const seconds = fact.duration / 1000;
                 const durationText = seconds ? `(${seconds}s)` : '';
                 let htmlContent = `<tem> ${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} </tem>`;
-                if (fact.apply_count && fact.apply_count > 1) {
+                if (fact.apply_count > 1) {
                     htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML;
                 }
                 return htmlContent;
