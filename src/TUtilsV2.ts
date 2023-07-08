@@ -44,8 +44,9 @@ class TUtilsV2 {
 	static Uncapitalize = <T extends string>(str : T) => str.charAt(0).toLowerCase() + str.slice(1) as Uncapitalize<T>;
 
 	static withUpToNDigits(mode : 'toPrecision' | 'toFixed', x : number, digits : number) {
-		let str = (x)[mode](digits), c;
-		while((c = str.charAt(str.length - 1)) === '0' || c === '.') str = str.slice(0, -1);
+		let str = (x)[mode](digits);
+		while(str.charAt(str.length - 1) === '0') str = str.slice(0, -1);
+		if(str.charAt(str.length - 1) === '.') str = str.slice(0, -1);
 		return str;
 	}
 }
