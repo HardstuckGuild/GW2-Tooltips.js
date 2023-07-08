@@ -445,13 +445,11 @@ class FactsProcessor {
         const generateBuffDescription = (buff, fact) => {
             let modsArray = [];
             if (buff.modifiers) {
+                const relevantModifiers = buff.modifiers.filter(modifier => ((!modifier.trait_req || context.character.traits.includes(modifier.trait_req))
+                    && (!modifier.mode || modifier.mode === context.gameMode)));
                 let modsMap = new Map();
-                for (let i = 0; i < buff.modifiers.length; i++) {
-                    const modifier = buff.modifiers[i];
-                    if ((modifier.trait_req && !context.character.traits.includes(modifier.trait_req)) ||
-                        (modifier.mode && modifier.mode !== context.gameMode)) {
-                        continue;
-                    }
+                for (let i = 0; i < relevantModifiers.length; i++) {
+                    const modifier = relevantModifiers[i];
                     let entry = modsMap.get(modifier.id) || modsMap.set(modifier.id, { modifier: modifier, value: 0 }).get(modifier.id);
                     let value = this.calculateModifier(modifier, context.character);
                     if (modifier.attribute_conversion) {
@@ -462,8 +460,7 @@ class FactsProcessor {
                         i++;
                     }
                 }
-                for (const entry of modsMap.values()) {
-                    let { value, modifier } = entry;
+                for (let { value, modifier } of modsMap.values()) {
                     if (modifier.flags.includes('Subtract')) {
                         value -= 100;
                     }
@@ -548,7 +545,7 @@ class FactsProcessor {
                 iconSlug = buff.icon;
                 const seconds = fact.duration / 1000;
                 const durationText = seconds ? `(${seconds}s)` : '';
-                let htmlContent = `<tem> ${fact.text || buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} </tem>`;
+                let htmlContent = `<tem> ${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} </tem>`;
                 if (fact.apply_count && fact.apply_count > 1) {
                     htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML;
                 }
@@ -629,8 +626,10 @@ class TUtilsV2 {
         return this.dummy.content;
     }
     static withUpToNDigits(mode, x, digits) {
-        let str = (x)[mode](digits), c;
-        while ((c = str.charAt(str.length - 1)) === '0' || c === '.')
+        let str = (x)[mode](digits);
+        while (str.charAt(str.length - 1) === '0')
+            str = str.slice(0, -1);
+        if (str.charAt(str.length - 1) === '.')
             str = str.slice(0, -1);
         return str;
     }

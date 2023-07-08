@@ -96,8 +96,7 @@ class FactsProcessor {
 					}
 				}
 
-				for(const entry of modsMap.values()) {
-					let {value, modifier} = entry;
+				for(let { value, modifier } of modsMap.values()) {
 					if(modifier.flags.includes('Subtract')) {
 						value -= 100;
 					}
@@ -197,7 +196,7 @@ class FactsProcessor {
 				const seconds = fact.duration / 1000
 				const durationText =  seconds ? `(${seconds}s)` : ''
 
-				let htmlContent = `<tem> ${fact.text || buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} </tem>`
+				let htmlContent = `<tem> ${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} </tem>`
 
 				if(fact.apply_count && fact.apply_count > 1) {
 					htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML
