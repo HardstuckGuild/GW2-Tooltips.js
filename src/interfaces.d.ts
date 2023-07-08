@@ -57,7 +57,7 @@ namespace API {
 		attribute_conversion? : Exclude<Attributes, 'None'>
 		description           : string
 		description_override? : ModifierDescriptionOverride[]
-		flags                 : ('FormatPercent' | 'SkipNextEntry' | 'MulByDuration' | 'DivDurationBy3' | 'DivDurationBy10' | 'NonStacking' | 'Subtract')[]
+		flags                 : ('FormatFraction' | 'FormatPercent' | 'SkipNextEntry' | 'MulByDuration' | 'DivDurationBy3' | 'DivDurationBy10' | 'NonStacking' | 'Subtract')[]
 		trait_req?            : number
 		mode?                 : GameMode
 	}

@@ -477,12 +477,18 @@ class FactsProcessor {
                     if (!modifier.flags.includes('NonStacking')) {
                         value *= fact.apply_count;
                     }
-                    let strValue = TUtilsV2.withUpToNDigits("toFixed", value, 2);
+                    let strValue = '';
+                    if (modifier.flags.includes('FormatFraction')) {
+                        strValue = TUtilsV2.withUpToNDigits("toFixed", value, 2);
+                    }
+                    else {
+                        strValue = Math.floor(value).toString();
+                    }
                     if (modifier.flags.includes('FormatPercent')) {
                         if (value > 0) {
                             strValue = '+' + strValue;
                         }
-                        strValue += "%";
+                        strValue += '%';
                     }
                     strValue += ' ' + modifier.description;
                     modsArray.push(strValue);
