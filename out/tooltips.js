@@ -472,7 +472,7 @@ class FactsProcessor {
                         if (modifier.flags.includes('DivDurationBy10')) {
                             duration /= 10;
                         }
-                        value *= Math.max(duration, 1);
+                        value *= duration || 1;
                     }
                     if (!modifier.flags.includes('NonStacking')) {
                         value *= fact.apply_count;

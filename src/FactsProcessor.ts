@@ -110,7 +110,7 @@ class FactsProcessor {
 							duration /= 10;
 						}
 
-						value *= Math.max(duration, 1);
+						value *= duration || 1;
 					}
 
 					if(!modifier.flags.includes('NonStacking')) {
