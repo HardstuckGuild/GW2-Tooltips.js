@@ -442,6 +442,61 @@ class FactsProcessor {
     }
     static generateFact(fact, weapon_strength, context) {
         let iconSlug = fact.icon;
+        const generateBuffDescription = (buff, fact) => {
+            let modsArray = [];
+            if (buff.modifiers) {
+                let modsMap = new Map();
+                let skip_next = false;
+                for (const modifier of buff.modifiers) {
+                    if ((modifier.trait_req && !context.character.traits.includes(modifier.trait_req)) ||
+                        (modifier.mode && modifier.mode !== context.gameMode)) {
+                        continue;
+                    }
+                    if (skip_next) {
+                        skip_next = false;
+                        continue;
+                    }
+                    let entry = modsMap.get(modifier.id) || modsMap.set(modifier.id, { modifier: modifier, value: 0 }).get(modifier.id);
+                    let value = this.calculateModifier(modifier, context.character);
+                    if (modifier.attribute_conversion) {
+                        value *= context.character.stats[TUtilsV2.Uncapitalize(modifier.attribute_conversion)];
+                    }
+                    entry.value += value;
+                    if (modifier.flags.includes('SkipNextEntry')) {
+                        skip_next = true;
+                    }
+                }
+                for (const entry of modsMap.values()) {
+                    let { value, modifier } = entry;
+                    if (modifier.flags.includes('Subtract')) {
+                        value -= 100;
+                    }
+                    if (modifier.flags.includes('MulByDuration')) {
+                        let duration = fact.duration / 1000;
+                        if (modifier.flags.includes('DivDurationBy3')) {
+                            duration /= 3;
+                        }
+                        if (modifier.flags.includes('DivDurationBy10')) {
+                            duration /= 10;
+                        }
+                        value *= Math.max(duration, 1);
+                    }
+                    if (!modifier.flags.includes('NonStacking')) {
+                        value *= fact.apply_count;
+                    }
+                    let strValue = value.toString();
+                    if (modifier.flags.includes('FormatPercent')) {
+                        if (value > 0) {
+                            strValue = '+' + strValue;
+                        }
+                        strValue += "%";
+                    }
+                    strValue += ' ' + modifier.description;
+                    modsArray.push(strValue);
+                }
+            }
+            return TUtilsV2.GW2Text2HTML(buff.description_brief || modsArray.join(', ') || buff.description);
+        };
         const factInflators = {
             Time: ({ fact }) => `<tem> ${fact.text}: ${fact.duration / 1000}s </tem>`,
             Distance: ({ fact }) => `<tem> ${fact.text}: ${fact.distance} </tem>`,
@@ -469,7 +524,13 @@ class FactsProcessor {
                     console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                     buff = this.MissingBuff;
                 }
-                return `<tem> ${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML} ${buff.name_brief || buff.name} </tem>`;
+                const seconds = fact.duration / 1000;
+                const durationText = seconds ? `(${seconds}s)` : '';
+                let htmlContent = `<tem> ${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML} ${buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} </tem>`;
+                if (fact.apply_count && fact.apply_count > 1) {
+                    htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML;
+                }
+                return htmlContent;
             },
             PrefixedBuffBrief: ({ fact }) => {
                 let prefix = APICache.storage.skills.get(fact.prefix);
@@ -489,36 +550,10 @@ class FactsProcessor {
                 if (!buff)
                     console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                 buff = buff || this.MissingBuff;
-                let modifiers = '';
                 iconSlug = buff.icon;
-                if (buff.modifiers) {
-                    for (const modifier of buff.modifiers) {
-                        if ((modifier.trait_req && !context.character.traits.includes(modifier.trait_req)) ||
-                            (modifier.mode && modifier.mode !== context.gameMode)) {
-                            continue;
-                        }
-                        let modifierValue = this.calculateModifier(modifier, context.character);
-                        if (modifier.flags.includes('MulByDuration') &&
-                            !modifier.flags.includes('FormatPercent')) {
-                            modifierValue *= fact.duration / 1000;
-                        }
-                        if (modifier.flags.includes('FormatPercent')) {
-                            if (modifier.flags.includes('NonStacking')) {
-                                modifiers += ` ${Math.round(modifierValue)}% ${modifier.description}`;
-                            }
-                            else {
-                                modifiers += ` ${Math.round(fact.apply_count * modifierValue)}% ${modifier.description}`;
-                            }
-                        }
-                        else {
-                            modifiers += ` ${Math.round(fact.apply_count * modifierValue)} ${modifier.description}`;
-                        }
-                    }
-                }
-                const description = TUtilsV2.GW2Text2HTML(buff.description_brief || buff.description || modifiers);
                 const seconds = fact.duration / 1000;
                 const durationText = seconds ? `(${seconds}s)` : '';
-                let htmlContent = `<tem> ${fact.text || buff.name_brief || buff.name} ${durationText} ${description} </tem>`;
+                let htmlContent = `<tem> ${fact.text || buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} </tem>`;
                 if (fact.apply_count && fact.apply_count > 1) {
                     htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML;
                 }
