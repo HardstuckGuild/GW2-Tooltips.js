@@ -73,17 +73,17 @@ class FactsProcessor {
 		const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact) => {
 			let modsArray: string[] = []
 			if(buff.modifiers) {
+				const relevantModifiers = buff.modifiers.filter(modifier => (
+					   (!modifier.trait_req || context.character.traits.includes(modifier.trait_req))
+					&& (!modifier.mode || modifier.mode === context.gameMode)
+				));
+					
+				//NOTE(Rennorb): Modifiers can 'stack'. For that reason we need to first collect the values and then create text from that, otherwise we get duplicates.
 				let modsMap = new Map<number, { modifier : API.Modifier, value : number }>();
-				// accumulate first
-				for (let i = 0; i < buff.modifiers.length; i++) {
-					const modifier = buff.modifiers[i];
+				for (let i = 0; i < relevantModifiers.length; i++) {
+					const modifier = relevantModifiers[i];
 
-					if ((modifier.trait_req && !context.character.traits.includes(modifier.trait_req)) ||
-						(modifier.mode && modifier.mode !== context.gameMode)) {
-						continue;
-					}
-
-					let entry = modsMap.get(modifier.id) || modsMap.set(modifier.id, {modifier: modifier, value: 0}).get(modifier.id);
+					let entry = modsMap.get(modifier.id) || modsMap.set(modifier.id, { modifier: modifier, value: 0 }).get(modifier.id);
 					let value = this.calculateModifier(modifier, context.character);
 					if (modifier.attribute_conversion) {
 					   value *= context.character.stats[TUtilsV2.Uncapitalize(modifier.attribute_conversion)];
