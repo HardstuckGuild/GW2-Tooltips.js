@@ -42,4 +42,10 @@ class TUtilsV2 {
 
 	//TODO(Rennorb) @cleanup: we should jsut use consistent names.
 	static Uncapitalize = <T extends string>(str : T) => str.charAt(0).toLowerCase() + str.slice(1) as Uncapitalize<T>;
+
+	static withUpToNDigits(mode : 'toPrecision' | 'toFixed', x : number, digits : number) {
+		let str = (x)[mode](digits), c;
+		while((c = str.charAt(str.length - 1)) === '0' || c === '.') str = str.slice(0, -1);
+		return str;
+	}
 }

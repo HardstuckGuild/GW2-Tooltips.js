@@ -359,8 +359,7 @@ class GW2TooltipsV2 {
 		}
 
 		if(currentContextInformation.activation) {
-			let value = (currentContextInformation.activation / 1000).toPrecision(3);
-			while(value.charAt(value.length - 1) === '0' || value.charAt(value.length - 1) === '.') value = value.slice(0, -1);
+			const value = TUtilsV2.withUpToNDigits("toPrecision", currentContextInformation.activation / 1000, 3)
 			headerElements.push(TUtilsV2.newElm('ter', 
 				value+'s', 
 				TUtilsV2.newImg(this.ICONS.ACTIVATION, 'iconsmall')

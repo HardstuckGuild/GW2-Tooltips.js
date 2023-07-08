@@ -446,14 +446,10 @@ class FactsProcessor {
             let modsArray = [];
             if (buff.modifiers) {
                 let modsMap = new Map();
-                let skip_next = false;
-                for (const modifier of buff.modifiers) {
+                for (let i = 0; i < buff.modifiers.length; i++) {
+                    const modifier = buff.modifiers[i];
                     if ((modifier.trait_req && !context.character.traits.includes(modifier.trait_req)) ||
                         (modifier.mode && modifier.mode !== context.gameMode)) {
-                        continue;
-                    }
-                    if (skip_next) {
-                        skip_next = false;
                         continue;
                     }
                     let entry = modsMap.get(modifier.id) || modsMap.set(modifier.id, { modifier: modifier, value: 0 }).get(modifier.id);
@@ -463,7 +459,7 @@ class FactsProcessor {
                     }
                     entry.value += value;
                     if (modifier.flags.includes('SkipNextEntry')) {
-                        skip_next = true;
+                        i++;
                     }
                 }
                 for (const entry of modsMap.values()) {
@@ -484,7 +480,7 @@ class FactsProcessor {
                     if (!modifier.flags.includes('NonStacking')) {
                         value *= fact.apply_count;
                     }
-                    let strValue = value.toString();
+                    let strValue = TUtilsV2.withUpToNDigits("toFixed", value, 2);
                     if (modifier.flags.includes('FormatPercent')) {
                         if (value > 0) {
                             strValue = '+' + strValue;
@@ -512,44 +508,43 @@ class FactsProcessor {
             Duration: () => `<tem> !!Duration </tem>`,
             StunBreak: () => `<tem> Breaks Stun </tem>`,
             Unblockable: () => `<tem> Unblockable </tem>`,
-            PrefixedBuff: ({ fact }) => {
+            PrefixedBuff: ({ fact, buff }) => {
                 let prefix = APICache.storage.skills.get(fact.prefix);
                 if (!prefix) {
                     console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
                     prefix = this.MissingBuff;
                 }
                 iconSlug = prefix.icon || iconSlug;
-                let buff = APICache.storage.skills.get(fact.buff);
                 if (!buff) {
                     console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                     buff = this.MissingBuff;
                 }
                 const seconds = fact.duration / 1000;
                 const durationText = seconds ? `(${seconds}s)` : '';
-                let htmlContent = `<tem> ${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML} ${buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} </tem>`;
+                let htmlContent = `<te>${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML}<tem> ${buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} </tem></te>`;
                 if (fact.apply_count && fact.apply_count > 1) {
                     htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML;
                 }
                 return htmlContent;
             },
-            PrefixedBuffBrief: ({ fact }) => {
+            PrefixedBuffBrief: ({ fact, buff }) => {
                 let prefix = APICache.storage.skills.get(fact.prefix);
                 if (!prefix) {
                     console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
                     prefix = this.MissingBuff;
                 }
                 iconSlug = prefix.icon || iconSlug;
-                let buff = APICache.storage.skills.get(fact.buff);
                 if (!buff) {
                     console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                     buff = this.MissingBuff;
                 }
-                return `<tem> ${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML} ${buff.name_brief || buff.name} </tem>`;
+                return `<te>${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML}<tem> ${buff.name_brief || buff.name} </tem></te>`;
             },
             Buff: ({ fact, buff }) => {
-                if (!buff)
+                if (!buff) {
                     console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-                buff = buff || this.MissingBuff;
+                    buff = this.MissingBuff;
+                }
                 iconSlug = buff.icon;
                 const seconds = fact.duration / 1000;
                 const durationText = seconds ? `(${seconds}s)` : '';
@@ -632,6 +627,12 @@ class TUtilsV2 {
     static fromHTML(html) {
         this.dummy.innerHTML = html;
         return this.dummy.content;
+    }
+    static withUpToNDigits(mode, x, digits) {
+        let str = (x)[mode](digits), c;
+        while ((c = str.charAt(str.length - 1)) === '0' || c === '.')
+            str = str.slice(0, -1);
+        return str;
     }
 }
 TUtilsV2.iconSource = 'https://assets.gw2dat.com/';
@@ -935,9 +936,7 @@ class GW2TooltipsV2 {
             headerElements.push(TUtilsV2.newElm('ter', String(currentContextInformation.resource_cost), TUtilsV2.newImg(this.ICONS.RESOURCE, 'iconsmall')));
         }
         if (currentContextInformation.activation) {
-            let value = (currentContextInformation.activation / 1000).toPrecision(3);
-            while (value.charAt(value.length - 1) === '0' || value.charAt(value.length - 1) === '.')
-                value = value.slice(0, -1);
+            const value = TUtilsV2.withUpToNDigits("toPrecision", currentContextInformation.activation / 1000, 3);
             headerElements.push(TUtilsV2.newElm('ter', value + 's', TUtilsV2.newImg(this.ICONS.ACTIVATION, 'iconsmall')));
         }
         if (currentContextInformation.recharge) {

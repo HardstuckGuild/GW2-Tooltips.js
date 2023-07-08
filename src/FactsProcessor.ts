@@ -70,67 +70,62 @@ class FactsProcessor {
 	static generateFact(fact : API.Fact, weapon_strength : number, context : Context) : { wrapper? : HTMLElement, defiance_break : number } {
 		let iconSlug = fact.icon
 
-		const generateBuffDescription = (buff: API.Skill, fact: API.BuffFact | API.PrefixedBuffFact) => {
-			
+		const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact) => {
 			let modsArray: string[] = []
-			if(buff.modifiers) {					
-				let modsMap = new Map<number, {modifier: API.Modifier, value: number}>();
+			if(buff.modifiers) {
+				let modsMap = new Map<number, { modifier : API.Modifier, value : number }>();
 				// accumulate first
-				let skip_next = false;
-				for (const modifier of buff.modifiers) {
+				for (let i = 0; i < buff.modifiers.length; i++) {
+					const modifier = buff.modifiers[i];
+
 					if ((modifier.trait_req && !context.character.traits.includes(modifier.trait_req)) ||
 						(modifier.mode && modifier.mode !== context.gameMode)) {
 						continue;
 					}
 
-					if(skip_next){
-						skip_next = false;
-						continue;
-					}
-					
 					let entry = modsMap.get(modifier.id) || modsMap.set(modifier.id, {modifier: modifier, value: 0}).get(modifier.id);
 					let value = this.calculateModifier(modifier, context.character);
 					if (modifier.attribute_conversion) {
 					   value *= context.character.stats[TUtilsV2.Uncapitalize(modifier.attribute_conversion)];
 					}
-					
+
 					entry!.value += value;
 
-					if(modifier.flags.includes('SkipNextEntry')){
-						skip_next = true;
+					if(modifier.flags.includes('SkipNextEntry')) {
+						i++;
 					}
 				}
 
-				for(const entry of modsMap.values()){
+				for(const entry of modsMap.values()) {
 					let {value, modifier} = entry;
 					if(modifier.flags.includes('Subtract')) {
 						value -= 100;
-					}                       
+					}
 
-					if(modifier.flags.includes('MulByDuration')){
+					if(modifier.flags.includes('MulByDuration')) {
 						let duration = fact.duration / 1000;
-						if(modifier.flags.includes('DivDurationBy3')){
+						if(modifier.flags.includes('DivDurationBy3')) {
 							duration /= 3;
 						}
-						if(modifier.flags.includes('DivDurationBy10')){
+						if(modifier.flags.includes('DivDurationBy10')) {
 							duration /= 10;
 						}
-						
+
 						value *= Math.max(duration, 1);
 					}
 
-					if(!modifier.flags.includes('NonStacking')){
+					if(!modifier.flags.includes('NonStacking')) {
 						value *= fact.apply_count;
 					}
 
-					let strValue = value.toString()
+					let strValue = TUtilsV2.withUpToNDigits("toFixed", value, 2);
 
-					if(modifier.flags.includes('FormatPercent')){
-						if(value > 0 ){
+					if(modifier.flags.includes('FormatPercent')) {
+						if(value > 0 ) {
 							strValue = '+' + strValue;
 						}
 						strValue += "%"
-					}                        
+					}
 					strValue += ' ' + modifier.description;
 
 					modsArray.push(strValue);
@@ -140,6 +135,7 @@ class FactsProcessor {
 			return TUtilsV2.GW2Text2HTML(buff.description_brief || modsArray.join(', ') || buff.description)
 		}
 
+		//TODO(Rennorb) @cleanup: remove the jank spaces in the generated html
 		const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => string } = {
 			Time         : ({ fact }) => `<tem> ${fact.text}: ${fact.duration / 1000}s </tem>`,
 			Distance     : ({ fact }) => `<tem> ${fact.text}: ${fact.distance} </tem>`,
@@ -156,46 +152,46 @@ class FactsProcessor {
 			StunBreak    : () => `<tem> Breaks Stun </tem>`,
 			Unblockable  : () => `<tem> Unblockable </tem>`,
 			//now for the more complex ones
-			PrefixedBuff : ({ fact }) => {
+			PrefixedBuff : ({ fact, buff }) => {
 				let prefix = APICache.storage.skills.get(fact.prefix)
 				if(!prefix) {
 					console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
 					prefix = this.MissingBuff
 				}
 				iconSlug = prefix.icon || iconSlug
-				let buff = APICache.storage.skills.get(fact.buff)
 				if(!buff) {
 					console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
 					buff = this.MissingBuff
-				}	
-				
-				const seconds = fact.duration / 1000
-				const durationText =  seconds ? `(${seconds}s)` : ''	
+				}
 
-				let htmlContent = `<tem> ${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML} ${buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} </tem>`
-				
+				const seconds = fact.duration / 1000
+				const durationText =  seconds ? `(${seconds}s)` : ''
+
+				let htmlContent = `<te>${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML}<tem> ${buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} </tem></te>`
+
 				if(fact.apply_count && fact.apply_count > 1) {
 					htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML
 				}
 				return htmlContent
 			},
-			PrefixedBuffBrief: ({ fact }) => {
+			PrefixedBuffBrief: ({ fact, buff }) => {
 				let prefix = APICache.storage.skills.get(fact.prefix)
 				if(!prefix) {
 					console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
 					prefix = this.MissingBuff
 				}
 				iconSlug = prefix.icon || iconSlug
-				let buff = APICache.storage.skills.get(fact.buff)
 				if(!buff) {
 					console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
 					buff = this.MissingBuff
 				}
-				return `<tem> ${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML} ${buff.name_brief || buff.name} </tem>`
+				return `<te>${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML}<tem> ${buff.name_brief || buff.name} </tem></te>`
 			},
 			Buff: ({ fact, buff }) => {
-				if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-				buff = buff || this.MissingBuff // in case we didn't get the buff we wanted from the api
+				if(!buff) {
+					console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
+					buff = this.MissingBuff
+				}
 				iconSlug = buff.icon
 
 				const seconds = fact.duration / 1000
