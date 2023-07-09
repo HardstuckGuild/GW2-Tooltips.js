@@ -4,7 +4,6 @@
 //TODO(Rennorb): Multi skill tooltips (multiple boxes) (kindof works nit not complete)
 //TODO(Rennorb): Option to show whole skill-chain (maybe on button hold)?
 //TODO(Rennorb): Stop using these jank custom tags. There is no reason to do so and its technically not legal per html spec.
-//TODO(Rennorb): The positioning code seems a bit wired,it doesnt respect margins when checking for oob, only when positioning the thing.
 //TODO(Rennorb) @fixme: impale: the impale buff doesn't have a name, only shows duration
 //TODO(Rennorb): Figure out how to handle boon descriptions. Have a toggle between 'realistic as in game' and 'full information'
 //TODO(Rennorb): Link minion skills to minion summon skill.
@@ -137,20 +136,26 @@ class GW2TooltipsV2 {
 	}
 
 	positionTooltip() {
-		const tooltip = this.tooltip
-		const wpadminbar = document.getElementById('wpadminbar') //TODO(Rennorb) @hardcoded: this accounts for the wordpress bar that might exist.
-		const additionaloffset = wpadminbar ? wpadminbar.offsetHeight : 0
+		const wpadminbar = document.getElementById('wpadminbar'); //TODO(Rennorb) @hardcoded: this accounts for the wordpress bar that might exist.
+		const topBarHeight = wpadminbar ? wpadminbar.offsetHeight : 0;
 
-		let tooltipXpos = this.lastMouseX + 16
-		if(this.lastMouseX + tooltip.offsetWidth + 22 > window.innerWidth) {
-			tooltipXpos = window.innerWidth - 22 - tooltip.offsetWidth
+		//using actual css margins in css is pain
+		const marginX = 22;
+		const marginY = 13;
+		//some space form the cursor
+		const offsetX = 6;
+		const offsetY = 6;
+
+		let tooltipXpos = this.lastMouseX + offsetX;
+		if(tooltipXpos + this.tooltip.offsetWidth + marginX > document.documentElement.clientWidth) {
+			tooltipXpos = document.documentElement.clientWidth - (this.tooltip.offsetWidth + marginX);
 		}
-		let tooltipYpos = this.lastMouseY - 6 - tooltip.offsetHeight
-		if(this.lastMouseY - tooltip.offsetHeight - 13 - document.documentElement.scrollTop < 0) {
-			tooltipYpos = additionaloffset + 6 + document.documentElement.scrollTop
+		let tooltipYpos = this.lastMouseY - offsetY - this.tooltip.offsetHeight;
+		if(tooltipYpos - marginY < document.documentElement.scrollTop) {
+			tooltipYpos = topBarHeight + marginY + document.documentElement.scrollTop;
 		}
 
-		tooltip.style.transform = `translate(${tooltipXpos}px, ${tooltipYpos}px)`
+		this.tooltip.style.transform = `translate(${tooltipXpos}px, ${tooltipYpos}px)`;
 	}
 
 	hookDocument(scope : ScopeElement, _unused? : any) : Promise<void[]> {
@@ -170,7 +175,7 @@ class GW2TooltipsV2 {
 			if(!isNaN(stats)) statsToGet.add(stats);
 
 			const objId = +String(gw2Object.getAttribute('objId'))
-			//TODO(Rennorb) @cleanup @compat: this is literally just for naming convenience.
+			//TODO(Rennorb) @cleanup @compat: this is literally just for naming 'convenience'.
 			// Figure out if we can just get rid of the +'s' or if that poses an issue with backwards compat
 			const type = (gw2Object.getAttribute('type') || 'skill') + 's'
 			if(isNaN(objId) || !(type in objectsToGet)) continue;
@@ -181,15 +186,15 @@ class GW2TooltipsV2 {
 
 			gw2Object.addEventListener('mouseenter', (e) => {
 				const gw2Object = e.target as HTMLElement;
-				const type = (gw2Object.getAttribute('type') || 'skill') as LegacyCompat.ObjectType + 's';
+				const type = ((gw2Object.getAttribute('type') || 'skill') + 's') as `${LegacyCompat.ObjectType}s`;
 				const objId = +String(gw2Object.getAttribute('objId'))
 				const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
 				const stackSize = +String(gw2Object.getAttribute('count')) || undefined;
 
-				if(type != 'skills' && type != 'traits' && type != 'pvp/amulets' && type != "items") return; //TODO(Rennorb): others disabled for now
+				if(type == 'specializations') return; //TODO(Rennorb) @completeness: inline objs
+				if(type == 'pets') return; //TODO(Rennorb) @completeness
 
-
-				const data = APICache.storage[type].get(objId) //TODO(Rennorb) @cleanup: move into generateToolTipList?
+				const data = APICache.storage[type].get(objId);
 				if(data) {
 					if(type == 'items') {
 						const statId = +String(gw2Object.getAttribute('stats')) || undefined;
@@ -310,10 +315,38 @@ class GW2TooltipsV2 {
 	// TODO(Rennorb) @cleanup: split this into the inflator system aswell. its getting to convoluted already
 	generateToolTip(apiObject : SupportedTTTypes, context : Context) : HTMLElement {
 		const headerElements = [TUtilsV2.newElm('teb', TUtilsV2.GW2Text2HTML(apiObject.name))];
-		
+		headerElements.push(TUtilsV2.newElm('div.flexbox-fill')); // split, now the right side
+
+		const currentContextInformation = this.resolveTraitsAndOverrides(apiObject, context);
+
+		if(currentContextInformation.resource_cost) {
+			headerElements.push(TUtilsV2.newElm('ter', 
+				String(currentContextInformation.resource_cost),
+				TUtilsV2.newImg(this.ICONS.RESOURCE, 'iconsmall')
+			));
+		}
+
+		if(currentContextInformation.activation) {
+			const value = TUtilsV2.withUpToNDigits("toPrecision", currentContextInformation.activation / 1000, 3)
+			headerElements.push(TUtilsV2.newElm('ter', 
+				value+'s', 
+				TUtilsV2.newImg(this.ICONS.ACTIVATION, 'iconsmall')
+			));
+		}
+
+		if(currentContextInformation.recharge) {
+			headerElements.push(TUtilsV2.newElm('ter', 
+				(currentContextInformation.recharge / 1000)+'s', 
+				TUtilsV2.newImg(this.ICONS.RECHARGE, 'iconsmall')
+			));
+		}
+
+		const secondHeaderRow = [];
 		//TODO(Rennorb): slots stuff might not be doable serverside since the server is missing context. this is at least a case of @cleanup
-		if('palettes' in apiObject) headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
-		else if('slot' in apiObject) headerElements.push(TUtilsV2.newElm('tes', `( ${apiObject.slot} )`));
+		if('palettes' in apiObject) secondHeaderRow.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
+		else if('slot' in apiObject) secondHeaderRow.push(TUtilsV2.newElm('tes', `( ${apiObject.slot} )`));
+
+		secondHeaderRow.push(TUtilsV2.newElm('div.flexbox-fill')); // split, now the right side
 
 		if('override_groups' in apiObject && apiObject.override_groups) {
 			const baseContext = new Set<GameMode>(['Pve', 'Pvp', 'Wvw']);
@@ -344,36 +377,11 @@ class GW2TooltipsV2 {
 				}
 			}
 
-			headerElements.push(TUtilsV2.newElm('tes', '( ', TUtilsV2.fromHTML(splits.join(' | ')), ' )'));
-		}
-
-		headerElements.push(TUtilsV2.newElm('div.flexbox-fill')); // split, now the right side
-
-		const currentContextInformation = this.resolveTraitsAndOverrides(apiObject, context);
-
-		if(currentContextInformation.resource_cost) {
-			headerElements.push(TUtilsV2.newElm('ter', 
-				String(currentContextInformation.resource_cost),
-				TUtilsV2.newImg(this.ICONS.RESOURCE, 'iconsmall')
-			));
-		}
-
-		if(currentContextInformation.activation) {
-			const value = TUtilsV2.withUpToNDigits("toPrecision", currentContextInformation.activation / 1000, 3)
-			headerElements.push(TUtilsV2.newElm('ter', 
-				value+'s', 
-				TUtilsV2.newImg(this.ICONS.ACTIVATION, 'iconsmall')
-			));
-		}
-
-		if(currentContextInformation.recharge) {
-			headerElements.push(TUtilsV2.newElm('ter', 
-				(currentContextInformation.recharge / 1000)+'s', 
-				TUtilsV2.newImg(this.ICONS.RECHARGE, 'iconsmall')
-			));
+			secondHeaderRow.push(TUtilsV2.newElm('tes', '( ', TUtilsV2.fromHTML(splits.join(' | ')), ' )'));
 		}
 		
 		const parts : HTMLElement[] = [TUtilsV2.newElm('tet', ...headerElements)];
+		if(secondHeaderRow.length > 1) parts.push(TUtilsV2.newElm('tet.small', ...secondHeaderRow));
 		
 		if('description' in apiObject && apiObject.description) {
 			const description = document.createElement('ted')

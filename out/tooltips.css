@@ -9,7 +9,7 @@
 	--gw2-tt-color-text: #d3d2cf;
 	--gw2-tt-color-text-accent: hsl(40deg 96% 70%);
 	--gw2-tt-color-tt-title: hsl(40deg 96% 70%);
-	--gw2-tt-color-tt-desc: hsl(40deg 96% 70%);
+	--gw2-tt-color-tt-desc: hsl(0, 0%, 73%);
   --gw2-tt-font-weight-thick: 600;
 	--gw2-tt-font-size-s: .88em;
 	--gw2-tt-font-size-m: 1.17em;
@@ -71,6 +71,7 @@
 	box-shadow: #000 4px 4px 8px;
 
 	padding: 4px;
+	max-width: 100%;
 	max-height: 80vh;
 
 	background-color: #373f46;
@@ -100,6 +101,9 @@
   align-items: center;
   gap: 0 1ch;
   white-space: nowrap;
+}
+.tooltipWrapper tet.small {
+	font-size: var(--gw2-tt-font-size-s);
 }
 .tooltip:not(.item) tet teb {
 	color: var(--gw2-tt-color-tt-title);

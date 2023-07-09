@@ -742,18 +742,21 @@ class GW2TooltipsV2 {
         this.positionTooltip();
     }
     positionTooltip() {
-        const tooltip = this.tooltip;
         const wpadminbar = document.getElementById('wpadminbar');
-        const additionaloffset = wpadminbar ? wpadminbar.offsetHeight : 0;
-        let tooltipXpos = this.lastMouseX + 16;
-        if (this.lastMouseX + tooltip.offsetWidth + 22 > window.innerWidth) {
-            tooltipXpos = window.innerWidth - 22 - tooltip.offsetWidth;
+        const topBarHeight = wpadminbar ? wpadminbar.offsetHeight : 0;
+        const marginX = 22;
+        const marginY = 13;
+        const offsetX = 6;
+        const offsetY = 6;
+        let tooltipXpos = this.lastMouseX + offsetX;
+        if (tooltipXpos + this.tooltip.offsetWidth + marginX > document.documentElement.clientWidth) {
+            tooltipXpos = document.documentElement.clientWidth - (this.tooltip.offsetWidth + marginX);
         }
-        let tooltipYpos = this.lastMouseY - 6 - tooltip.offsetHeight;
-        if (this.lastMouseY - tooltip.offsetHeight - 13 - document.documentElement.scrollTop < 0) {
-            tooltipYpos = additionaloffset + 6 + document.documentElement.scrollTop;
+        let tooltipYpos = this.lastMouseY - offsetY - this.tooltip.offsetHeight;
+        if (tooltipYpos - marginY < document.documentElement.scrollTop) {
+            tooltipYpos = topBarHeight + marginY + document.documentElement.scrollTop;
         }
-        tooltip.style.transform = `translate(${tooltipXpos}px, ${tooltipYpos}px)`;
+        this.tooltip.style.transform = `translate(${tooltipXpos}px, ${tooltipYpos}px)`;
     }
     hookDocument(scope, _unused) {
         const objectsToGet = {
@@ -780,11 +783,13 @@ class GW2TooltipsV2 {
                 objectsToGet[type].set(objId, [gw2Object]);
             gw2Object.addEventListener('mouseenter', (e) => {
                 const gw2Object = e.target;
-                const type = (gw2Object.getAttribute('type') || 'skill') + 's';
+                const type = ((gw2Object.getAttribute('type') || 'skill') + 's');
                 const objId = +String(gw2Object.getAttribute('objId'));
                 const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
                 const stackSize = +String(gw2Object.getAttribute('count')) || undefined;
-                if (type != 'skills' && type != 'traits' && type != 'pvp/amulets' && type != "items")
+                if (type == 'specializations')
+                    return;
+                if (type == 'pets')
                     return;
                 const data = APICache.storage[type].get(objId);
                 if (data) {
@@ -902,10 +907,24 @@ class GW2TooltipsV2 {
     }
     generateToolTip(apiObject, context) {
         const headerElements = [TUtilsV2.newElm('teb', TUtilsV2.GW2Text2HTML(apiObject.name))];
+        headerElements.push(TUtilsV2.newElm('div.flexbox-fill'));
+        const currentContextInformation = this.resolveTraitsAndOverrides(apiObject, context);
+        if (currentContextInformation.resource_cost) {
+            headerElements.push(TUtilsV2.newElm('ter', String(currentContextInformation.resource_cost), TUtilsV2.newImg(this.ICONS.RESOURCE, 'iconsmall')));
+        }
+        if (currentContextInformation.activation) {
+            const value = TUtilsV2.withUpToNDigits("toPrecision", currentContextInformation.activation / 1000, 3);
+            headerElements.push(TUtilsV2.newElm('ter', value + 's', TUtilsV2.newImg(this.ICONS.ACTIVATION, 'iconsmall')));
+        }
+        if (currentContextInformation.recharge) {
+            headerElements.push(TUtilsV2.newElm('ter', (currentContextInformation.recharge / 1000) + 's', TUtilsV2.newImg(this.ICONS.RECHARGE, 'iconsmall')));
+        }
+        const secondHeaderRow = [];
         if ('palettes' in apiObject)
-            headerElements.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
+            secondHeaderRow.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
         else if ('slot' in apiObject)
-            headerElements.push(TUtilsV2.newElm('tes', `( ${apiObject.slot} )`));
+            secondHeaderRow.push(TUtilsV2.newElm('tes', `( ${apiObject.slot} )`));
+        secondHeaderRow.push(TUtilsV2.newElm('div.flexbox-fill'));
         if ('override_groups' in apiObject && apiObject.override_groups) {
             const baseContext = new Set(['Pve', 'Pvp', 'Wvw']);
             for (const override of apiObject.override_groups) {
@@ -933,21 +952,11 @@ class GW2TooltipsV2 {
                         splits.push(mode);
                 }
             }
-            headerElements.push(TUtilsV2.newElm('tes', '( ', TUtilsV2.fromHTML(splits.join(' | ')), ' )'));
-        }
-        headerElements.push(TUtilsV2.newElm('div.flexbox-fill'));
-        const currentContextInformation = this.resolveTraitsAndOverrides(apiObject, context);
-        if (currentContextInformation.resource_cost) {
-            headerElements.push(TUtilsV2.newElm('ter', String(currentContextInformation.resource_cost), TUtilsV2.newImg(this.ICONS.RESOURCE, 'iconsmall')));
-        }
-        if (currentContextInformation.activation) {
-            const value = TUtilsV2.withUpToNDigits("toPrecision", currentContextInformation.activation / 1000, 3);
-            headerElements.push(TUtilsV2.newElm('ter', value + 's', TUtilsV2.newImg(this.ICONS.ACTIVATION, 'iconsmall')));
-        }
-        if (currentContextInformation.recharge) {
-            headerElements.push(TUtilsV2.newElm('ter', (currentContextInformation.recharge / 1000) + 's', TUtilsV2.newImg(this.ICONS.RECHARGE, 'iconsmall')));
+            secondHeaderRow.push(TUtilsV2.newElm('tes', '( ', TUtilsV2.fromHTML(splits.join(' | ')), ' )'));
         }
         const parts = [TUtilsV2.newElm('tet', ...headerElements)];
+        if (secondHeaderRow.length > 1)
+            parts.push(TUtilsV2.newElm('tet.small', ...secondHeaderRow));
         if ('description' in apiObject && apiObject.description) {
             const description = document.createElement('ted');
             description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`;
