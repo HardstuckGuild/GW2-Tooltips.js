@@ -768,12 +768,19 @@ class GW2TooltipsV2 {
             'pvp/amulets': new Map(),
         };
         const statsToGet = new Set();
+        const _legacy_effectErrorStore = new Set();
         for (const gw2Object of scope.getElementsByTagName('gw2object')) {
             const stats = +String(gw2Object.getAttribute('stats'));
             if (!isNaN(stats))
                 statsToGet.add(stats);
-            const objId = +String(gw2Object.getAttribute('objId'));
-            const type = (gw2Object.getAttribute('type') || 'skill') + 's';
+            let objId = +String(gw2Object.getAttribute('objId'));
+            let type = (gw2Object.getAttribute('type') || 'skill') + 's';
+            if (this.config.legacyCompatibility) {
+                if (type === 'effects') {
+                    type = 'skills';
+                    objId = this._legacy_transformEffectToSkillObject(gw2Object, _legacy_effectErrorStore);
+                }
+            }
             if (isNaN(objId) || !(type in objectsToGet))
                 continue;
             const elementsWithThisId = objectsToGet[type].get(objId);
@@ -787,7 +794,7 @@ class GW2TooltipsV2 {
                 const objId = +String(gw2Object.getAttribute('objId'));
                 const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
                 const stackSize = +String(gw2Object.getAttribute('count')) || undefined;
-                if (type == 'specializations')
+                if (type == 'specializations' || type == 'effects')
                     return;
                 if (type == 'pets')
                     return;
@@ -806,6 +813,9 @@ class GW2TooltipsV2 {
                 this.tooltip.style.display = 'none';
                 this.cycleTooltipsHandler = undefined;
             });
+        }
+        if (_legacy_effectErrorStore.size) {
+            console.error("[gw2-tooltips] [legacy-compat] Some effects could not be translated into skills: ", Array.from(_legacy_effectErrorStore));
         }
         if (statsToGet.size > 0)
             APICache.ensureExistence('itemstats', statsToGet.values());
@@ -893,6 +903,7 @@ class GW2TooltipsV2 {
                     case 'Elite':
                         skillSlot = 'Elite';
                         break;
+                    case 'Pet':
                     case 'Profession':
                         skillSlot = slot.slot;
                         break;
@@ -920,7 +931,7 @@ class GW2TooltipsV2 {
             headerElements.push(TUtilsV2.newElm('ter', (currentContextInformation.recharge / 1000) + 's', TUtilsV2.newImg(this.ICONS.RECHARGE, 'iconsmall')));
         }
         const secondHeaderRow = [];
-        if ('palettes' in apiObject)
+        if ('palettes' in apiObject && apiObject.palettes.length)
             secondHeaderRow.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
         else if ('slot' in apiObject)
             secondHeaderRow.push(TUtilsV2.newElm('tes', `( ${apiObject.slot} )`));
@@ -1294,6 +1305,103 @@ class GW2TooltipsV2 {
             const attrString = upgradeIds.join(',');
             if (attrString)
                 itemEl.setAttribute('slotted', attrString);
+        }
+    }
+    _legacy_transformEffectToSkillObject(gw2Object, error_store) {
+        const name = String(gw2Object.getAttribute('objId'));
+        let id = {
+            blight: 62653,
+            bloodstone_blessed: 34917,
+            blue_pylon_power: 31317,
+            chill: 722,
+            quickness: 1187,
+            chilled: 722,
+            fear: 896,
+            alacrity: 30328,
+            protection: 717,
+            vigor: 726,
+            barrier: 0,
+            fury: 725,
+            stability: 1122,
+            stunbreak: 0,
+            aegis: 743,
+            might: 740,
+            champion_of_the_legions: 20845,
+            compromised: 35096,
+            crowd_favor: 36173,
+            curse_of_frailty: 53723,
+            dark_aura: 39978,
+            debilitated: 0,
+            debilitating_void: 0,
+            defense_up: 28482,
+            derangement: 34965,
+            elemental_empowerment: 62733,
+            empowering_auras: 62939,
+            equalization_matrix: 66586,
+            exposed: 28778,
+            expose_weakness: 26660,
+            extreme_vulnerability: 65662,
+            fixated: 47434,
+            growing_rage_ashym: 3362,
+            ignite: 16259,
+            intervention: 35061,
+            invulnerability: 56227,
+            necrosis: 47414,
+            not_sticking_together: 54378,
+            nova: 39193,
+            ooze_pheromone: 21538,
+            photon_saturation: 0,
+            positive_flow: 66665,
+            power_of_the_void: 0,
+            reinforced_armor: 9283,
+            relentless_fire: 62805,
+            retaliation_ashym: 24646,
+            sentinel_retribution: 16350,
+            shattering_ice: 62909,
+            shell_shocked: 33361,
+            spectral_darkness: 31498,
+            sticking_together: 54604,
+            synchronized_vitality: 63840,
+            unnatural_signet: 38224,
+            use_soul_binder: 55630,
+            void_empowerment: 68083,
+            xeras_embrace: 34979,
+        }[name];
+        if (!id) {
+            const hardCoded = {
+                barrier: {
+                    id: 1,
+                    name: 'Barrier',
+                    icon: '1770209.png',
+                    description: "Creates a health barrier that takes damage prior to the health bar. Barrier disappears 5s after being applied. Applying a barrier while one is already active will add to it, but the previously-existing barrier will still disappear 5s after it was originally applied. The amount of barrier generated is based on the source's healing power, and is capped at 50% of the recipient's maximum health.",
+                    description_brief: "Creates a health barrier that takes damage prior to the health bar.",
+                    categories: [], palettes: [],
+                },
+                stunbreak: {
+                    id: 2,
+                    name: 'Stun Break',
+                    description: 'Cancel control effects such as stuns.',
+                    icon: '156654.png',
+                    categories: [], palettes: [],
+                }
+            }[name];
+            if (hardCoded) {
+                id = hardCoded.id;
+                APICache.storage.skills.set(id, hardCoded);
+            }
+        }
+        if (id) {
+            gw2Object.setAttribute('type', 'skill');
+            gw2Object.setAttribute('objId', String(id));
+            return id;
+        }
+        else {
+            gw2Object.innerText = name;
+            gw2Object.title = `Failed to translate effect '${name}'.`;
+            gw2Object.style.cursor = "help";
+            gw2Object.classList.add('error');
+            error_store.add(name);
+            return 0;
         }
     }
     formatItemName(item, context, statSet, upgradeComponent, stackSize = 1) {

@@ -200,6 +200,10 @@ gw2object.gw2objectembed:empty {
 	100% { background-position: 100vw; }
 }
 
+gw2object.error {
+	border-bottom: dotted red 1px;
+}
+
 gw2object.gw2objectembed {
 	height: 1.25em; /* todo use text size */
 	vertical-align: baseline;

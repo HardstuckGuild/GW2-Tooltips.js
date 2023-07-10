@@ -9,8 +9,9 @@
 //TODO(Rennorb): Link minion skills to minion summon skill.
 //TODO(Rennorb): specs, pets, and amulets endpoints.
 //TODO(Rennorb): translation for attributes into 'human readable' (in game) names
-//TODO(Rennorb): Something with the traits is funky, the facts are clearly incomplete for some of them.
-//TODO(Rennorb): Amulet enrichment slot if not there.
+//TODO(Rennorb): Something with the traits is funky, the facts are clearly incomplete for some of them. The linked/trigger skills are missing afaict.
+//TODO(Rennorb): Amulet enrichment slot is not there.
+//TODO(Rennorb): Defiance break on single effect tooltips.
 
 /// <reference path="Collect.ts" />
 
@@ -169,15 +170,24 @@ class GW2TooltipsV2 {
 			'pvp/amulets'  : new Map<number, HTMLElement[] | undefined>(),
 		}
 		const statsToGet = new Set<number>();
+		const _legacy_effectErrorStore = new Set<string>();
 
 		for(const gw2Object of scope.getElementsByTagName('gw2object') as HTMLCollectionOf<HTMLElement>) {
 			const stats = +String(gw2Object.getAttribute('stats'))
 			if(!isNaN(stats)) statsToGet.add(stats);
 
-			const objId = +String(gw2Object.getAttribute('objId'))
+			let objId = +String(gw2Object.getAttribute('objId'))
 			//TODO(Rennorb) @cleanup @compat: this is literally just for naming 'convenience'.
 			// Figure out if we can just get rid of the +'s' or if that poses an issue with backwards compat
-			const type = (gw2Object.getAttribute('type') || 'skill') + 's'
+			let type = (gw2Object.getAttribute('type') || 'skill') + 's'
+
+			if(this.config.legacyCompatibility) {
+				if(type === 'effects') {
+					type = 'skills';
+					objId = this._legacy_transformEffectToSkillObject(gw2Object, _legacy_effectErrorStore);
+				}
+			}
+
 			if(isNaN(objId) || !(type in objectsToGet)) continue;
 
 			const elementsWithThisId = objectsToGet[type as keyof typeof objectsToGet].get(objId);
@@ -191,7 +201,7 @@ class GW2TooltipsV2 {
 				const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
 				const stackSize = +String(gw2Object.getAttribute('count')) || undefined;
 
-				if(type == 'specializations') return; //TODO(Rennorb) @completeness: inline objs
+				if(type == 'specializations' || type == 'effects') return; //TODO(Rennorb) @completeness: inline objs
 				if(type == 'pets') return; //TODO(Rennorb) @completeness
 
 				const data = APICache.storage[type].get(objId);
@@ -209,6 +219,10 @@ class GW2TooltipsV2 {
 				this.tooltip.style.display = 'none';
 				this.cycleTooltipsHandler = undefined;
 			})
+		}
+
+		if(_legacy_effectErrorStore.size) {
+			console.error("[gw2-tooltips] [legacy-compat] Some effects could not be translated into skills: ", Array.from(_legacy_effectErrorStore));
 		}
 
 		if(statsToGet.size > 0) APICache.ensureExistence('itemstats', statsToGet.values());
@@ -268,6 +282,8 @@ class GW2TooltipsV2 {
 			for(const slot of palette.slots) {
 				switch (palette.type) {
 					case 'Equipment':
+						//NOTE(Rennorb): mech skills are part pet part equipment skills...
+						//TODO(Rennorb): Figure out a good way to get the actual slot name for that. Also look at actual pets.
 						if(palette.weapon_type !== 'None') {
 							//TODO(Rennorb) @cleanup: move this to the api side
 							const replaceFn = (_: string, __: string, digit: string) => {
@@ -299,6 +315,7 @@ class GW2TooltipsV2 {
 					case 'Elite':
 						skillSlot = 'Elite'
 						break
+					case 'Pet':
 					case 'Profession':
 						skillSlot = slot.slot
 						break;
@@ -343,7 +360,7 @@ class GW2TooltipsV2 {
 
 		const secondHeaderRow = [];
 		//TODO(Rennorb): slots stuff might not be doable serverside since the server is missing context. this is at least a case of @cleanup
-		if('palettes' in apiObject) secondHeaderRow.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
+		if('palettes' in apiObject && apiObject.palettes.length) secondHeaderRow.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
 		else if('slot' in apiObject) secondHeaderRow.push(TUtilsV2.newElm('tes', `( ${apiObject.slot} )`));
 
 		secondHeaderRow.push(TUtilsV2.newElm('div.flexbox-fill')); // split, now the right side
@@ -775,6 +792,114 @@ class GW2TooltipsV2 {
 
 			const attrString = upgradeIds.join(',');
 			if(attrString) itemEl.setAttribute('slotted', attrString);
+		}
+	}
+
+	//TODO(Rennorb) @cleanup: move
+	_legacy_transformEffectToSkillObject(gw2Object : HTMLElement, error_store : Set<string>) : number {
+		const name = String(gw2Object.getAttribute('objId'));
+		let id = ({
+			blight                  : 62653,
+			bloodstone_blessed      : 34917,
+			blue_pylon_power        : 31317, //maybe wrong (vale guardian)
+			chill                   : 722,
+			quickness               : 1187,
+			chilled                 : 722,
+			fear                    : 896,
+			alacrity                : 30328,
+			protection              : 717,
+			vigor                   : 726,
+			barrier                 : 0, //TODO
+			fury                    : 725,
+			stability               : 1122,
+			stunbreak               : 0, //TODO
+			aegis                   : 743,
+			might                   : 740,
+			champion_of_the_legions : 20845, //maybe wrong (rock fest thing?)
+			compromised             : 35096,
+			crowd_favor             : 36173, //maybe wrong (marionette)
+			curse_of_frailty        : 53723, //maybe wrong (pirate fractal)
+			dark_aura               : 39978,
+			debilitated             : 0, //TODO ko
+			debilitating_void       : 0, //TODO ankah
+			defense_up              : 28482,
+			derangement             : 34965,
+			elemental_empowerment   : 62733,
+			empowering_auras        : 62939,
+			equalization_matrix     : 66586, //maybe wrong (ko)
+			exposed                 : 28778, //maybe wrong
+			expose_weakness         : 26660, //maybe wrong
+			extreme_vulnerability   : 65662,
+			fixated                 : 47434, //maybe wrong
+			//gems_big                : ,
+			//gold_gold_big           : ,
+			growing_rage_ashym      : 3362, //maybe wrong (urban battleground)
+			//h                       : ,
+			ignite                  : 16259,
+			intervention            : 35061,
+			invulnerability         : 56227,
+			necrosis                : 47414,
+			not_sticking_together   : 54378,
+			nova                    : 39193, //there is also the upgraded version with aegis
+			ooze_pheromone          : 21538,
+			photon_saturation       : 0, //TODO ah cm
+			positive_flow           : 66665,
+			power_of_the_void       : 0, //TODO xjj
+			//q                       : ,
+			reinforced_armor        : 9283,
+			relentless_fire         : 62805,
+			retaliation_ashym       : 24646, //maybe wrong
+			sentinel_retribution    : 16350,
+			shattering_ice          : 62909,
+			shell_shocked           : 33361,
+			spectral_darkness       : 31498,
+			sticking_together       : 54604,
+			synchronized_vitality   : 63840, //maybe wrong(ko)
+			unnatural_signet        : 38224,
+			use_soul_binder         : 55630,
+			void_empowerment        : 68083,
+			xeras_embrace           : 34979,
+		} as any)[name]
+
+		if(!id) {
+			//NOTE(Rennorb): these don't actually exist and need to be synthesized.
+			const hardCoded = ({
+				barrier: {
+					id: 1,
+					name: 'Barrier',
+					icon: '1770209.png',
+					description: "Creates a health barrier that takes damage prior to the health bar. Barrier disappears 5s after being applied. Applying a barrier while one is already active will add to it, but the previously-existing barrier will still disappear 5s after it was originally applied. The amount of barrier generated is based on the source's healing power, and is capped at 50% of the recipient's maximum health.",
+					description_brief: "Creates a health barrier that takes damage prior to the health bar.",
+					categories: [], palettes: [],
+				},
+				stunbreak: {
+					id: 2,
+					name: 'Stun Break',
+					description: 'Cancel control effects such as stuns.',
+					icon: '156654.png',
+					categories: [], palettes: [],
+				}
+			} as {[k : string] : API.Skill})[name];
+
+			if(hardCoded) {
+				id = hardCoded.id;
+				//TODO(Rennorb) @cleanup: could probably move this out
+				APICache.storage.skills.set(id, hardCoded);
+			}
+		}
+
+		if(id) {
+			gw2Object.setAttribute('type', 'skill');
+			gw2Object.setAttribute('objId', String(id));
+			return id;
+		}
+		else {
+			gw2Object.innerText = name;
+			gw2Object.title = `Failed to translate effect '${name}'.`;
+			gw2Object.style.cursor = "help";
+			gw2Object.classList.add('error');
+			error_store.add(name);
+			return 0;
 		}
 	}
 

@@ -1,5 +1,5 @@
 namespace LegacyCompat {
-	type ObjectType = 'skill' | 'trait' | 'item' | 'specialization' | 'pet' | 'pvp/amulet' | 'specialization';
+	type ObjectType = 'skill' | 'trait' | 'item' | 'specialization' | 'pet' | 'pvp/amulet' | 'specialization' | 'effect';
 }
 
 namespace API {
@@ -346,7 +346,7 @@ type ObjectDataStorage = {
 }
 
 type ObjectsToFetch = {
-	[k in `${LegacyCompat.ObjectType}s`] : Map<number, HTMLElement[] | undefined>
+	[k in `${Exclude<LegacyCompat.ObjectType, 'effect'>}s`] : Map<number, HTMLElement[] | undefined>
 }
 
 interface HandlerParams<TFact = API.Fact> {

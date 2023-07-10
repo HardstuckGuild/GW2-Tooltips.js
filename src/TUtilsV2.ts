@@ -40,7 +40,7 @@ class TUtilsV2 {
 			.replaceAll('\n', '<br />')
 		: '';
 
-	//TODO(Rennorb) @cleanup: we should jsut use consistent names.
+	//TODO(Rennorb) @cleanup: we should just use consistent names.
 	static Uncapitalize = <T extends string>(str : T) => str.charAt(0).toLowerCase() + str.slice(1) as Uncapitalize<T>;
 
 	static withUpToNDigits(mode : 'toPrecision' | 'toFixed', x : number, digits : number) {
