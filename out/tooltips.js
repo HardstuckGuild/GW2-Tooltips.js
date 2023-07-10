@@ -1041,17 +1041,19 @@ class GW2TooltipsV2 {
         const addObjectsToChain = (currentSkill) => {
             objectChain.push(currentSkill);
             if ('palettes' in currentSkill) {
+                let hasChain = false;
                 for (const palette of currentSkill.palettes) {
                     for (const slot of palette.slots) {
                         if (slot.next_chain && slot.profession !== 'None') {
                             const nextSkillInChain = APICache.storage.skills.get(slot.next_chain);
                             if (nextSkillInChain) {
+                                hasChain = true;
                                 addObjectsToChain(nextSkillInChain);
                             }
                         }
                     }
                 }
-                if (currentSkill.sub_skills) {
+                if (!hasChain && currentSkill.sub_skills) {
                     for (const subSkillId of currentSkill.sub_skills) {
                         const subSkillInChain = APICache.storage.skills.get(subSkillId);
                         if (subSkillInChain && subSkillInChain.palettes.some(palette => validPaletteTypes.includes(palette.type))) {

@@ -477,18 +477,23 @@ class GW2TooltipsV2 {
 			objectChain.push(currentSkill)
 
 			if('palettes' in currentSkill) {
+				let hasChain = false;
 				for(const palette of currentSkill.palettes) {
 					for(const slot of palette.slots) {
 						if(slot.next_chain && slot.profession !== 'None') {
 							const nextSkillInChain = APICache.storage.skills.get(slot.next_chain);
 							if(nextSkillInChain) {
+								hasChain = true;
 								addObjectsToChain(nextSkillInChain)
 							}
 						}
 					}
 				}
 
-				if(currentSkill.sub_skills) {
+				//TODO(Rennorb): Apparently sub_skills is of very questionable correctness and seems to only be used internally.
+				// Using it in this way might produce unexpected results.
+				//NOTE(Rennorb): Checking for the skill chain here since it usually produces duplicated entries if one is present and the skill chain is more authoritative.
+				if(!hasChain && currentSkill.sub_skills) {
 					for(const subSkillId of currentSkill.sub_skills) {
 						const subSkillInChain = APICache.storage.skills.get(subSkillId);
 						if(subSkillInChain && subSkillInChain.palettes.some(palette => validPaletteTypes.includes(palette.type))) {
