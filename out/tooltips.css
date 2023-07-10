@@ -15,6 +15,9 @@
 	--gw2-tt-font-size-m: 1.17em;
 	--gw2-tt-color-shadow: black;
 	--gw2-tt-color-loading: #393827;
+
+	--gw2-tt-font-body: 'Trebuchet MS', sans-serif;
+	--gw2-tt-font-title: 'Trebuchet MS', sans-serif;
 }
 
 .color-abilitytype { color: #FFEC8CFF }
@@ -49,7 +52,7 @@
 	position: absolute;
 	top: 0;
 	left: 0;
-	max-width: min(50ch, 100%);
+	max-width: min(48ch, 100%);
 	min-width: 40ch;
 
 	display: flex;
@@ -57,8 +60,9 @@
 	flex-wrap: wrap;
 	gap: 0 .25rem;
 
-	line-height: 1.2;
+	line-height: 1.125;
 	font-size: var(--gw2-tt-font-size-s);
+	font-family: var(--gw2-tt-font-body);
 	
 	pointer-events: none;  /* important */
 }
@@ -107,6 +111,7 @@
 }
 .tooltip:not(.item) tet teb {
 	color: var(--gw2-tt-color-tt-title);
+	font-family: var(--gw2-tt-font-title);
 }
 
 .tooltipWrapper teb, .tooltipWrapper te {
