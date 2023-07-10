@@ -931,10 +931,11 @@ class GW2TooltipsV2 {
             headerElements.push(TUtilsV2.newElm('ter', (currentContextInformation.recharge / 1000) + 's', TUtilsV2.newImg(this.ICONS.RECHARGE, 'iconsmall')));
         }
         const secondHeaderRow = [];
-        if ('palettes' in apiObject && apiObject.palettes.length)
-            secondHeaderRow.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
-        else if ('slot' in apiObject)
-            secondHeaderRow.push(TUtilsV2.newElm('tes', `( ${apiObject.slot} )`));
+        {
+            let slotName = ('slot' in apiObject && apiObject.slot) || ('palettes' in apiObject && this.getSlotName(apiObject));
+            if (slotName)
+                secondHeaderRow.push(TUtilsV2.newElm('tes', `( ${slotName} )`));
+        }
         secondHeaderRow.push(TUtilsV2.newElm('div.flexbox-fill'));
         if ('override_groups' in apiObject && apiObject.override_groups) {
             const baseContext = new Set(['Pve', 'Pvp', 'Wvw']);

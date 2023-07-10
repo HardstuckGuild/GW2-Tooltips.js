@@ -359,9 +359,11 @@ class GW2TooltipsV2 {
 		}
 
 		const secondHeaderRow = [];
-		//TODO(Rennorb): slots stuff might not be doable serverside since the server is missing context. this is at least a case of @cleanup
-		if('palettes' in apiObject && apiObject.palettes.length) secondHeaderRow.push(TUtilsV2.newElm('tes', `( ${this.getSlotName(apiObject)} )`));
-		else if('slot' in apiObject) secondHeaderRow.push(TUtilsV2.newElm('tes', `( ${apiObject.slot} )`));
+		{
+			//TODO(Rennorb): slots stuff might not be doable serverside since the server is missing context. this is at least a case of @cleanup
+			let slotName = ('slot' in apiObject && apiObject.slot) || ('palettes' in apiObject && this.getSlotName(apiObject));
+			if(slotName) secondHeaderRow.push(TUtilsV2.newElm('tes', `( ${slotName} )`));
+		}
 
 		secondHeaderRow.push(TUtilsV2.newElm('div.flexbox-fill')); // split, now the right side
 
