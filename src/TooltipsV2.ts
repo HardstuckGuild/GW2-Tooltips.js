@@ -775,7 +775,8 @@ class GW2TooltipsV2 {
 			const counts : Character['upgradeCounts'] = {};
 			for(const [id, c] of Object.entries(ctx.character.upgradeCounts)) {
 				let item;
-				if((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Default')
+				//NOTE(Rennorb): Pvp runes / sigils have type default; should fix this on the api side
+				if((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Default' && !item.flags.includes('Pvp'))
 					counts[id] = c;
 			}
 			return counts;
@@ -797,8 +798,8 @@ class GW2TooltipsV2 {
 			{
 				let id, item;
 				if((id = +String(itemEl.getAttribute('objid'))) && (item = APICache.storage.items.get(id)) && 'slots' in item) {
-					for(const s of item.slots) {
-						if(s == 'Infusion') {
+					for(const slot of item.slots) {
+						if(slot == 'Infusion') {
 							const remainingInfusions = remainingInfusionsByContext[itemCtx] as { [k : string] : number };
 							for(const infusionId of Object.keys(remainingInfusions)) {
 								upgradeIds.push(infusionId);

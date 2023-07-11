@@ -26,7 +26,8 @@ class Collect {
 
 			let amountToAdd = 1;
 
-			if(item.subtype == "Default") {
+			//NOTE(Rennorb): Pvp runes / sigils have type default; should fix this on the api side
+			if(item.subtype == "Default" && !item.flags.includes('Pvp')) {
 				if(!(amountToAdd = +String(element.getAttribute('count')))) { // modern version just has the item count as attribute
 
 					if(GW2TooltipsV2.config.legacyCompatibility) {
@@ -131,7 +132,8 @@ class Collect {
 					tier = item.tiers[tierNumber - 1];
 				}
 				else {
-					if(item.subtype == "Default") {
+					//NOTE(Rennorb): Pvp runes / sigils have type default; should fix this on the api side
+					if(item.subtype == "Default" && !item.flags.includes('Pvp')) {
 						if(!(amountToAdd = +String(element.getAttribute('count')))) { // modern version just has the item count as attribute
 
 							if(GW2TooltipsV2.config.legacyCompatibility) {

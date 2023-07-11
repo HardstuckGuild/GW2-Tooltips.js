@@ -187,7 +187,7 @@ class Collect {
             if (!item || !('subtype' in item) || (item.subtype != 'Rune' && item.subtype != 'Default'))
                 continue;
             let amountToAdd = 1;
-            if (item.subtype == "Default") {
+            if (item.subtype == "Default" && !item.flags.includes('Pvp')) {
                 if (!(amountToAdd = +String(element.getAttribute('count')))) {
                     if (GW2TooltipsV2.config.legacyCompatibility) {
                         amountToAdd = this._legacy_getInfusionCount(element);
@@ -286,7 +286,7 @@ class Collect {
                     tier = item.tiers[tierNumber - 1];
                 }
                 else {
-                    if (item.subtype == "Default") {
+                    if (item.subtype == "Default" && !item.flags.includes('Pvp')) {
                         if (!(amountToAdd = +String(element.getAttribute('count')))) {
                             if (GW2TooltipsV2.config.legacyCompatibility) {
                                 amountToAdd = this._legacy_getInfusionCount(element);
@@ -1352,7 +1352,7 @@ class GW2TooltipsV2 {
             const counts = {};
             for (const [id, c] of Object.entries(ctx.character.upgradeCounts)) {
                 let item;
-                if ((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Default')
+                if ((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Default' && !item.flags.includes('Pvp'))
                     counts[id] = c;
             }
             return counts;
@@ -1370,8 +1370,8 @@ class GW2TooltipsV2 {
             {
                 let id, item;
                 if ((id = +String(itemEl.getAttribute('objid'))) && (item = APICache.storage.items.get(id)) && 'slots' in item) {
-                    for (const s of item.slots) {
-                        if (s == 'Infusion') {
+                    for (const slot of item.slots) {
+                        if (slot == 'Infusion') {
                             const remainingInfusions = remainingInfusionsByContext[itemCtx];
                             for (const infusionId of Object.keys(remainingInfusions)) {
                                 upgradeIds.push(infusionId);
