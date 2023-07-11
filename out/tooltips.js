@@ -501,14 +501,14 @@ class FactsProcessor {
                 var _a;
                 const attribute = context.character.stats[TUtilsV2.Uncapitalize(fact.target)] || 0;
                 const value = Math.round((fact.value + attribute * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count);
-                const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocaleAttibutes(attribute);
+                const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(attribute);
                 const coefficent = ((_a = window.GW2TooltipsConfig) === null || _a === void 0 ? void 0 : _a.preferCorrectnessOverExtraInfo) ? '' : ` (${TUtilsV2.withUpToNDigits('toFixed', fact.attribute_multiplier, 4)})`;
                 return [TUtilsV2.newElm('tem', `${text}: ${value}${coefficent}`)];
             },
             AttributeAdjust: ({ fact }) => {
                 const value = Math.round((fact.range[1] - fact.range[0]) / (context.character.level / 80) + fact.range[0]);
                 const sign = value > 0 ? '+' : '';
-                const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocaleAttibutes(fact.target);
+                const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(fact.target);
                 return [TUtilsV2.newElm('tem', `${text}: ${sign}${value}`)];
             },
             Buff: ({ fact, buff }) => {
@@ -541,7 +541,7 @@ class FactsProcessor {
             HealthAdjustHealing: ({ fact }) => {
                 const attribute = context.character.stats[TUtilsV2.Uncapitalize(fact.attribute)] || 0;
                 const value = Math.round((fact.value + attribute * fact.multiplier) * fact.hit_count);
-                const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocaleAttibutes(fact.attribute);
+                const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(fact.attribute);
                 return [TUtilsV2.newElm('tem', `${text}: ${value}`)];
             },
             Number: ({ fact }) => {
@@ -551,23 +551,18 @@ class FactsProcessor {
                 return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.percent)}%`)];
             },
             PercentDamage: ({ fact }) => {
-                const { percent, text } = fact;
-                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}%`)];
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.percent)}%`)];
             },
-            PercentLifeForceAdjust: ({ fact }) => {
-                const { percent, text } = fact;
-                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}%`)];
-            },
-            PercentHealth: ({ fact }) => {
-                const { percent, text } = fact;
-                const hp = 20000;
-                const raw = Math.round((hp * percent) * 0.01);
+            PercentLifeForceAdjust: ({ fact: { percent, text } }) => {
+                const raw = Math.round(GW2TooltipsV2.getHealth(context.character) * 0.69 * percent * 0.01);
                 return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`)];
             },
-            LifeForceAdjust: ({ fact }) => {
-                const { percent, text } = fact;
-                const hp = 20000;
-                const raw = Math.round((hp * percent) * 0.01);
+            PercentHealth: ({ fact: { percent, text } }) => {
+                const raw = Math.round((GW2TooltipsV2.getHealth(context.character) * percent) * 0.01);
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`)];
+            },
+            LifeForceAdjust: ({ fact: { percent, text } }) => {
+                const raw = Math.round(GW2TooltipsV2.getHealth(context.character) * 0.69 * percent * 0.01);
                 return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`)];
             },
             Damage: ({ fact, weaponStrength }) => {
@@ -585,11 +580,11 @@ class FactsProcessor {
             },
             ComboField: ({ fact }) => {
                 const { field_type, text } = fact;
-                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.mapLocaleComboFieldType(field_type)}`)];
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.mapLocale(field_type)}`)];
             },
             ComboFinisher: ({ fact }) => {
                 const { finisher_type, text } = fact;
-                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.mapLocaleComboFinisherType(finisher_type)}`)];
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.mapLocale(finisher_type)}`)];
             },
             BuffConversion: ({ fact }) => {
                 return [TUtilsV2.newElm('tem', `Gain ${fact.target} Based on a Percentage of ${fact.source}: ${fact.percent}%`)];
@@ -629,9 +624,6 @@ class FactsProcessor {
                 buff = buff || this.MissingBuff;
                 let node = TUtilsV2.newElm('te', TUtilsV2.newImg(buff.icon, 'iconmed'), TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name}`));
                 return [node];
-            },
-            Recharge: ({ fact }) => {
-                return [TUtilsV2.newElm('div', '((RECHARGE NOT IMPLEMENTED))')];
             },
             Range: ({ fact }) => {
                 var _a;
@@ -737,24 +729,14 @@ class TUtilsV2 {
             return this.withUpToNDigits('toFixed', value, 3);
         }
     }
-    static mapLocaleComboFieldType(type) {
-        return type;
-    }
-    static mapLocaleComboFinisherType(type) {
-        return type;
-    }
-    static mapLocaleAttibutes(type) {
+    static mapLocale(type) {
         switch (type) {
             case 'ConditionDmg': return 'Condition Damage';
             case 'CritDamage': return 'Ferocity';
+            case 'BowLong': return 'Longbow';
+            case 'BowShort': return 'Shortbow';
             default: return type;
         }
-    }
-    static calculateConditionDuration(level, expertise) {
-        return expertise / (this.LUT_CRITICAL_DEFENSE[level] * (15 / this.LUT_CRITICAL_DEFENSE[80]));
-    }
-    static calculateBoonDuration(level, concentration) {
-        return concentration / (this.LUT_CRITICAL_DEFENSE[level] * (15 / this.LUT_CRITICAL_DEFENSE[80]));
     }
 }
 TUtilsV2.iconSource = 'https://assets.gw2dat.com/';
@@ -769,9 +751,6 @@ TUtilsV2.GW2Text2HTML = (text, tag = 'span') => text
         .replaceAll('\n', '<br />')
     : '';
 TUtilsV2.Uncapitalize = (str) => str.charAt(0).toLowerCase() + str.slice(1);
-TUtilsV2.LUT_CRITICAL_DEFENSE = [
-    1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 5.2, 5.4, 5.6, 5.8, 6.0, 6.2, 6.4, 6.6, 6.8, 7.0, 7.3, 7.6, 7.9, 8.2, 8.5, 8.8, 9.1, 9.4, 9.7, 10.0, 10.3, 10.6, 10.9, 11.2, 11.5, 11.8, 12.1, 12.4, 12.7, 13.0, 13.4, 13.8, 14.2, 14.6, 15.0, 15.4, 15.8, 16.2, 16.6, 17.0, 17.4, 17.8, 18.2, 18.6, 19.0, 19.4, 19.8, 20.2, 20.6, 21.0, 21.5, 22.0, 22.5, 23.0, 23.5, 24.0, 24.5, 25.0, 25.5, 26.0, 26.5, 27.0, 27.5, 28.0, 28.5, 29.0, 29.5, 30.0, 30.5, 31.0,
-];
 class GW2TooltipsV2 {
     static createCompleteContext(partialContext) {
         var _a, _b, _c;
@@ -962,14 +941,13 @@ class GW2TooltipsV2 {
                 switch (palette.type) {
                     case 'Equipment':
                         if (palette.weapon_type !== 'None') {
-                            const replaceFn = (_, __, digit) => {
+                            skillSlot = slot.slot.replace(/(Offhand|Main)(\d)/, (_, __, digit) => {
                                 if (['Greatsword', 'Hammer', 'BowLong', 'Rifle', 'BowShort', 'Staff'].includes(palette.weapon_type) &&
                                     ['Offhand1', 'Offhand2'].includes(slot.slot)) {
                                     digit = digit === '1' ? '4' : '5';
                                 }
-                                return `${palette.weapon_type} ${digit}`;
-                            };
-                            skillSlot = slot.slot.replace(/(Offhand|Main)(\d)/, replaceFn);
+                                return `${TUtilsV2.mapLocale(palette.weapon_type)} ${digit}`;
+                            });
                         }
                         break;
                     case 'Standard':
@@ -1098,6 +1076,22 @@ class GW2TooltipsV2 {
             info.facts = info.facts.filter(f => !f.requires_trait || !f.requires_trait.some(t => !context.character.traits.includes(t)));
         }
         return info;
+    }
+    static getHealth(character) {
+        const baseHealth = !character.profession
+            ? 1000
+            : {
+                Guardian: 1645,
+                Thief: 1645,
+                Elementalist: 1645,
+                Engineer: 5922,
+                Ranger: 5922,
+                Mesmer: 5922,
+                Revenant: 5922,
+                Necromancer: 9212,
+                Warrior: 9212,
+            }[character.profession];
+        return baseHealth + character.stats.vitality * 10;
     }
     static getWeaponStrength({ weapon_type, type: palette_type }) {
         let weaponStrength = {
@@ -1492,6 +1486,12 @@ class GW2TooltipsV2 {
             return 0;
         }
     }
+    static calculateConditionDuration(level, expertise) {
+        return expertise / (this.LUT_CRITICAL_DEFENSE[level] * (15 / this.LUT_CRITICAL_DEFENSE[80]));
+    }
+    static calculateBoonDuration(level, concentration) {
+        return concentration / (this.LUT_CRITICAL_DEFENSE[level] * (15 / this.LUT_CRITICAL_DEFENSE[80]));
+    }
     static formatItemName(item, context, statSet, upgradeComponent, stackSize = 1) {
         let name;
         if (item.type == 'TraitGuide') {
@@ -1625,6 +1625,9 @@ GW2TooltipsV2.LUT_RARITY = {
     Ascended: 4,
     Legendary: 4,
 };
+GW2TooltipsV2.LUT_CRITICAL_DEFENSE = [
+    1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 5.2, 5.4, 5.6, 5.8, 6.0, 6.2, 6.4, 6.6, 6.8, 7.0, 7.3, 7.6, 7.9, 8.2, 8.5, 8.8, 9.1, 9.4, 9.7, 10.0, 10.3, 10.6, 10.9, 11.2, 11.5, 11.8, 12.1, 12.4, 12.7, 13.0, 13.4, 13.8, 14.2, 14.6, 15.0, 15.4, 15.8, 16.2, 16.6, 17.0, 17.4, 17.8, 18.2, 18.6, 19.0, 19.4, 19.8, 20.2, 20.6, 21.0, 21.5, 22.0, 22.5, 23.0, 23.5, 24.0, 24.5, 25.0, 25.5, 26.0, 26.5, 27.0, 27.5, 28.0, 28.5, 29.0, 29.5, 30.0, 30.5, 31.0,
+];
 GW2TooltipsV2.ICONS = {
     COIN_COPPER: 156902,
     COIN_SILVER: 156907,

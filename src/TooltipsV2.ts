@@ -287,16 +287,15 @@ class GW2TooltipsV2 {
 						//TODO(Rennorb): Figure out a good way to get the actual slot name for that. Also look at actual pets.
 						if(palette.weapon_type !== 'None') {
 							//TODO(Rennorb) @cleanup: move this to the api side
-							const replaceFn = (_: string, __: string, digit: string) => {
+							skillSlot = slot.slot.replace(/(Offhand|Main)(\d)/, (_, __, digit) => {
 								if(
 									['Greatsword', 'Hammer', 'BowLong', 'Rifle', 'BowShort', 'Staff'].includes(palette.weapon_type) &&
 									['Offhand1', 'Offhand2'].includes(slot.slot)
 								) {
 									digit = digit === '1' ? '4' : '5'
 								}
-								return `${palette.weapon_type} ${digit}`
-							}
-							skillSlot = slot.slot.replace(/(Offhand|Main)(\d)/, replaceFn)
+								return `${TUtilsV2.mapLocale(palette.weapon_type)} ${digit}`
+							});
 						}
 						break
 					case 'Standard':
@@ -451,6 +450,26 @@ class GW2TooltipsV2 {
 			info.facts = info.facts.filter(f => !f.requires_trait || !f.requires_trait.some(t => !context.character.traits.includes(t)));
 		}
 		return info;
+	}
+
+	//TODO(Rennorb) @correctness: this does not take traits into consideration
+	static getHealth(character : Character) : number {
+		//TODO(Rennorb): level scaling
+		const baseHealth = !character.profession
+			? 1000 //TODO(Rennorb): none?
+			: ({
+					Guardian     : 1645,
+					Thief        : 1645,
+					Elementalist : 1645,
+					Engineer     : 5922,
+					Ranger       : 5922,
+					Mesmer       : 5922,
+					Revenant     : 5922,
+					Necromancer  : 9212,
+					Warrior      : 9212,
+				} as { [k in Profession] : number })[character.profession];
+
+		return baseHealth + character.stats.vitality * 10;
 	}
 
 	static getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) : number {
@@ -907,6 +926,15 @@ class GW2TooltipsV2 {
 		}
 	}
 
+	static calculateConditionDuration(level : number, expertise : number) {
+		return expertise / (this.LUT_CRITICAL_DEFENSE[level] * (15 / this.LUT_CRITICAL_DEFENSE[80]));
+	}
+
+	static calculateBoonDuration(level : number, concentration : number) {
+		return concentration / (this.LUT_CRITICAL_DEFENSE[level] * (15 / this.LUT_CRITICAL_DEFENSE[80]));
+	}
+
+	//TODO(Rennorb): have another look at the suffix. might still be missing in the export
 	static formatItemName(item : API.Item, context : Context, statSet? : API.AttributeSet, upgradeComponent? : any, stackSize = 1) : string {
 		let name;
 		if(item.type == 'TraitGuide') {
@@ -1004,6 +1032,10 @@ class GW2TooltipsV2 {
 		Ascended : 4,
 		Legendary: 4,
 	};
+
+	static LUT_CRITICAL_DEFENSE = [
+		1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 5.2, 5.4, 5.6, 5.8, 6.0, 6.2, 6.4, 6.6, 6.8, 7.0, 7.3, 7.6, 7.9, 8.2, 8.5, 8.8, 9.1, 9.4, 9.7, 10.0, 10.3, 10.6, 10.9, 11.2, 11.5, 11.8, 12.1, 12.4, 12.7, 13.0, 13.4, 13.8, 14.2, 14.6, 15.0, 15.4, 15.8, 16.2, 16.6, 17.0, 17.4, 17.8, 18.2, 18.6, 19.0, 19.4, 19.8, 20.2, 20.6, 21.0, 21.5, 22.0, 22.5, 23.0, 23.5, 24.0, 24.5, 25.0, 25.5, 26.0, 26.5, 27.0, 27.5, 28.0, 28.5, 29.0, 29.5, 30.0, 30.5, 31.0,
+	];
 
 	static ICONS = {
 		COIN_COPPER     : 156902,

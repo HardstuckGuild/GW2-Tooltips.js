@@ -20,7 +20,7 @@ interface Context {
 }
 
 type GameMode = 'Pve' | 'Pvp' | 'Wvw';
-type Profession = 'Guardia' | 'Warrio' | 'Enginee' | 'Range' | 'Thie' | 'Elementalis' | 'Mesme' | 'Necromance' | 'Revenant'
+type Profession = 'Guardian' | 'Warrior' | 'Engineer' | 'Ranger' | 'Thief' | 'Elementalist' | 'Mesmer' | 'Necromancer' | 'Revenant'
 
 interface Character {
 	level         : number

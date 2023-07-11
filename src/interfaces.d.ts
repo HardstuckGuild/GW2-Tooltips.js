@@ -216,13 +216,7 @@ namespace API {
 		prefix : number
 	}
 
-    // Custom facts
-	interface RechargeFact extends BasicFact<'Recharge'> {
-		text?    : string
-		icon?    : string
-		duration : Milliseconds
-	}
-
+	// Custom facts
 	interface RangeFact extends BasicFact<'Range'> {
 		text? : string
 		icon? : string
@@ -256,7 +250,6 @@ namespace API {
 		PrefixedBuff                     : PrefixedBuffFact
 		PrefixedBuffBrief                : PrefixedBuffBriefFact
 		// Custom facts
-		Recharge                         : RechargeFact
 		Range                            : RangeFact
 		StunBreak                        : StunBreakFact
 	}

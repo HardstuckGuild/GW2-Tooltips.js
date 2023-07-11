@@ -144,14 +144,14 @@ class FactsProcessor {
 				//TODO(Rennorb) @cleanup
 				const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0;
 				const value = Math.round((fact.value + attribute * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count);
-				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocaleAttibutes(attribute);
+				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(attribute);
 				const coefficent = window.GW2TooltipsConfig?.preferCorrectnessOverExtraInfo ? '' : ` (${TUtilsV2.withUpToNDigits('toFixed', fact.attribute_multiplier, 4)})`;
 				return [TUtilsV2.newElm('tem', `${text}: ${value}${coefficent}`)];
 			},
 			AttributeAdjust : ({fact}) => {
 				const value = Math.round((fact.range[1] - fact.range[0]) / (context.character.level / 80) + fact.range[0]);
 				const sign = value > 0 ? '+' : ''
-				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocaleAttibutes(fact.target);
+				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(fact.target);
 				return [TUtilsV2.newElm('tem', `${text}: ${sign}${value}`)];
 			},
 			Buff : ({fact, buff}) =>  {
@@ -177,7 +177,7 @@ class FactsProcessor {
 			},
 			BuffBrief : ({fact, buff}) =>  {
 				if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api
+				buff = buff || this.MissingBuff;
 				iconSlug = buff.icon || iconSlug;
 
 				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text).replace("%str1%", buff.name)}`)];
@@ -189,7 +189,7 @@ class FactsProcessor {
 				//TODO(Rennorb) @cleanup
 				const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.attribute)] || 0;
 				const value = Math.round((fact.value + attribute * fact.multiplier) * fact.hit_count);
-				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocaleAttibutes(fact.attribute);
+				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(fact.attribute);
 
 				return [TUtilsV2.newElm('tem', `${text}: ${value}`)];
 			},
@@ -200,25 +200,25 @@ class FactsProcessor {
 				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.percent)}%`)];
 			},
 			PercentDamage : ({fact}) => {
-				const {percent, text} = fact;
-				// TODO(mithos) game shows an actual raw number here. to implement this we need to get the characters health
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}%`)];
+				// TODO(mithos) game shows an actual raw number here. to implement this we need to get the characters damage
+				//NOTE(Rennorb): this is going to be verry difficult if not impossible
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.percent)}%`)];
 			},
-			PercentLifeForceAdjust : ({fact}) => {
-				const {percent, text} = fact;
-				// TODO(mithos) game shows an actual raw number here. to implement this we need to get the characters health
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}%`)];
-			},
-			PercentHealth : ({fact}) => {
-				const {percent, text} = fact;
-				const hp = 20_000; // TODO(mithos) implement getting the actual calculated hp
-				const raw = Math.round((hp * percent) * 0.01);
+			PercentLifeForceAdjust : ({fact: {percent, text}}) => {
+				//NOTE(Rennorb): lifeforce is 69% of the hp pool
+				//TODO(Rennorb): traits
+				const raw = Math.round(GW2TooltipsV2.getHealth(context.character) * 0.69 * percent * 0.01);
 				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`)];
 			},
-			LifeForceAdjust : ({fact}) => {
-				const {percent, text} = fact;
-				const hp = 20_000; // TODO(mithos) implement getting the actual calculated hp
-				const raw = Math.round((hp * percent) * 0.01);
+			PercentHealth : ({fact: {percent, text}}) => {
+				const raw = Math.round((GW2TooltipsV2.getHealth(context.character) * percent) * 0.01);
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`)];
+			},
+			//TODO(Rennorb): this seems to be verry much percent based. Whats the difference to PercentLifeForceAdjust here?
+			LifeForceAdjust : ({fact: {percent, text}}) => {
+				//NOTE(Rennorb): lifeforce is 69% of the hp pool
+				//TODO(Rennorb): traits
+				const raw = Math.round(GW2TooltipsV2.getHealth(context.character) * 0.69 * percent * 0.01);
 				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`)];
 			},
 			Damage : ({fact, weaponStrength}) => {
@@ -235,11 +235,11 @@ class FactsProcessor {
 			},
 			ComboField : ({fact}) =>  {
 				const {field_type, text} = fact;
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.mapLocaleComboFieldType(field_type)}`)];
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.mapLocale(field_type)}`)];
 			},
 			ComboFinisher : ({fact}) => {
 				const {finisher_type, text} = fact;
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.mapLocaleComboFinisherType(finisher_type)}`)];
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.mapLocale(finisher_type)}`)];
 			},
 			BuffConversion : ({fact}) => {
 				return [TUtilsV2.newElm('tem', `Gain ${fact.target} Based on a Percentage of ${fact.source}: ${fact.percent}%`)];
@@ -291,10 +291,6 @@ class FactsProcessor {
 				);
 
 				return [node]
-			},
-			// Unused?
-			Recharge : ({fact}) => {
-				return [TUtilsV2.newElm('div', '((RECHARGE NOT IMPLEMENTED))')];
 			},
 			Range : ({fact}) => {
 				const {min ,max} = fact;
