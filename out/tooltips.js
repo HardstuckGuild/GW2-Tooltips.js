@@ -1294,7 +1294,7 @@ class GW2TooltipsV2 {
                 let slottedItemIdx;
                 switch (s) {
                     case 'Upgrade':
-                        slottedItemIdx = slottedItems.findIndex(i => ['Rune', 'Sigil', 'Gem'].includes(i.subtype));
+                        slottedItemIdx = slottedItems.findIndex(i => ['Rune', 'Sigil', 'Gem'].includes(i.subtype) || (i.subtype == 'Default' && i.flags.includes('Pvp')));
                         break;
                     case 'Infusion':
                         slottedItemIdx = slottedItems.findIndex(i => i.subtype == 'Default');

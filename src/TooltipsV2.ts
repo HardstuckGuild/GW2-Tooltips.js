@@ -681,7 +681,7 @@ class GW2TooltipsV2 {
 				let slottedItemIdx;
 				//TODO(Rennorb) @correctness @cleanup: this should use UpgradeComponent Flags
 				switch(s) {
-					case 'Upgrade'   : slottedItemIdx = slottedItems!.findIndex(i => ['Rune', 'Sigil', 'Gem'].includes(i.subtype)); break;
+					case 'Upgrade'   : slottedItemIdx = slottedItems!.findIndex(i => ['Rune', 'Sigil', 'Gem'].includes(i.subtype) || (i.subtype == 'Default' && i.flags.includes('Pvp'))); break;
 					case 'Infusion'  : slottedItemIdx = slottedItems!.findIndex(i => i.subtype == 'Default'); break;
 					case 'Enrichment': slottedItemIdx = slottedItems!.findIndex(i => i.subtype == 'Default'); break;
 				}
