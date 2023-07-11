@@ -78,12 +78,13 @@ class GW2TooltipsV2 {
 
 	config : Config;
 	static defaultConfig : Config = {
-		autoInitialize            : true,
-		autoCollectRuneCounts     : true,
-		autoCollectStatSources    : true,
-		adjustIncorrectStatIds    : true,
-		autoInferEquipmentUpgrades: true,
-		legacyCompatibility       : true,
+		autoInitialize            		: true,
+		autoCollectRuneCounts     		: true,
+		autoCollectStatSources    		: true,
+		adjustIncorrectStatIds    		: true,
+		autoInferEquipmentUpgrades		: true,
+		legacyCompatibility       		: true,
+		preferCorrectnessOverExtraInfo  : false,
 	}
 
 	constructor() {
@@ -344,7 +345,7 @@ class GW2TooltipsV2 {
 		}
 
 		if(currentContextInformation.activation) {
-			const value = TUtilsV2.withUpToNDigits("toPrecision", currentContextInformation.activation / 1000, 3)
+			const value = TUtilsV2.drawFractional(currentContextInformation.activation / 1000)
 			headerElements.push(TUtilsV2.newElm('ter', 
 				value+'s', 
 				TUtilsV2.newImg(this.ICONS.ACTIVATION, 'iconsmall')
@@ -352,8 +353,9 @@ class GW2TooltipsV2 {
 		}
 
 		if(currentContextInformation.recharge) {
+			const value = TUtilsV2.drawFractional(currentContextInformation.recharge / 1000)
 			headerElements.push(TUtilsV2.newElm('ter', 
-				(currentContextInformation.recharge / 1000)+'s', 
+				value+'s', 
 				TUtilsV2.newImg(this.ICONS.RECHARGE, 'iconsmall')
 			));
 		}

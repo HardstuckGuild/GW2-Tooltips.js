@@ -68,7 +68,7 @@ class FactsProcessor {
 
 	/** @param fact should already be context resolved */
 	static generateFact(fact : API.Fact, weapon_strength : number, context : Context) : { wrapper? : HTMLElement, defiance_break : number } {
-		let iconSlug = fact.icon
+		let iconSlug = fact.icon || '156661.png'; // setting the default fact icon should happen on the api side
 
 		const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact) => {
 			let modsArray: string[] = []
@@ -119,7 +119,7 @@ class FactsProcessor {
 
 					let strValue = '';
 					if(modifier.flags.includes('FormatFraction')) {
-						strValue = TUtilsV2.withUpToNDigits("toFixed", value, 2);
+						strValue = TUtilsV2.drawFractional(value);
 					}else{
 						strValue = Math.floor(value).toString();
 					}
@@ -139,117 +139,185 @@ class FactsProcessor {
 			return TUtilsV2.GW2Text2HTML(buff.description_brief || modsArray.join(', ') || buff.description)
 		}
 
-		//TODO(Rennorb) @cleanup: remove the jank spaces in the generated html
-		const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => string } = {
-			Time         : ({ fact }) => `<tem> ${fact.text}: ${fact.duration / 1000}s </tem>`,
-			Distance     : ({ fact }) => `<tem> ${fact.text}: ${fact.distance} </tem>`,
-			Number       : ({ fact }) => `<tem> ${fact.text}: ${fact.value} </tem>`,
-			ComboField   : ({ fact }) => `<tem> ${fact.text}: ${fact.field_type} </tem>`,
-			ComboFinisher: ({ fact }) => `<tem> ${fact.text}: ${fact.finisher_type} </tem>`,
-			NoData       : ({ fact }) => `<tem> ${fact.text} </tem>`,
-			Percent      : ({ fact }) => `<tem> ${TUtilsV2.GW2Text2HTML(fact.text)}: ${fact.percent}% </tem>`,
-			Radius       : ({ fact }) => `<tem> ${fact.value} ${fact.text} </tem>`, //TODO(Rennorb) @completeness
-			Range        : ({ fact }) => `<tem> ${fact.min ? fact.min + ' - ' : ''}${fact.max} ${fact.text || 'Range'} </tem>`,
-			HealingAdjust: ({ fact }) => `<tem> ${fact.text || '<HA text undefined>'} </tem>`, //TODO(Rennorb) @completeness
-			Heal         : () => `<tem> !!Heal </tem>`, //TODO(Rennorb) @completeness
-			Duration     : () => `<tem> !!Duration </tem>`, //TODO(Rennorb) @completeness
-			StunBreak    : () => `<tem> Breaks Stun </tem>`,
-			Unblockable  : () => `<tem> Unblockable </tem>`,
-			//now for the more complex ones
-			PrefixedBuff : ({ fact, buff }) => {
-				let prefix = APICache.storage.skills.get(fact.prefix)
-				if(!prefix) {
-					console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
-					prefix = this.MissingBuff
-				}
-				iconSlug = prefix.icon || iconSlug
-				if(!buff) {
-					console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-					buff = this.MissingBuff
-				}
-
-				const seconds = fact.duration / 1000
-				const durationText = seconds ? `(${seconds}s)` : ''
-
-				let node = TUtilsV2.newElm('te', 
-					TUtilsV2.newImg(buff.icon, 'iconmed'),
-					TUtilsV2.newElm('tem', ` ${buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} `),
-				);
-				if(fact.apply_count > 1) {
-					node.append(TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()));
-				}
-				return node.outerHTML;
+		const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => HTMLElement[] } = {
+			AdjustByAttributeAndLevelHealing : ({fact}) =>  {	
+				//TODO(Rennorb) @cleanup		
+				const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0;
+				const value = Math.round((fact.value + attribute * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count);
+				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocaleAttibutes(attribute);
+				const coefficent = window.GW2TooltipsConfig?.preferCorrectnessOverExtraInfo ? '' : ` (${TUtilsV2.withUpToNDigits('toFixed', fact.attribute_multiplier, 4)})`;
+				return [TUtilsV2.newElm('tem', `${text}: ${value}${coefficent}`)];
 			},
-			PrefixedBuffBrief: ({ fact, buff }) => {
-				let prefix = APICache.storage.skills.get(fact.prefix)
-				if(!prefix) {
-					console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
-					prefix = this.MissingBuff
-				}
-				iconSlug = prefix.icon || iconSlug
-				if(!buff) {
-					console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-					buff = this.MissingBuff
-				}
-				return `<te>${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML}<tem> ${buff.name_brief || buff.name} </tem></te>`
+			AttributeAdjust : ({fact}) => {	
+				const value = Math.round((fact.range[1] - fact.range[0]) / (context.character.level / 80) + fact.range[0]);
+				const sign = value > 0 ? '+' : ''
+				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocaleAttibutes(fact.target);
+				return [TUtilsV2.newElm('tem', `${text}: ${sign}${value}`)];
 			},
-			Buff: ({ fact, buff }) => {
-				if(!buff) {
-					console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-					buff = this.MissingBuff
-				}
-				iconSlug = buff.icon
-
-				const seconds = fact.duration / 1000
-				const durationText =  seconds ? `(${seconds}s)` : ''
-
-				let htmlContent = `<tem> ${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} </tem>`
-
-				if(fact.apply_count > 1) {
-					htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML
-				}
-				return htmlContent
-			},
-			BuffBrief: ({ fact, buff }) => {
+			Buff : ({fact, buff}) =>  {	
 				if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-				buff = buff || this.MissingBuff // in case we didn't get the buff we wanted from the api
+				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api
+				iconSlug = buff.icon || iconSlug;		
 
-				iconSlug = buff.icon
-				let text = TUtilsV2.GW2Text2HTML(fact.text).replace("%str1%", buff.name);
-				return `<tem> ${text} </tem> `
-			},
-			Damage: ({ fact, weaponStrength }) => {
-				let hitCountLabel = '';
-				//NOTE(Rennorb) The default formula is: weapon_strength * factor * power / target_armor.
-				let damage = weaponStrength * fact.hit_count * fact.dmg_multiplier * context.character.stats.power / context.targetArmor;
-				if(!fact.hit_count) console.warn("[gw2-tooltips] [facts processor] 0 hit count: ", fact); //TODO(Rennorb) @debug
-				if(fact.hit_count > 1) {
-					damage *= fact.hit_count;
-					hitCountLabel = `(${fact.hit_count}x)`;
+				let {duration, apply_count} = fact;
+				// TODO(mithos) factor in condi/boon duration.
+				
+				let buffDescription = generateBuffDescription(buff, fact);
+				if(buffDescription) {
+					buffDescription = `: ${buffDescription}`;
 				}
-				return `<tem> ${fact.text}: ${hitCountLabel} ${Math.round(damage)} </tem>`
+
+				const seconds = duration > 0 ? `(${TUtilsV2.drawFractional(duration / 1000)}s)`: '';
+
+				let node = [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`)]		
+				if(apply_count > 1) {
+					node.push(TUtilsV2.newElm('div.buffcount', apply_count.toString()));
+				}
+				return node;
 			},
-			AttributeAdjust: ({ fact }) =>{
-				//TODO(Rennorb) @cleanup
-				const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0
-				const value = Math.round(fact.value + attribute * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier)
-				return `<tem> ${value > 0 ? '+'+value : value} ${fact.text || fact.target} </tem>`
+			BuffBrief : ({fact, buff}) =>  {		
+				if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
+				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api
+				iconSlug = buff.icon || iconSlug;
+				
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text).replace("%str1%", buff.name)}`)];
 			},
-			BuffConversion : ({ fact }) =>{
-				//TODO(Rennorb) @cleanup
-				const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.source)] || 0
-				const value = Math.round(attribute * fact.percent / 100)
-				return `<tem> ${fact.text}: Converting ${fact.percent}% of ${fact.source} to +${value} ${fact.target} </tem>`
-			}
+			Distance : ({fact}) => {				
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${Math.round(fact.distance)}`)];
+			},
+			HealthAdjustHealing: ({ fact }) => {
+				//TODO(Rennorb) @cleanup		
+				const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.attribute)] || 0;				
+				const value = Math.round((fact.value + attribute * fact.multiplier) * fact.hit_count);
+				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocaleAttibutes(fact.attribute);
+
+				return [TUtilsV2.newElm('tem', `${text}: ${value}`)];
+			},
+			Number : ({fact}) => {
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.value)}`)];
+			},
+			Percent : ({fact}) => {
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.percent)}%`)];
+			},
+			PercentDamage : ({fact}) => {
+				const {percent, text} = fact;
+				// TODO(mithos) game shows an actual raw number here. to implement this we need to get the characters health
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}%`)];
+			},
+			PercentLifeForceAdjust : ({fact}) => {
+				const {percent, text} = fact;
+				// TODO(mithos) game shows an actual raw number here. to implement this we need to get the characters health
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}%`)];
+			},
+			PercentHealth : ({fact}) => {
+				const {percent, text} = fact;
+				const hp = 20_000; // TODO(mithos) implement getting the actual calculated hp
+				const raw = Math.round((hp * percent) * 0.01);
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`)];
+			},
+			LifeForceAdjust : ({fact}) => {
+				const {percent, text} = fact;
+				const hp = 20_000; // TODO(mithos) implement getting the actual calculated hp
+				const raw = Math.round((hp * percent) * 0.01);
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`)];
+			},
+			Damage : ({fact, weaponStrength}) => {
+				const {dmg_multiplier, hit_count, text} = fact;
+				const times = hit_count > 1 ? `(${hit_count}x)` : '';
+				const damage = hit_count * weaponStrength * dmg_multiplier * context.character.stats.power / context.targetArmor;
+				const coefficent = window.GW2TooltipsConfig?.preferCorrectnessOverExtraInfo ? '' : ` (${TUtilsV2.withUpToNDigits('toFixed', dmg_multiplier * hit_count, 4)})`;
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}${times}: ${Math.round(damage)}${coefficent}`)];
+			},
+			Time : ({fact}) => {
+				const {duration, text} = fact;
+				const time = duration != 1000 ? 'seconds' : 'second';
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(duration / 1000)} ${time}`)];
+			},
+			ComboField : ({fact}) =>  {
+				const {field_type, text} = fact;
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.mapLocaleComboFieldType(field_type)}`)];
+			},
+			ComboFinisher : ({fact}) => {
+				const {finisher_type, text} = fact;
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.mapLocaleComboFinisherType(finisher_type)}`)];
+			},
+			BuffConversion : ({fact}) => {
+				return [TUtilsV2.newElm('tem', `Gain ${fact.target} Based on a Percentage of ${fact.source}: ${fact.percent}%`)];
+			},
+			NoData : ({fact}) => {
+				return [TUtilsV2.newElm('tem', TUtilsV2.GW2Text2HTML(fact.text))];
+			},
+			PrefixedBuff : ({fact, buff}) => {
+				let prefix = APICache.storage.skills.get(fact.prefix);
+				if(!prefix) console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
+				prefix = prefix || this.MissingBuff;
+				iconSlug = prefix.icon || iconSlug;
+
+				if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
+				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api						
+
+				let {duration, apply_count, text} = fact;
+				// TODO(mithos) factor in condi/boon duration.
+
+				let buffDescription = generateBuffDescription(buff, fact);
+				if(buffDescription) {
+					buffDescription = `: ${buffDescription}`;
+				}
+
+				const seconds = duration > 0 ? `(${TUtilsV2.drawFractional(duration / 1000)}s)`: '';
+
+				let node = TUtilsV2.newElm('te',
+					TUtilsV2.newImg(buff.icon, 'iconmed'),
+					TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`)
+				);
+				
+				if(apply_count > 1) {
+					node.appendChild(TUtilsV2.newElm('div.buffcount', apply_count.toString()));
+				}
+				return [node];				
+			},
+			PrefixedBuffBrief : ({fact, buff}) => {
+				let prefix = APICache.storage.skills.get(fact.prefix)
+				if(!prefix) console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
+				prefix = prefix || this.MissingBuff;
+				iconSlug = prefix.icon || iconSlug
+
+				if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
+				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api	
+
+				let node = TUtilsV2.newElm('te',
+					TUtilsV2.newImg(buff.icon, 'iconmed'),
+					TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name}`)
+				);		
+
+				return [node]
+			},
+			// Unused?
+			Recharge : ({fact}) => {
+				return [TUtilsV2.newElm('div', '((RECHARGE NOT IMPLEMENTED))')];
+			},
+			Range : ({fact}) => {
+				const {min ,max} = fact;
+				if(window.GW2TooltipsConfig?.preferCorrectnessOverExtraInfo) {
+					return [TUtilsV2.newElm('tem', `Range: ${max}`)];
+				}
+				const range = min ? `${min} - ${max}` : max; 
+				return [TUtilsV2.newElm('tem', `Range: ${range}`)];
+			},
+			StunBreak : ({fact}) => {
+				return [TUtilsV2.newElm('tem', "Breaks Stun")];
+			},
 		}
 
 		const buff = APICache.storage.skills.get(fact.buff || 0)
 		const data : HandlerParams = { fact, buff, weaponStrength: weapon_strength }
-		const text = TUtilsV2.fromHTML(factInflators[fact.type](data as any))
+		const text = factInflators[fact.type](data as any)		
 		const wrapper = TUtilsV2.newElm('te')
-		if(fact.requires_trait) wrapper.classList.add('color-traited-fact')
-		if(iconSlug) wrapper.append(TUtilsV2.newImg(iconSlug, 'iconmed'))
-		wrapper.append(text)
+		if(fact.requires_trait) {
+			wrapper.classList.add('color-traited-fact')
+		}
+		wrapper.append(TUtilsV2.newImg(iconSlug, 'iconmed'))
+		wrapper.append(... text)
 
 		return { wrapper, defiance_break: fact.defiance_break || 0 }
 	}

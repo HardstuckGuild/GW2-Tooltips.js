@@ -8,7 +8,7 @@ class FakeAPI {
                     obj.facts = [];
                     for (const [attribute, adjustment] of Object.entries(obj.attributes)) {
                         obj.facts.push({
-                            type: 'AttributeAdjust',
+                            type: 'AdjustByAttributeAndLevelHealing',
                             icon: '',
                             order: -1,
                             target: attribute,
@@ -441,7 +441,7 @@ class FactsProcessor {
         return factWraps;
     }
     static generateFact(fact, weapon_strength, context) {
-        let iconSlug = fact.icon;
+        let iconSlug = fact.icon || '156661.png';
         const generateBuffDescription = (buff, fact) => {
             let modsArray = [];
             if (buff.modifiers) {
@@ -479,7 +479,7 @@ class FactsProcessor {
                     }
                     let strValue = '';
                     if (modifier.flags.includes('FormatFraction')) {
-                        strValue = TUtilsV2.withUpToNDigits("toFixed", value, 2);
+                        strValue = TUtilsV2.drawFractional(value);
                     }
                     else {
                         strValue = Math.floor(value).toString();
@@ -497,105 +497,164 @@ class FactsProcessor {
             return TUtilsV2.GW2Text2HTML(buff.description_brief || modsArray.join(', ') || buff.description);
         };
         const factInflators = {
-            Time: ({ fact }) => `<tem> ${fact.text}: ${fact.duration / 1000}s </tem>`,
-            Distance: ({ fact }) => `<tem> ${fact.text}: ${fact.distance} </tem>`,
-            Number: ({ fact }) => `<tem> ${fact.text}: ${fact.value} </tem>`,
-            ComboField: ({ fact }) => `<tem> ${fact.text}: ${fact.field_type} </tem>`,
-            ComboFinisher: ({ fact }) => `<tem> ${fact.text}: ${fact.finisher_type} </tem>`,
-            NoData: ({ fact }) => `<tem> ${fact.text} </tem>`,
-            Percent: ({ fact }) => `<tem> ${TUtilsV2.GW2Text2HTML(fact.text)}: ${fact.percent}% </tem>`,
-            Radius: ({ fact }) => `<tem> ${fact.value} ${fact.text} </tem>`,
-            Range: ({ fact }) => `<tem> ${fact.min ? fact.min + ' - ' : ''}${fact.max} ${fact.text || 'Range'} </tem>`,
-            HealingAdjust: ({ fact }) => `<tem> ${fact.text || '<HA text undefined>'} </tem>`,
-            Heal: () => `<tem> !!Heal </tem>`,
-            Duration: () => `<tem> !!Duration </tem>`,
-            StunBreak: () => `<tem> Breaks Stun </tem>`,
-            Unblockable: () => `<tem> Unblockable </tem>`,
-            PrefixedBuff: ({ fact, buff }) => {
-                let prefix = APICache.storage.skills.get(fact.prefix);
-                if (!prefix) {
-                    console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
-                    prefix = this.MissingBuff;
-                }
-                iconSlug = prefix.icon || iconSlug;
-                if (!buff) {
-                    console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-                    buff = this.MissingBuff;
-                }
-                const seconds = fact.duration / 1000;
-                const durationText = seconds ? `(${seconds}s)` : '';
-                let node = TUtilsV2.newElm('te', TUtilsV2.newImg(buff.icon, 'iconmed'), TUtilsV2.newElm('tem', ` ${buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} `));
-                if (fact.apply_count > 1) {
-                    node.append(TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()));
-                }
-                return node.outerHTML;
+            AdjustByAttributeAndLevelHealing: ({ fact }) => {
+                var _a;
+                const attribute = context.character.stats[TUtilsV2.Uncapitalize(fact.target)] || 0;
+                const value = Math.round((fact.value + attribute * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count);
+                const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocaleAttibutes(attribute);
+                const coefficent = ((_a = window.GW2TooltipsConfig) === null || _a === void 0 ? void 0 : _a.preferCorrectnessOverExtraInfo) ? '' : ` (${TUtilsV2.withUpToNDigits('toFixed', fact.attribute_multiplier, 4)})`;
+                return [TUtilsV2.newElm('tem', `${text}: ${value}${coefficent}`)];
             },
-            PrefixedBuffBrief: ({ fact, buff }) => {
-                let prefix = APICache.storage.skills.get(fact.prefix);
-                if (!prefix) {
-                    console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
-                    prefix = this.MissingBuff;
-                }
-                iconSlug = prefix.icon || iconSlug;
-                if (!buff) {
-                    console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-                    buff = this.MissingBuff;
-                }
-                return `<te>${TUtilsV2.newImg(buff.icon, 'iconmed').outerHTML}<tem> ${buff.name_brief || buff.name} </tem></te>`;
+            AttributeAdjust: ({ fact }) => {
+                const value = Math.round((fact.range[1] - fact.range[0]) / (context.character.level / 80) + fact.range[0]);
+                const sign = value > 0 ? '+' : '';
+                const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocaleAttibutes(fact.target);
+                return [TUtilsV2.newElm('tem', `${text}: ${sign}${value}`)];
             },
             Buff: ({ fact, buff }) => {
-                if (!buff) {
+                if (!buff)
                     console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-                    buff = this.MissingBuff;
+                buff = buff || this.MissingBuff;
+                iconSlug = buff.icon || iconSlug;
+                let { duration, apply_count } = fact;
+                let buffDescription = generateBuffDescription(buff, fact);
+                if (buffDescription) {
+                    buffDescription = `: ${buffDescription}`;
                 }
-                iconSlug = buff.icon;
-                const seconds = fact.duration / 1000;
-                const durationText = seconds ? `(${seconds}s)` : '';
-                let htmlContent = `<tem> ${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${durationText}: ${generateBuffDescription(buff, fact)} </tem>`;
-                if (fact.apply_count > 1) {
-                    htmlContent += TUtilsV2.newElm('div.buffcount', fact.apply_count.toString()).outerHTML;
+                const seconds = duration > 0 ? `(${TUtilsV2.drawFractional(duration / 1000)}s)` : '';
+                let node = [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`)];
+                if (apply_count > 1) {
+                    node.push(TUtilsV2.newElm('div.buffcount', apply_count.toString()));
                 }
-                return htmlContent;
+                return node;
             },
             BuffBrief: ({ fact, buff }) => {
                 if (!buff)
                     console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                 buff = buff || this.MissingBuff;
-                iconSlug = buff.icon;
-                let text = TUtilsV2.GW2Text2HTML(fact.text).replace("%str1%", buff.name);
-                return `<tem> ${text} </tem> `;
+                iconSlug = buff.icon || iconSlug;
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text).replace("%str1%", buff.name)}`)];
+            },
+            Distance: ({ fact }) => {
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${Math.round(fact.distance)}`)];
+            },
+            HealthAdjustHealing: ({ fact }) => {
+                const attribute = context.character.stats[TUtilsV2.Uncapitalize(fact.attribute)] || 0;
+                const value = Math.round((fact.value + attribute * fact.multiplier) * fact.hit_count);
+                const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocaleAttibutes(fact.attribute);
+                return [TUtilsV2.newElm('tem', `${text}: ${value}`)];
+            },
+            Number: ({ fact }) => {
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.value)}`)];
+            },
+            Percent: ({ fact }) => {
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.percent)}%`)];
+            },
+            PercentDamage: ({ fact }) => {
+                const { percent, text } = fact;
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}%`)];
+            },
+            PercentLifeForceAdjust: ({ fact }) => {
+                const { percent, text } = fact;
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}%`)];
+            },
+            PercentHealth: ({ fact }) => {
+                const { percent, text } = fact;
+                const hp = 20000;
+                const raw = Math.round((hp * percent) * 0.01);
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`)];
+            },
+            LifeForceAdjust: ({ fact }) => {
+                const { percent, text } = fact;
+                const hp = 20000;
+                const raw = Math.round((hp * percent) * 0.01);
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`)];
             },
             Damage: ({ fact, weaponStrength }) => {
-                let hitCountLabel = '';
-                let damage = weaponStrength * fact.hit_count * fact.dmg_multiplier * context.character.stats.power / context.targetArmor;
-                if (!fact.hit_count)
-                    console.warn("[gw2-tooltips] [facts processor] 0 hit count: ", fact);
-                if (fact.hit_count > 1) {
-                    damage *= fact.hit_count;
-                    hitCountLabel = `(${fact.hit_count}x)`;
-                }
-                return `<tem> ${fact.text}: ${hitCountLabel} ${Math.round(damage)} </tem>`;
+                var _a;
+                const { dmg_multiplier, hit_count, text } = fact;
+                const times = hit_count > 1 ? `(${hit_count}x)` : '';
+                const damage = hit_count * weaponStrength * dmg_multiplier * context.character.stats.power / context.targetArmor;
+                const coefficent = ((_a = window.GW2TooltipsConfig) === null || _a === void 0 ? void 0 : _a.preferCorrectnessOverExtraInfo) ? '' : ` (${TUtilsV2.withUpToNDigits('toFixed', dmg_multiplier * hit_count, 4)})`;
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}${times}: ${Math.round(damage)}${coefficent}`)];
             },
-            AttributeAdjust: ({ fact }) => {
-                const attribute = context.character.stats[TUtilsV2.Uncapitalize(fact.target)] || 0;
-                const value = Math.round(fact.value + attribute * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier);
-                return `<tem> ${value > 0 ? '+' + value : value} ${fact.text || fact.target} </tem>`;
+            Time: ({ fact }) => {
+                const { duration, text } = fact;
+                const time = duration != 1000 ? 'seconds' : 'second';
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(duration / 1000)} ${time}`)];
+            },
+            ComboField: ({ fact }) => {
+                const { field_type, text } = fact;
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.mapLocaleComboFieldType(field_type)}`)];
+            },
+            ComboFinisher: ({ fact }) => {
+                const { finisher_type, text } = fact;
+                return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.mapLocaleComboFinisherType(finisher_type)}`)];
             },
             BuffConversion: ({ fact }) => {
-                const attribute = context.character.stats[TUtilsV2.Uncapitalize(fact.source)] || 0;
-                const value = Math.round(attribute * fact.percent / 100);
-                return `<tem> ${fact.text}: Converting ${fact.percent}% of ${fact.source} to +${value} ${fact.target} </tem>`;
-            }
+                return [TUtilsV2.newElm('tem', `Gain ${fact.target} Based on a Percentage of ${fact.source}: ${fact.percent}%`)];
+            },
+            NoData: ({ fact }) => {
+                return [TUtilsV2.newElm('tem', TUtilsV2.GW2Text2HTML(fact.text))];
+            },
+            PrefixedBuff: ({ fact, buff }) => {
+                let prefix = APICache.storage.skills.get(fact.prefix);
+                if (!prefix)
+                    console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
+                prefix = prefix || this.MissingBuff;
+                iconSlug = prefix.icon || iconSlug;
+                if (!buff)
+                    console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
+                buff = buff || this.MissingBuff;
+                let { duration, apply_count, text } = fact;
+                let buffDescription = generateBuffDescription(buff, fact);
+                if (buffDescription) {
+                    buffDescription = `: ${buffDescription}`;
+                }
+                const seconds = duration > 0 ? `(${TUtilsV2.drawFractional(duration / 1000)}s)` : '';
+                let node = TUtilsV2.newElm('te', TUtilsV2.newImg(buff.icon, 'iconmed'), TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`));
+                if (apply_count > 1) {
+                    node.appendChild(TUtilsV2.newElm('div.buffcount', apply_count.toString()));
+                }
+                return [node];
+            },
+            PrefixedBuffBrief: ({ fact, buff }) => {
+                let prefix = APICache.storage.skills.get(fact.prefix);
+                if (!prefix)
+                    console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
+                prefix = prefix || this.MissingBuff;
+                iconSlug = prefix.icon || iconSlug;
+                if (!buff)
+                    console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
+                buff = buff || this.MissingBuff;
+                let node = TUtilsV2.newElm('te', TUtilsV2.newImg(buff.icon, 'iconmed'), TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name}`));
+                return [node];
+            },
+            Recharge: ({ fact }) => {
+                return [TUtilsV2.newElm('div', '((RECHARGE NOT IMPLEMENTED))')];
+            },
+            Range: ({ fact }) => {
+                var _a;
+                const { min, max } = fact;
+                if ((_a = window.GW2TooltipsConfig) === null || _a === void 0 ? void 0 : _a.preferCorrectnessOverExtraInfo) {
+                    return [TUtilsV2.newElm('tem', `Range: ${max}`)];
+                }
+                const range = min ? `${min} - ${max}` : max;
+                return [TUtilsV2.newElm('tem', `Range: ${range}`)];
+            },
+            StunBreak: ({ fact }) => {
+                return [TUtilsV2.newElm('tem', "Breaks Stun")];
+            },
         };
         const buff = APICache.storage.skills.get(fact.buff || 0);
         const data = { fact, buff, weaponStrength: weapon_strength };
-        const text = TUtilsV2.fromHTML(factInflators[fact.type](data));
+        const text = factInflators[fact.type](data);
         const wrapper = TUtilsV2.newElm('te');
-        if (fact.requires_trait)
+        if (fact.requires_trait) {
             wrapper.classList.add('color-traited-fact');
-        if (iconSlug)
-            wrapper.append(TUtilsV2.newImg(iconSlug, 'iconmed'));
-        wrapper.append(text);
+        }
+        wrapper.append(TUtilsV2.newImg(iconSlug, 'iconmed'));
+        wrapper.append(...text);
         return { wrapper, defiance_break: fact.defiance_break || 0 };
     }
 }
@@ -639,6 +698,64 @@ class TUtilsV2 {
             str = str.slice(0, -1);
         return str;
     }
+    static drawFractional(value) {
+        var _a;
+        if ((_a = window.GW2TooltipsConfig) === null || _a === void 0 ? void 0 : _a.preferCorrectnessOverExtraInfo) {
+            const sign = value < 0 ? '-' : '';
+            value = Math.abs(value);
+            const index = (Math.min(Math.round((value % 1) * 4), 4));
+            let fraction = '';
+            switch (index) {
+                case 0:
+                case 4:
+                    {
+                        value = Math.round(value);
+                        break;
+                    }
+                case 1: {
+                    value = Math.floor(value);
+                    fraction = '¼';
+                    break;
+                }
+                case 2: {
+                    value = Math.floor(value);
+                    fraction = '½';
+                    break;
+                }
+                case 3: {
+                    value = Math.floor(value);
+                    fraction = '¾';
+                    break;
+                }
+            }
+            if (value == 0 && fraction == '') {
+                return '0';
+            }
+            return `${sign}${value > 0 ? value : ''}${fraction}`;
+        }
+        else {
+            return this.withUpToNDigits('toFixed', value, 3);
+        }
+    }
+    static mapLocaleComboFieldType(type) {
+        return type;
+    }
+    static mapLocaleComboFinisherType(type) {
+        return type;
+    }
+    static mapLocaleAttibutes(type) {
+        switch (type) {
+            case 'ConditionDmg': return 'Condition Damage';
+            case 'CritDamage': return 'Ferocity';
+            default: return type;
+        }
+    }
+    static calculateConditionDuration(level, expertise) {
+        return expertise / (this.LUT_CRITICAL_DEFENSE[level] * (15 / this.LUT_CRITICAL_DEFENSE[80]));
+    }
+    static calculateBoonDuration(level, concentration) {
+        return concentration / (this.LUT_CRITICAL_DEFENSE[level] * (15 / this.LUT_CRITICAL_DEFENSE[80]));
+    }
 }
 TUtilsV2.iconSource = 'https://assets.gw2dat.com/';
 TUtilsV2.missingImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHEAAABuCAIAAACfnGvJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMCSURBVHhe7ZjpkeowEAaJywERD9GQDMGwumyPLj+2XssH+/UPyjMjjVBjUWXf3oJGTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSU51inr8d0u02PVwp/xf/MHQvt9Hm/Be7PlMgIHhyzCjn9hNlpc7ebxe9hhNPp8QifpTdfuz9Oe3thjHH6Cndkfv7DWb0/syNbnN8QJuzkZr5q5K+Xk2C6BtbCTDEAZJDTuIfKi0tUKuZgHhBx89P1Zj5rtK4YQzspL43z6RnltFBR5DMVKVhGFPTy3UYBO6vo0GuIMcxpvs1O2gbhei0tbOazRusvmCe+x6nddDtbBA4/LmEFNfN1o57TOD0F5ZIDGOh0CbL91SrqDYZ07iiQ5etGdrxNpGkz9XowQ53GG2Sa7H5rFc095n1W1nzdqOPUXzbXGMVYp1FqlqlVxMCNXEd9kG806t2n87cw2KE4g53mO/fUKrJgxkzp5Ou5Paf//E4wtNPzUelupki+32k8+cZgMDpQ6V9w6ij+UAeee8/fcLovcsojpzxyyiOnPHLKI6c8csqDOx39MH0B5JRHTnmGO00v2uKLi0B8e7E8ghf+7aP5RimyDrC1ga9HPmIXp2ajy95tvEhwUaHJlpaouUandgD7OF3MpHijbrAlf13MmsOwoulQxruzu9NfGLClvtO6QTF2d87mNISWuWT7ZGtUMwJy2nLVKK2YBcqGx3Mmp+XUomQqGUcf9YpT3afZ2BBUoWFpElqYnm7ooY5P9n8a9QRcDz83lfylFdVcJnGoUAfudAjlD+FopM7CNZy27/aTKr2KU4c93Y6jD/gG13F6HeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklOb9/gEv6oxxwmIw6QAAAABJRU5ErkJggg==';
@@ -652,6 +769,109 @@ TUtilsV2.GW2Text2HTML = (text, tag = 'span') => text
         .replaceAll('\n', '<br />')
     : '';
 TUtilsV2.Uncapitalize = (str) => str.charAt(0).toLowerCase() + str.slice(1);
+TUtilsV2.LUT_CRITICAL_DEFENSE = [
+    1.0,
+    1.1,
+    1.2,
+    1.3,
+    1.4,
+    1.5,
+    1.6,
+    1.7,
+    1.8,
+    1.9,
+    2.0,
+    2.1,
+    2.2,
+    2.3,
+    2.4,
+    2.5,
+    2.6,
+    2.7,
+    2.8,
+    2.9,
+    3.0,
+    3.2,
+    3.4,
+    3.6,
+    3.8,
+    4.0,
+    4.2,
+    4.4,
+    4.6,
+    4.8,
+    5.0,
+    5.2,
+    5.4,
+    5.6,
+    5.8,
+    6.0,
+    6.2,
+    6.4,
+    6.6,
+    6.8,
+    7.0,
+    7.3,
+    7.6,
+    7.9,
+    8.2,
+    8.5,
+    8.8,
+    9.1,
+    9.4,
+    9.7,
+    10.0,
+    10.3,
+    10.6,
+    10.9,
+    11.2,
+    11.5,
+    11.8,
+    12.1,
+    12.4,
+    12.7,
+    13.0,
+    13.4,
+    13.8,
+    14.2,
+    14.6,
+    15.0,
+    15.4,
+    15.8,
+    16.2,
+    16.6,
+    17.0,
+    17.4,
+    17.8,
+    18.2,
+    18.6,
+    19.0,
+    19.4,
+    19.8,
+    20.2,
+    20.6,
+    21.0,
+    21.5,
+    22.0,
+    22.5,
+    23.0,
+    23.5,
+    24.0,
+    24.5,
+    25.0,
+    25.5,
+    26.0,
+    26.5,
+    27.0,
+    27.5,
+    28.0,
+    28.5,
+    29.0,
+    29.5,
+    30.0,
+    30.5,
+    31.0,
+];
 class GW2TooltipsV2 {
     static createCompleteContext(partialContext) {
         var _a, _b, _c;
@@ -924,11 +1144,12 @@ class GW2TooltipsV2 {
             headerElements.push(TUtilsV2.newElm('ter', String(currentContextInformation.resource_cost), TUtilsV2.newImg(this.ICONS.RESOURCE, 'iconsmall')));
         }
         if (currentContextInformation.activation) {
-            const value = TUtilsV2.withUpToNDigits("toPrecision", currentContextInformation.activation / 1000, 3);
+            const value = TUtilsV2.drawFractional(currentContextInformation.activation / 1000);
             headerElements.push(TUtilsV2.newElm('ter', value + 's', TUtilsV2.newImg(this.ICONS.ACTIVATION, 'iconsmall')));
         }
         if (currentContextInformation.recharge) {
-            headerElements.push(TUtilsV2.newElm('ter', (currentContextInformation.recharge / 1000) + 's', TUtilsV2.newImg(this.ICONS.RECHARGE, 'iconsmall')));
+            const value = TUtilsV2.drawFractional(currentContextInformation.recharge / 1000);
+            headerElements.push(TUtilsV2.newElm('ter', value + 's', TUtilsV2.newImg(this.ICONS.RECHARGE, 'iconsmall')));
         }
         const secondHeaderRow = [];
         {
@@ -1515,6 +1736,7 @@ GW2TooltipsV2.defaultConfig = {
     adjustIncorrectStatIds: true,
     autoInferEquipmentUpgrades: true,
     legacyCompatibility: true,
+    preferCorrectnessOverExtraInfo: false,
 };
 window.gw2tooltips = new GW2TooltipsV2();
 if (window.gw2tooltips.config.autoInitialize) {

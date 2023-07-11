@@ -73,106 +73,8 @@ namespace API {
 		//NOTE(Rennorb): This is here so we can just use `Fact.buff` and similar. Otherwise ts wont like us calling that on the `Fact` union because the prop doesn't exist on some of the constituents.
 		[k : string] : undefined 
 	}
-	
-	interface BuffFact extends BasicFact<'Buff'> {
-		text?       : string
-		icon?       : string
-		buff        : number
-		apply_count : number
-		duration    : Milliseconds
-	}
-	interface BuffBriefFact extends BasicFact<'BuffBrief'> {
-		text : string
-		buff : number
-	}
-	interface BuffConversionFact extends BasicFact<'BuffConversion'> {
-		text?   : string
-    icon?   : string
-    source  : Attributes
-    target  : Attributes
-    percent : number
-	}
-	interface PrefixedBuffFact extends BasicFact<'PrefixedBuff'>{
-    text?       : string
-    icon?       : string
-    apply_count : number
-    buff        : number
-    prefix      : number
-    duration    : Milliseconds
-	}
-	interface PrefixedBuffBriefFact extends BasicFact<'PrefixedBuffBrief'>{
-		text?  : string
-		icon?  : string
-		buff   : number
-		prefix : number
-	}
-	interface RadiusFact extends BasicFact<'Radius'> {
-		text  : string
-		icon? : string
-		value : number
-	}
-	interface RangeFact extends BasicFact<'Range'> {
-		text? : string
-		icon? : string
-		min?  : number
-		max   : number
-	}
-	interface TimeFact extends BasicFact<'Time'> {
-		text     : string
-		icon?    : string
-		duration : Milliseconds;
-	}
-	interface DistanceFact extends BasicFact<'Distance'> {
-		text     : string
-		icon?    : string
-		distance : number
-	}
-	interface DurationFact extends BasicFact<'Duration'> {
-		text?    : string
-		icon?    : string
-		duration : Milliseconds
-	}
-	interface NumberFact extends BasicFact<'Number'> {
-		text  : string
-		icon? : string
-		value : number
-	}
-	type ComboFieldType = 'Water' | 'Fire' // incomplete
-	interface ComboFieldFact extends BasicFact<'ComboField'> {
-		text       : string
-		icon?      : string
-		field_type : ComboFieldType
-	}
-	type ComboFinisherType = "Blast" | "Projectile" // incomplete
-	interface ComboFinisherFact extends BasicFact<'ComboFinisher'> {
-		text          : string
-		icon?         : string
-		finisher_type : ComboFinisherType
-	}
-	interface HealingAdjustFact extends BasicFact<'HealingAdjust'> {
-    text?      : string
-    icon?      : string
-    value      : number
-    attribute  : Attributes
-    multiplier : number
-    hit_count  : number
-	}
-	interface NoDataFact extends BasicFact<'NoData'> {
-		text : string
-		icon?: string
-	}
-	interface DamageFact extends BasicFact<'Damage'> {
-		text           : string
-		icon?          : string
-		hit_count      : number
-		dmg_multiplier : number
-	}
-	interface PercentFact extends BasicFact<'Percent'> {
-		text    : string
-		icon?   : string
-		percent : number
-	}
-	interface AttributeAdjustFact extends BasicFact<'AttributeAdjust'> {
+
+	interface AdjustByAttributeAndLevelHealingFact extends BasicFact<'AdjustByAttributeAndLevelHealing'> {
 		text?                : string
 		icon?                : string
 		value                : number
@@ -182,33 +84,181 @@ namespace API {
 		level_multiplier     : number
 		hit_count            : number
 	}
+
+	interface AttributeAdjustFact extends BasicFact<'AttributeAdjust'> {
+		text?	: string
+		icon?	: string
+		range	: number[]
+		target	: Attributes
+	}
+
+	interface BuffFact extends BasicFact<'Buff'> {
+		text?       : string
+		icon?       : string
+		buff        : number
+		apply_count : number
+		duration    : Milliseconds
+	}
+
+	interface BuffBriefFact extends BasicFact<'BuffBrief'> {
+		text? : string
+		buff  : number
+	}
+
+	interface DistanceFact extends BasicFact<'Distance'> {
+		text?    : string
+		icon?    : string
+		distance : number
+	}
+
+	interface HealthAdjustHealingFact extends BasicFact<'HealthAdjustHealing'> {
+		text?      : string
+		icon?      : string
+		value      : number
+		attribute  : Attributes
+		multiplier : number
+		hit_count  : number
+	}
+
+	interface NumberFact extends BasicFact<'Number'> {
+		text? : string
+		icon? : string
+		value : number
+	}
+
+	interface PercentFact extends BasicFact<'Percent'> {
+		text?   : string
+		icon?   : string
+		percent : number
+	}
+
+	interface PercentDamageFact extends BasicFact<'PercentDamage'> {
+		text?   : string
+		icon?   : string
+		percent : number
+	}
+	
+	interface PercentLifeForceAdjustFact extends BasicFact<'PercentLifeForceAdjust'> {
+		text?   : string
+		icon?   : string
+		percent : number
+	}
+	
+	interface PercentHealthFact extends BasicFact<'PercentHealth'> {
+		text?   : string
+		icon?   : string
+		percent : number
+	}
+	
+	interface LifeForceAdjustFact extends BasicFact<'LifeForceAdjust'> {
+		text?   : string
+		icon?   : string
+		percent : number
+	}
+
+	interface DamageFact extends BasicFact<'Damage'> {
+		text?          : string
+		icon?          : string
+		hit_count      : number
+		dmg_multiplier : number
+	}
+
+	interface TimeFact extends BasicFact<'Time'> {
+		text?    : string
+		icon?    : string
+		duration : Milliseconds;
+	}
+
+	type ComboFieldType =
+		'Air' | 'Dark' | 'Fire' | 'Ice' | 'Light' |
+		'Lightning' | 'Poison' | 'Smoke' | 'Ethereal' | 'Water'
+
+	interface ComboFieldFact extends BasicFact<'ComboField'> {
+		text?      : string
+		icon?      : string
+		field_type : ComboFieldType
+	}
+
+	type ComboFinisherType = 'Blast' | 'Leap'  | 'Projectile' | 'Whirl'
+
+	interface ComboFinisherFact extends BasicFact<'ComboFinisher'> {
+		text?         : string
+		icon?         : string
+		finisher_type : ComboFinisherType
+	}
+
+	interface BuffConversionFact extends BasicFact<'BuffConversion'> {
+		text?   : string
+    	icon?   : string
+    	source  : Attributes
+    	target  : Attributes
+    	percent : number
+	}
+
+	interface NoDataFact extends BasicFact<'NoData'> {
+		text?: string
+		icon?: string
+	}
+
+	interface PrefixedBuffFact extends BasicFact<'PrefixedBuff'>{
+    	text?       : string
+    	icon?       : string
+    	apply_count : number
+    	buff        : number
+    	prefix      : number
+    	duration    : Milliseconds
+	}
+
+	interface PrefixedBuffBriefFact extends BasicFact<'PrefixedBuffBrief'>{
+		text?  : string
+		icon?  : string
+		buff   : number
+		prefix : number
+	}
+
+    // Custom facts
+	interface RechargeFact extends BasicFact<'Recharge'> {
+		text?    : string
+		icon?    : string
+		duration : Milliseconds
+	}
+
+	interface RangeFact extends BasicFact<'Range'> {
+		text? : string
+		icon? : string
+		min?  : number
+		max   : number
+	}
+
 	interface StunBreakFact extends BasicFact<'StunBreak'> {
 		icon? : string
-		value : true
 	}
 	
 	type FactMap = {
-		AttributeAdjust   : AttributeAdjustFact
-		Buff              : BuffFact
-		BuffBrief         : BuffBriefFact
-		BuffConversion    : BuffConversionFact
-		ComboField        : ComboFieldFact
-		ComboFinisher     : ComboFinisherFact
-		Damage            : DamageFact
-		Distance          : DistanceFact
-		Duration          : DurationFact
-		Heal              : BasicFact<'Heal'>
-		HealingAdjust     : HealingAdjustFact
-		NoData            : NoDataFact
-		Number            : NumberFact
-		Percent           : PercentFact
-		PrefixedBuff      : PrefixedBuffFact
-		PrefixedBuffBrief : PrefixedBuffBriefFact
-		Radius            : RadiusFact
-		Range             : RangeFact
-		StunBreak         : StunBreakFact
-		Time              : TimeFact
-		Unblockable       : BasicFact<'Unblockable'>
+		AdjustByAttributeAndLevelHealing   	: AdjustByAttributeAndLevelHealingFact
+		AttributeAdjust						: AttributeAdjustFact
+		Buff              					: BuffFact
+		BuffBrief         					: BuffBriefFact
+		Distance          					: DistanceFact
+		HealthAdjustHealing     			: HealthAdjustHealingFact
+		Number           	 				: NumberFact
+		Percent           					: PercentFact
+		PercentDamage           			: PercentDamageFact
+		PercentLifeForceAdjust           	: PercentLifeForceAdjustFact
+		PercentHealth           			: PercentHealthFact
+		LifeForceAdjust           			: LifeForceAdjustFact
+		Damage            					: DamageFact
+		Time              					: TimeFact
+		ComboField        					: ComboFieldFact
+		ComboFinisher     					: ComboFinisherFact
+		BuffConversion    					: BuffConversionFact
+		NoData            					: NoDataFact
+		PrefixedBuff      					: PrefixedBuffFact
+		PrefixedBuffBrief 					: PrefixedBuffBriefFact		
+    	// Custom facts
+		Recharge          					: RechargeFact
+		Range             					: RangeFact
+		StunBreak         					: StunBreakFact
 	}
 
 	type FactType = keyof FactMap;

@@ -55,15 +55,16 @@ interface StatSource {
 
 
 interface Config {
-	 autoInitialize         : bool
+	 autoInitialize         		: bool
 	 // only works if auto initialize is turned on
-	 autoCollectRuneCounts  : bool
+	 autoCollectRuneCounts  		: bool
 	 // only works if auto initialize is turned on
-	 autoCollectStatSources : bool
+	 autoCollectStatSources 		: bool
 	 // only works if auto initialize is turned on
-	 autoInferEquipmentUpgrades : bool
-	 adjustIncorrectStatIds : bool
-	 legacyCompatibility    : bool
+	 autoInferEquipmentUpgrades 	: bool
+	 adjustIncorrectStatIds 		: bool
+	 legacyCompatibility    		: bool
+	 preferCorrectnessOverExtraInfo : bool
 
 	 apiImpl?               : () => APIImplementation
 }

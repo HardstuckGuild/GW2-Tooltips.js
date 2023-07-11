@@ -13,7 +13,7 @@ class FakeAPI implements APIImplementation {
 					//hackedy hack hack
 					for(const [attribute, adjustment] of Object.entries(obj.attributes)) {
 						obj.facts.push({
-							type  : 'AttributeAdjust',
+							type  : 'AdjustByAttributeAndLevelHealing',
 							icon  : '',
 							order : -1,
 							target: attribute,
@@ -22,7 +22,7 @@ class FakeAPI implements APIImplementation {
 							level_exponent       : 0,
 							hit_count            : 0,
 							level_multiplier     : 0,
-						} as API.AttributeAdjustFact)
+						} as API.AdjustByAttributeAndLevelHealingFact)
 					}
 				}
 			}
