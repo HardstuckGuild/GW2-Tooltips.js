@@ -23,16 +23,16 @@ declare interface ObjectConstructor {
 //TODO(Rennorb) @cleanup: make static class or just turn the whole project into a module with functions only.
 // Instances aren't needed for anything here.
 class GW2TooltipsV2 {
-	tooltip      : HTMLElement
-	
-	cycleTooltipsHandler? : VoidFunction;
-	cycling = false
-	cyclePos!    : number  
-	baseTooltip! : number
-	lastMouseX!  : number
-	lastMouseY!  : number
+	static tooltip      : HTMLElement
 
-	context : Context[] = [];
+	static cycleTooltipsHandler? : VoidFunction;
+	static cycling = false
+	static cyclePos    : number
+	static baseTooltip : number
+	static lastMouseX  : number
+	static lastMouseY  : number
+
+	static context : Context[] = [];
 	static defaultContext : Context = {
 		gameMode           : 'Pve',
 		targetArmor        : 2597,
@@ -76,18 +76,18 @@ class GW2TooltipsV2 {
 		return Object.assign({}, this.defaultContext, partialContext, { character });
 	}
 
-	config : Config;
+	static config : Config;
 	static defaultConfig : Config = {
-		autoInitialize            		: true,
-		autoCollectRuneCounts     		: true,
-		autoCollectStatSources    		: true,
-		adjustIncorrectStatIds    		: true,
-		autoInferEquipmentUpgrades		: true,
-		legacyCompatibility       		: true,
-		preferCorrectnessOverExtraInfo  : false,
+		autoInitialize                : true,
+		autoCollectRuneCounts         : true,
+		autoCollectStatSources        : true,
+		adjustIncorrectStatIds        : true,
+		autoInferEquipmentUpgrades    : true,
+		legacyCompatibility           : true,
+		preferCorrectnessOverExtraInfo: false,
 	}
 
-	constructor() {
+	static _constructor() {
 		if(window.GW2TooltipsContext instanceof Array) {
 			for(const partialContext of window.GW2TooltipsContext)
 				this.context.push(GW2TooltipsV2.createCompleteContext(partialContext))
@@ -119,12 +119,12 @@ class GW2TooltipsV2 {
 		})
 	}
 
-	displayCorrectChainTooltip(tooltips: HTMLElement[], tooltipIndex: number) {
+	static displayCorrectChainTooltip(tooltips: HTMLElement[], tooltipIndex: number) {
 		for(let index = 0; index < tooltips.length; index++) {
 			tooltips[index].classList.toggle('active', index === tooltipIndex);
 		}
 	}
-	cycleTooltips() {
+	static cycleTooltips() {
 		if(!this.cycling) return
 		this.cycling = true
 
@@ -137,7 +137,7 @@ class GW2TooltipsV2 {
 		this.positionTooltip()
 	}
 
-	positionTooltip() {
+	static positionTooltip() {
 		const wpadminbar = document.getElementById('wpadminbar'); //TODO(Rennorb) @hardcoded: this accounts for the wordpress bar that might exist.
 		const topBarHeight = wpadminbar ? wpadminbar.offsetHeight : 0;
 
@@ -160,7 +160,7 @@ class GW2TooltipsV2 {
 		this.tooltip.style.transform = `translate(${tooltipXpos}px, ${tooltipYpos}px)`;
 	}
 
-	hookDocument(scope : ScopeElement, _unused? : any) : Promise<void[]> {
+	static hookDocument(scope : ScopeElement, _unused? : any) : Promise<void[]> {
 		//NOTE(Rennorb): need to use an array since there might be multiple occurrences of the same id in a given scope
 		const objectsToGet : ObjectsToFetch = {
 			skills         : new Map<number, HTMLElement[] | undefined>(),
@@ -251,7 +251,7 @@ class GW2TooltipsV2 {
 		}))
 	}
 
-	inflateGenericIcon(gw2Object : HTMLElement, data : { name : string, icon? : string }) {
+	static inflateGenericIcon(gw2Object : HTMLElement, data : { name : string, icon? : string }) {
 		const wikiLink = TUtilsV2.newElm('a', TUtilsV2.newImg(data.icon, undefined, data.name));
 		wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + TUtilsV2.GW2Text2HTML(data.name.replaceAll(/%str\d%/g, ''))
 		.replaceAll(/\[.*?\]/g, '');
@@ -259,7 +259,7 @@ class GW2TooltipsV2 {
 		if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(data.name);
 		gw2Object.append(wikiLink);
 	}
-	inflateItem(gw2Object : HTMLElement, item : API.Item) {
+	static inflateItem(gw2Object : HTMLElement, item : API.Item) {
 		const stackSize = +String(gw2Object.getAttribute('count')) || 1;
 		const context = this.context[+String(gw2Object.getAttribute('contextSet')) || 0];
 
@@ -270,14 +270,14 @@ class GW2TooltipsV2 {
 		if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(this.formatItemName(item, context, undefined, undefined, stackSize));
 		gw2Object.append(wikiLink);
 	}
-	inflateSpecialization(gw2Object : HTMLElement, spec: API.Specialization) {
+	static inflateSpecialization(gw2Object : HTMLElement, spec: API.Specialization) {
 		//TODO(Rennorb): this is probably wrong for inlines
 		gw2Object.style.backgroundImage = `url(${spec.background})`;
 		gw2Object.dataset.label = spec.name;
 	}
 
-	//TODO(Rennorb): this is neither complete, nor reliable 
-	getSlotName(skill: API.Skill) : string | undefined {
+	//TODO(Rennorb): this is neither complete, nor reliable
+	static getSlotName(skill: API.Skill) : string | undefined {
 		let skillSlot
 		for(const palette of skill.palettes) {
 			for(const slot of palette.slots) {
@@ -331,14 +331,14 @@ class GW2TooltipsV2 {
 	}
 
 	// TODO(Rennorb) @cleanup: split this into the inflator system aswell. its getting to convoluted already
-	generateToolTip(apiObject : SupportedTTTypes, context : Context) : HTMLElement {
+	static generateToolTip(apiObject : SupportedTTTypes, context : Context) : HTMLElement {
 		const headerElements = [TUtilsV2.newElm('teb', TUtilsV2.GW2Text2HTML(apiObject.name))];
 		headerElements.push(TUtilsV2.newElm('div.flexbox-fill')); // split, now the right side
 
 		const currentContextInformation = this.resolveTraitsAndOverrides(apiObject, context);
 
 		if(currentContextInformation.resource_cost) {
-			headerElements.push(TUtilsV2.newElm('ter', 
+			headerElements.push(TUtilsV2.newElm('ter',
 				String(currentContextInformation.resource_cost),
 				TUtilsV2.newImg(this.ICONS.RESOURCE, 'iconsmall')
 			));
@@ -346,16 +346,16 @@ class GW2TooltipsV2 {
 
 		if(currentContextInformation.activation) {
 			const value = TUtilsV2.drawFractional(currentContextInformation.activation / 1000)
-			headerElements.push(TUtilsV2.newElm('ter', 
-				value+'s', 
+			headerElements.push(TUtilsV2.newElm('ter',
+				value+'s',
 				TUtilsV2.newImg(this.ICONS.ACTIVATION, 'iconsmall')
 			));
 		}
 
 		if(currentContextInformation.recharge) {
 			const value = TUtilsV2.drawFractional(currentContextInformation.recharge / 1000)
-			headerElements.push(TUtilsV2.newElm('ter', 
-				value+'s', 
+			headerElements.push(TUtilsV2.newElm('ter',
+				value+'s',
 				TUtilsV2.newImg(this.ICONS.RECHARGE, 'iconsmall')
 			));
 		}
@@ -400,10 +400,10 @@ class GW2TooltipsV2 {
 
 			secondHeaderRow.push(TUtilsV2.newElm('tes', '( ', TUtilsV2.fromHTML(splits.join(' | ')), ' )'));
 		}
-		
+
 		const parts : HTMLElement[] = [TUtilsV2.newElm('tet', ...headerElements)];
 		if(secondHeaderRow.length > 1) parts.push(TUtilsV2.newElm('tet.small', ...secondHeaderRow));
-		
+
 		if('description' in apiObject && apiObject.description) {
 			const description = document.createElement('ted')
 			description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`
@@ -435,7 +435,7 @@ class GW2TooltipsV2 {
 		return tooltip;
 	}
 
-	resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { override_groups? : API.ContextInformation['override_groups'] }, context : Context) : API.ContextInformation {
+	static resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { override_groups? : API.ContextInformation['override_groups'] }, context : Context) : API.ContextInformation {
 		let override = apiObject.override_groups?.find(g => g.context.includes(context.gameMode));
 		let info = Object.assign({}, apiObject, override);
 		if(apiObject.facts && override && override.facts) {
@@ -453,7 +453,7 @@ class GW2TooltipsV2 {
 		return info;
 	}
 
-	getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) : number {
+	static getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) : number {
 		let weaponStrength = {
 			None       : 0,
 			BundleLarge: 0,
@@ -490,7 +490,7 @@ class GW2TooltipsV2 {
 		return weaponStrength
 	}
 
-	generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTMLElement, context : Context) : HTMLElement[] {
+	static generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTMLElement, context : Context) : HTMLElement[] {
 		const objectChain : SupportedTTTypes[] = []
 		const validPaletteTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard']
 
@@ -568,7 +568,7 @@ class GW2TooltipsV2 {
 		return tooltipChain
 	}
 
-	generateItemTooltip(item : API.Item, context : Context, target : HTMLElement, statSetId? : number, stackSize = 1) : HTMLElement {
+	static generateItemTooltip(item : API.Item, context : Context, target : HTMLElement, statSetId? : number, stackSize = 1) : HTMLElement {
 		let statSet : API.AttributeSet | undefined = undefined;
 		if(item.type == "Armor" || item.type == "Trinket" || item.type == "Weapon") {
 			statSetId = statSetId || item.attribute_set;
@@ -696,7 +696,7 @@ class GW2TooltipsV2 {
 			//TODO(Rennorb): soulbind on use
 		}
 		//TODO(Rennorb): salvage
-		
+
 		if(item.vendor_value) {
 			let inner = ['Vendor Value: ', this.formatCoins(item.vendor_value * stackSize)];
 			if(stackSize > 1)
@@ -711,7 +711,7 @@ class GW2TooltipsV2 {
 		return tooltip;
 	}
 
-	generateUpgradeItemGroup(item : API.ItemBase & (API.UpgradeComponentDetail | API.ConsumableDetail), context : Context) : HTMLElement {
+	static generateUpgradeItemGroup(item : API.ItemBase & (API.UpgradeComponentDetail | API.ConsumableDetail), context : Context) : HTMLElement {
 		const group = TUtilsV2.newElm('div.group');
 		for(const [i, tier] of item.tiers.entries()) {
 			let tier_wrap = TUtilsV2.newElm('te');
@@ -727,7 +727,7 @@ class GW2TooltipsV2 {
 
 			/*
 			if(tier.modifiers) for(const modifier of tier.modifiers) {
-				//TODO(Rennorb) @cleanup: unify this wth the buf fact processing 
+				//TODO(Rennorb) @cleanup: unify this wth the buf fact processing
 				let modifierValue = FactsProcessor.calculateModifier(modifier, context.character)
 
 				let text;
@@ -751,7 +751,7 @@ class GW2TooltipsV2 {
 	}
 
 	//TODO(Rennorb) @cleanup: probably move this
-	inferItemUpgrades(wrappers : Iterable<Element>) {
+	static inferItemUpgrades(wrappers : Iterable<Element>) {
 		const remainingInfusionsByContext = this.context.map(ctx => {
 			const counts : Character['upgradeCounts'] = {};
 			for(const [id, c] of Object.entries(ctx.character.upgradeCounts)) {
@@ -800,7 +800,7 @@ class GW2TooltipsV2 {
 	}
 
 	//TODO(Rennorb) @cleanup: move
-	_legacy_transformEffectToSkillObject(gw2Object : HTMLElement, error_store : Set<string>) : number {
+	static _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, error_store : Set<string>) : number {
 		const name = String(gw2Object.getAttribute('objId'));
 		let id = ({
 			blight                  : 62653,
@@ -907,7 +907,7 @@ class GW2TooltipsV2 {
 		}
 	}
 
-	formatItemName(item : API.Item, context : Context, statSet? : API.AttributeSet, upgradeComponent? : any, stackSize = 1) : string {
+	static formatItemName(item : API.Item, context : Context, statSet? : API.AttributeSet, upgradeComponent? : any, stackSize = 1) : string {
 		let name;
 		if(item.type == 'TraitGuide') {
 			name = item.trait;
@@ -945,30 +945,30 @@ class GW2TooltipsV2 {
 			.replaceAll('[null]', '')
 	}
 
-	formatCoins(amount : number) : HTMLElement {
+	static formatCoins(amount : number) : HTMLElement {
 		const parts = [String(Math.floor(amount % 100)), TUtilsV2.newImg(this.ICONS.COIN_COPPER, 'iconsmall', '')];
 		if(amount > 99) parts.unshift(String(Math.floor((amount / 100) % 100)), TUtilsV2.newImg(this.ICONS.COIN_SILVER, 'iconsmall', ''));
 		if(amount > 9999) parts.unshift(String(Math.floor(amount / 1_00_00)), TUtilsV2.newImg(this.ICONS.COIN_GOLD, 'iconsmall', ''));
 		return TUtilsV2.newElm('span', ...parts);
 	}
 
-	isTwoHanded(type : API.WeaponDetailType) {
+	static isTwoHanded(type : API.WeaponDetailType) {
 		switch(type) {
-			case 'Axe'         : return false; 
-			case 'Dagger'      : return false; 
-			case 'Mace'        : return false; 
-			case 'Pistol'      : return false; 
-			case 'Scepter'     : return false; 
-			case 'Focus'       : return false; 
-			case 'Sword'       : return false; 
-			case 'BowShort'    : return false; 
-			case 'Torch'       : return false; 
-			case 'Shield'      : return false; 
-			case 'Warhorn'     : return false; 
-			case 'Toy'         : return false; 
-			case 'ToyTwoHanded': return false; 
-			case 'BundleSmall' : return false; 
-			
+			case 'Axe'         : return false;
+			case 'Dagger'      : return false;
+			case 'Mace'        : return false;
+			case 'Pistol'      : return false;
+			case 'Scepter'     : return false;
+			case 'Focus'       : return false;
+			case 'Sword'       : return false;
+			case 'BowShort'    : return false;
+			case 'Torch'       : return false;
+			case 'Shield'      : return false;
+			case 'Warhorn'     : return false;
+			case 'Toy'         : return false;
+			case 'ToyTwoHanded': return false;
+			case 'BundleSmall' : return false;
+
 			case 'Hammer'     : return true;
 			case 'BowLong'    : return true;
 			case 'Greatsword' : return true;
@@ -982,19 +982,19 @@ class GW2TooltipsV2 {
 		}
 	}
 
-	LUT_DEFENSE = [
+	static LUT_DEFENSE = [
 		115, 120, 125, 129, 133, 137, 142, 146, 150, 154, 162, 168, 175, 182, 189, 196, 202, 209, 216, 223, 232, 240, 248, 257, 265, 274, 282, 290, 299, 307, 319, 330, 341, 352, 363, 374, 385, 396, 407, 418, 431, 443, 456, 469, 481, 494, 506, 519, 532, 544, 560, 575, 590, 606, 621, 636, 651, 666, 682, 697, 714, 731, 748, 764, 781, 798, 815, 832, 848, 865, 885, 905, 924, 943, 963, 982, 1002, 1021, 1040, 1060, 1081, 1102, 1123, 1144, 1165, 1186, 1207, 1228, 1249, 1270, 1291, 1312, 1333, 1354, 1375, 1396, 1417, 1438, 1459, 1480, 1501,
 	];
 
-	LUT_POWER_PLAYER = [
+	static LUT_POWER_PLAYER = [
 		170, 173, 176, 179, 182, 185, 188, 191, 194, 197, 202, 207, 212, 217, 222, 227, 232, 237, 242, 247, 253, 259, 265, 271, 277, 283, 289, 295, 301, 307, 315, 323, 331, 339, 347, 355, 363, 371, 379, 387, 396, 405, 414, 423, 432, 441, 450, 459, 468, 477, 488, 499, 510, 521, 532, 543, 554, 565, 576, 587, 599, 611, 623, 635, 647, 659, 671, 683, 695, 707, 721, 735, 749, 763, 777, 791, 805, 819, 833, 847, 862, 877, 892, 907, 922, 937, 952, 967, 982, 997, 1012, 1027, 1042, 1057, 1072, 1087, 1102, 1117, 1132, 1147, 1162,
 	];
 
-	LUT_POWER_MONSTER = [
+	static LUT_POWER_MONSTER = [
 		162, 179, 197, 214, 231, 249, 267, 286, 303, 322, 344, 367, 389, 394, 402, 412, 439, 454, 469, 483, 500, 517, 556, 575, 593, 612, 622, 632, 672, 684, 728, 744, 761, 778, 820, 839, 885, 905, 924, 943, 991, 1016, 1067, 1093, 1119, 1145, 1193, 1220, 1275, 1304, 1337, 1372, 1427, 1461, 1525, 1562, 1599, 1637, 1692, 1731, 1802, 1848, 1891, 1936, 1999, 2045, 2153, 2201, 2249, 2298, 2368, 2424, 2545, 2604, 2662, 2723, 2792, 2854, 2985, 3047, 3191, 3269, 3348, 3427, 3508, 3589, 3671, 3754, 3838, 3922, 4007, 4093, 4180, 4267, 4356, 4445, 4535, 4625, 4717, 4809, 4902,
 	];
 
-	LUT_RARITY = {
+	static LUT_RARITY = {
 		Junk     : 0,
 		Basic    : 0,
 		Common   : 1,
@@ -1005,7 +1005,7 @@ class GW2TooltipsV2 {
 		Legendary: 4,
 	};
 
-	ICONS = {
+	static ICONS = {
 		COIN_COPPER     : 156902,
 		COIN_SILVER     : 156907,
 		COIN_GOLD       : 156904,
@@ -1019,40 +1019,41 @@ class GW2TooltipsV2 {
 		ACTIVATION      : 496252,
 		RANGE           : 156666,
 		DEFIANCE_BREAK  : 1938788,
+		GENERIC_FACT    : 156661,
 	}
 }
 
 type SupportedTTTypes = API.Skill | API.Trait | API.Amulet; //TODO(Rennorb) @cleanup: once its finished
 
 
-window.gw2tooltips = new GW2TooltipsV2()
-if(window.gw2tooltips.config.autoInitialize) {
-	window.gw2tooltips.hookDocument(document)
+GW2TooltipsV2._constructor();
+if(GW2TooltipsV2.config.autoInitialize) {
+	GW2TooltipsV2.hookDocument(document)
 		.then(_ => {
 			//TODO(Rennorb) @cleanup: those routines could probably be combined into one when both options are active
-			if(window.gw2tooltips.config.autoCollectRuneCounts) {
+			if(GW2TooltipsV2.config.autoCollectRuneCounts) {
 				//TODO(Rennorb) @correctness: this might not work properly with multiple builds on one page
 				const targets = document.getElementsByClassName('gw2-build');
 				if(targets.length) for(const target of targets)
-					Collect.allUpgradeCounts(window.gw2tooltips.context, target)
+					Collect.allUpgradeCounts(GW2TooltipsV2.context, target)
 				else {
 					console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `gw2-build` could be found to use as source. Upgrades will not be collected as there is no way to tell which upgrades belongs to the build and which ones are just in some arbitrary text.");
 				}
 			}
 
-			if(window.gw2tooltips.config.autoCollectStatSources) {
+			if(GW2TooltipsV2.config.autoCollectStatSources) {
 				const targets = document.getElementsByClassName('gw2-build');
 				if(targets.length) for(const target of targets)
-					Collect.allStatSources(window.gw2tooltips.context, target)
+					Collect.allStatSources(GW2TooltipsV2.context, target)
 				else {
 					console.warn("[gw2-tooltips] [collect] `config.autoCollectStatSources` is active, but no element with class `gw2-build` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
 				}
 			}
 
-			if(window.gw2tooltips.config.autoInferEquipmentUpgrades) {
+			if(GW2TooltipsV2.config.autoInferEquipmentUpgrades) {
 				const targets = document.querySelectorAll('.weapon, .armor, .trinket');
 				if(targets.length)
-					window.gw2tooltips.inferItemUpgrades(targets)
+					GW2TooltipsV2.inferItemUpgrades(targets)
 				else {
 					console.warn("[gw2-tooltips] [collect] `config.autoInferEquipmentUpgrades` is active, but no wrapper elements element with class `'weapon`, `armor` or `trinket` could be found to use as source. No elements will be updated");
 				}

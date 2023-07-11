@@ -1,6 +1,6 @@
 # [VIP] Tooltips.js V2
 
-This is the second iteration of the js library used by [Hardstuck](https://hardstuck.gg) to render GW2 Item, Skill, Trait and Boon Icons, as well as tooltips as detailed as in game (or even better). 
+This is the second iteration of the js library used by [Hardstuck](https://hardstuck.gg) to render GW2 Item, Skill, Trait and Boon Icons, as well as tooltips as detailed as in game (or even better).
 
 Some special features include:
 - Proper skill splitting between game-modes
@@ -16,7 +16,7 @@ To archive all of the functionality we use our own proprietary API as opposed to
 ## Normal usage
 
 ### (legacy)
-1. Define `<gw2object objId='{id}' type={skill|trait|boon|...} />` in your html 
+1. Define `<gw2object objId='{id}' type={skill|trait|boon|...} />` in your html
 2. Optionally define one or more context(s) in a window-scoped object '`GW2TooltipsContext`'
 	```html
 	<script>
@@ -73,6 +73,6 @@ By including the script it wil automatically hook the whole document of the curr
 ## Compiling form TypeScript
 1. Download [Node.js](https://nodejs.org/en)
 2. Get the [typescript compiler](https://www.typescriptlang.org/) (probably obtained and installed globally using node by running `npm install -g typescript`)
-3. Clone this repository (`git clone git@github.com:HardstuckGuild/Tooltips.js.git`) or download it 
+3. Clone this repository (`git clone git@github.com:HardstuckGuild/Tooltips.js.git`) or download it
 4. The `tsconfig.json` in the project root defines all parameters. You only need to run `tsc build` next to it.
 5. The `out/` directory now holds your compiled `tooltips.js` file

@@ -57,7 +57,7 @@ class FactsProcessor {
 		//TODO(Rennorb): This should use order 1003
 		if(totalDefianceBreak > 0) {
 			const defianceWrap = TUtilsV2.newElm('te.defiance',
-				TUtilsV2.newImg('1938788.png', 'iconmed'),
+				TUtilsV2.newImg(GW2TooltipsV2.ICONS.DEFIANCE_BREAK, 'iconmed'),
 				TUtilsV2.newElm('tem.color-defiance-fact', `Defiance Break: ${totalDefianceBreak}`)
 			)
 			factWraps.push(defianceWrap)
@@ -68,7 +68,7 @@ class FactsProcessor {
 
 	/** @param fact should already be context resolved */
 	static generateFact(fact : API.Fact, weapon_strength : number, context : Context) : { wrapper? : HTMLElement, defiance_break : number } {
-		let iconSlug = fact.icon || '156661.png'; // setting the default fact icon should happen on the api side
+		let iconSlug = fact.icon || GW2TooltipsV2.ICONS.GENERIC_FACT; // setting the default fact icon should happen on the api side
 
 		const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact) => {
 			let modsArray: string[] = []
@@ -77,7 +77,7 @@ class FactsProcessor {
 					   (!modifier.trait_req || context.character.traits.includes(modifier.trait_req))
 					&& (!modifier.mode || modifier.mode === context.gameMode)
 				));
-					
+
 				//NOTE(Rennorb): Modifiers can 'stack'. For that reason we need to first collect the values and then create text from that, otherwise we get duplicates.
 				let modsMap = new Map<number, { modifier : API.Modifier, value : number }>();
 				for (let i = 0; i < relevantModifiers.length; i++) {
@@ -140,28 +140,28 @@ class FactsProcessor {
 		}
 
 		const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => HTMLElement[] } = {
-			AdjustByAttributeAndLevelHealing : ({fact}) =>  {	
-				//TODO(Rennorb) @cleanup		
+			AdjustByAttributeAndLevelHealing : ({fact}) =>  {
+				//TODO(Rennorb) @cleanup
 				const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0;
 				const value = Math.round((fact.value + attribute * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count);
 				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocaleAttibutes(attribute);
 				const coefficent = window.GW2TooltipsConfig?.preferCorrectnessOverExtraInfo ? '' : ` (${TUtilsV2.withUpToNDigits('toFixed', fact.attribute_multiplier, 4)})`;
 				return [TUtilsV2.newElm('tem', `${text}: ${value}${coefficent}`)];
 			},
-			AttributeAdjust : ({fact}) => {	
+			AttributeAdjust : ({fact}) => {
 				const value = Math.round((fact.range[1] - fact.range[0]) / (context.character.level / 80) + fact.range[0]);
 				const sign = value > 0 ? '+' : ''
 				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocaleAttibutes(fact.target);
 				return [TUtilsV2.newElm('tem', `${text}: ${sign}${value}`)];
 			},
-			Buff : ({fact, buff}) =>  {	
+			Buff : ({fact, buff}) =>  {
 				if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
 				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api
-				iconSlug = buff.icon || iconSlug;		
+				iconSlug = buff.icon || iconSlug;
 
 				let {duration, apply_count} = fact;
 				// TODO(mithos) factor in condi/boon duration.
-				
+
 				let buffDescription = generateBuffDescription(buff, fact);
 				if(buffDescription) {
 					buffDescription = `: ${buffDescription}`;
@@ -169,25 +169,25 @@ class FactsProcessor {
 
 				const seconds = duration > 0 ? `(${TUtilsV2.drawFractional(duration / 1000)}s)`: '';
 
-				let node = [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`)]		
+				let node = [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`)]
 				if(apply_count > 1) {
 					node.push(TUtilsV2.newElm('div.buffcount', apply_count.toString()));
 				}
 				return node;
 			},
-			BuffBrief : ({fact, buff}) =>  {		
+			BuffBrief : ({fact, buff}) =>  {
 				if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
 				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api
 				iconSlug = buff.icon || iconSlug;
-				
+
 				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text).replace("%str1%", buff.name)}`)];
 			},
-			Distance : ({fact}) => {				
+			Distance : ({fact}) => {
 				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${Math.round(fact.distance)}`)];
 			},
 			HealthAdjustHealing: ({ fact }) => {
-				//TODO(Rennorb) @cleanup		
-				const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.attribute)] || 0;				
+				//TODO(Rennorb) @cleanup
+				const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.attribute)] || 0;
 				const value = Math.round((fact.value + attribute * fact.multiplier) * fact.hit_count);
 				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocaleAttibutes(fact.attribute);
 
@@ -254,7 +254,7 @@ class FactsProcessor {
 				iconSlug = prefix.icon || iconSlug;
 
 				if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api						
+				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api
 
 				let {duration, apply_count, text} = fact;
 				// TODO(mithos) factor in condi/boon duration.
@@ -270,11 +270,11 @@ class FactsProcessor {
 					TUtilsV2.newImg(buff.icon, 'iconmed'),
 					TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`)
 				);
-				
+
 				if(apply_count > 1) {
 					node.appendChild(TUtilsV2.newElm('div.buffcount', apply_count.toString()));
 				}
-				return [node];				
+				return [node];
 			},
 			PrefixedBuffBrief : ({fact, buff}) => {
 				let prefix = APICache.storage.skills.get(fact.prefix)
@@ -283,12 +283,12 @@ class FactsProcessor {
 				iconSlug = prefix.icon || iconSlug
 
 				if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api	
+				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api
 
 				let node = TUtilsV2.newElm('te',
 					TUtilsV2.newImg(buff.icon, 'iconmed'),
 					TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name}`)
-				);		
+				);
 
 				return [node]
 			},
@@ -301,7 +301,7 @@ class FactsProcessor {
 				if(window.GW2TooltipsConfig?.preferCorrectnessOverExtraInfo) {
 					return [TUtilsV2.newElm('tem', `Range: ${max}`)];
 				}
-				const range = min ? `${min} - ${max}` : max; 
+				const range = min ? `${min} - ${max}` : max;
 				return [TUtilsV2.newElm('tem', `Range: ${range}`)];
 			},
 			StunBreak : ({fact}) => {
@@ -311,7 +311,7 @@ class FactsProcessor {
 
 		const buff = APICache.storage.skills.get(fact.buff || 0)
 		const data : HandlerParams = { fact, buff, weaponStrength: weapon_strength }
-		const text = factInflators[fact.type](data as any)		
+		const text = factInflators[fact.type](data as any)
 		const wrapper = TUtilsV2.newElm('te')
 		if(fact.requires_trait) {
 			wrapper.classList.add('color-traited-fact')

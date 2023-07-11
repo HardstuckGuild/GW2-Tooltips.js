@@ -34,7 +34,7 @@ class FakeAPI implements APIImplementation {
 				const allData = (window as any)['DUMP_output_'+endpoint] as APIResponseTypeMap[T][];
 				if(allData) {
 					const apiResult = allData.filter(data => ids.includes(data.id));
-					// for itemstats the new api will return related attibutes aswell. 
+					// for itemstats the new api will return related attibutes aswell.
 					if(endpoint == 'itemstats') {
 						const additionalIdsWithDuplicates = ((apiResult as APIResponseTypeMap['itemstats'][])
 							.map(set => set.similar_sets)

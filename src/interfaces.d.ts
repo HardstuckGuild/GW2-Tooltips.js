@@ -35,7 +35,7 @@ namespace API {
 
 	interface Slot {
 		profession  : 'None' | Profession
-		slot        : `${'Main'|'Offhand'}${1|2|3|4|5}` | `Offhand${1|2}` 
+		slot        : `${'Main'|'Offhand'}${1|2|3|4|5}` | `Offhand${1|2}`
 			| 'Heal' | 'Standard' | 'Elite'
 			| 'Pet' | `Transformation${1|2|3|4|5}`
 		prev_chain? : number
@@ -43,8 +43,8 @@ namespace API {
 	}
 
 	interface ModifierDescriptionOverride {
-		profession	: 'None' | Profession
-		description	: string
+		profession  : 'None' | Profession
+		description : string
 	}
 
 	interface Modifier {
@@ -69,9 +69,9 @@ namespace API {
 		requires_trait? : number[]
 		defiance_break? : number
 		overrides?      : number
-	
+
 		//NOTE(Rennorb): This is here so we can just use `Fact.buff` and similar. Otherwise ts wont like us calling that on the `Fact` union because the prop doesn't exist on some of the constituents.
-		[k : string] : undefined 
+		[k : string] : undefined
 	}
 
 	interface AdjustByAttributeAndLevelHealingFact extends BasicFact<'AdjustByAttributeAndLevelHealing'> {
@@ -86,10 +86,10 @@ namespace API {
 	}
 
 	interface AttributeAdjustFact extends BasicFact<'AttributeAdjust'> {
-		text?	: string
-		icon?	: string
-		range	: number[]
-		target	: Attributes
+		text?  : string
+		icon?  : string
+		range  : number[]
+		target : Attributes
 	}
 
 	interface BuffFact extends BasicFact<'Buff'> {
@@ -137,19 +137,19 @@ namespace API {
 		icon?   : string
 		percent : number
 	}
-	
+
 	interface PercentLifeForceAdjustFact extends BasicFact<'PercentLifeForceAdjust'> {
 		text?   : string
 		icon?   : string
 		percent : number
 	}
-	
+
 	interface PercentHealthFact extends BasicFact<'PercentHealth'> {
 		text?   : string
 		icon?   : string
 		percent : number
 	}
-	
+
 	interface LifeForceAdjustFact extends BasicFact<'LifeForceAdjust'> {
 		text?   : string
 		icon?   : string
@@ -189,10 +189,10 @@ namespace API {
 
 	interface BuffConversionFact extends BasicFact<'BuffConversion'> {
 		text?   : string
-    	icon?   : string
-    	source  : Attributes
-    	target  : Attributes
-    	percent : number
+		icon?   : string
+		source  : Attributes
+		target  : Attributes
+		percent : number
 	}
 
 	interface NoDataFact extends BasicFact<'NoData'> {
@@ -201,12 +201,12 @@ namespace API {
 	}
 
 	interface PrefixedBuffFact extends BasicFact<'PrefixedBuff'>{
-    	text?       : string
-    	icon?       : string
-    	apply_count : number
-    	buff        : number
-    	prefix      : number
-    	duration    : Milliseconds
+		text?       : string
+		icon?       : string
+		apply_count : number
+		buff        : number
+		prefix      : number
+		duration    : Milliseconds
 	}
 
 	interface PrefixedBuffBriefFact extends BasicFact<'PrefixedBuffBrief'>{
@@ -233,36 +233,36 @@ namespace API {
 	interface StunBreakFact extends BasicFact<'StunBreak'> {
 		icon? : string
 	}
-	
+
 	type FactMap = {
-		AdjustByAttributeAndLevelHealing   	: AdjustByAttributeAndLevelHealingFact
-		AttributeAdjust						: AttributeAdjustFact
-		Buff              					: BuffFact
-		BuffBrief         					: BuffBriefFact
-		Distance          					: DistanceFact
-		HealthAdjustHealing     			: HealthAdjustHealingFact
-		Number           	 				: NumberFact
-		Percent           					: PercentFact
-		PercentDamage           			: PercentDamageFact
-		PercentLifeForceAdjust           	: PercentLifeForceAdjustFact
-		PercentHealth           			: PercentHealthFact
-		LifeForceAdjust           			: LifeForceAdjustFact
-		Damage            					: DamageFact
-		Time              					: TimeFact
-		ComboField        					: ComboFieldFact
-		ComboFinisher     					: ComboFinisherFact
-		BuffConversion    					: BuffConversionFact
-		NoData            					: NoDataFact
-		PrefixedBuff      					: PrefixedBuffFact
-		PrefixedBuffBrief 					: PrefixedBuffBriefFact		
-    	// Custom facts
-		Recharge          					: RechargeFact
-		Range             					: RangeFact
-		StunBreak         					: StunBreakFact
+		AdjustByAttributeAndLevelHealing : AdjustByAttributeAndLevelHealingFact
+		AttributeAdjust                  : AttributeAdjustFact
+		Buff                             : BuffFact
+		BuffBrief                        : BuffBriefFact
+		Distance                         : DistanceFact
+		HealthAdjustHealing              : HealthAdjustHealingFact
+		Number                           : NumberFact
+		Percent                          : PercentFact
+		PercentDamage                    : PercentDamageFact
+		PercentLifeForceAdjust           : PercentLifeForceAdjustFact
+		PercentHealth                    : PercentHealthFact
+		LifeForceAdjust                  : LifeForceAdjustFact
+		Damage                           : DamageFact
+		Time                             : TimeFact
+		ComboField                       : ComboFieldFact
+		ComboFinisher                    : ComboFinisherFact
+		BuffConversion                   : BuffConversionFact
+		NoData                           : NoDataFact
+		PrefixedBuff                     : PrefixedBuffFact
+		PrefixedBuffBrief                : PrefixedBuffBriefFact
+		// Custom facts
+		Recharge                         : RechargeFact
+		Range                            : RangeFact
+		StunBreak                        : StunBreakFact
 	}
 
 	type FactType = keyof FactMap;
-	
+
 	type Trait = ContextInformation & {
 		id                 : number
 		icon               : string
@@ -286,7 +286,7 @@ namespace API {
 	}
 
 	type Item = ItemDetail & ItemBase
-	
+
 	type ItemBase = {
 		id             : number
 		name           : string
@@ -378,7 +378,7 @@ namespace API {
 	interface AttributeSet {
 		id         : number
 		name       : string
-		attributes : { 
+		attributes : {
 			attribute  : Exclude<Attributes, 'None'>
 			base_value : number
 			scaling    : number

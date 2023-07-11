@@ -38,7 +38,7 @@ class APICache {
 		let currentEndpoint : Endpoints | undefined = endpoint
 		let i = 0
 		do {
-			
+
 			const storageSet = this.storage[currentEndpoint]
 			//TODO(Rennorb): i really don't like this but it seems to be the most sensible way for now
 			const request = Array.from(additionalIds[currentEndpoint].values())

@@ -29,7 +29,7 @@ class Collect {
 			if(item.subtype == "Default") {
 				if(!(amountToAdd = +String(element.getAttribute('count')))) { // modern version just has the item count as attribute
 
-					if(window.gw2tooltips.config.legacyCompatibility) {
+					if(GW2TooltipsV2.config.legacyCompatibility) {
 						amountToAdd = this._legacy_getInfusionCount(element)!;
 						if(!amountToAdd) continue;
 					}
@@ -112,7 +112,7 @@ class Collect {
 
 			const item = APICache.storage.items.get(id);
 			if(!item || !('subtype' in item)) continue;
-			
+
 			let amountToAdd = 1;
 
 			if(item.type === 'UpgradeComponent' || item.type === 'Consumable') {
@@ -122,7 +122,7 @@ class Collect {
 				if(item.subtype === 'Rune') {
 					//TODO(Rennorb) @bug: this doesn't work if the runes are already collected / manually set. its already at 6 in that case and the value isn't properly processed.
 					if(tierNumber > 6) {
-						//NOTE(Rennorb): Only complain if we are manually counting runes. 
+						//NOTE(Rennorb): Only complain if we are manually counting runes.
 						//TODO(Rennorb) @correctness: Is this the right way to do it? should we just complain when runes are specified but we find one that isn't?
 						if(!targetContext.character.upgradeCounts[item.id])
 							console.warn("[gw2-tooltips] [collect] Found more than 6 runes of the same type. Here is the 7th rune element: ", element);
@@ -133,13 +133,13 @@ class Collect {
 				else {
 					if(item.subtype == "Default") {
 						if(!(amountToAdd = +String(element.getAttribute('count')))) { // modern version just has the item count as attribute
-		
-							if(window.gw2tooltips.config.legacyCompatibility) {
+
+							if(GW2TooltipsV2.config.legacyCompatibility) {
 								amountToAdd = this._legacy_getInfusionCount(element)!;
 								if(!amountToAdd) continue;
 							}
 						}
-		
+
 						if(!amountToAdd) {
 							console.warn("[gw2-tooltips] [collect] Could not figure how many infusions to add for sourceElement ", element, ". Will not assume anything and just ignore the stack.");
 									continue
@@ -165,7 +165,7 @@ class Collect {
 			}
 		}
 
-		//TODO(Rennorb) @cleanup: move this out? 
+		//TODO(Rennorb) @cleanup: move this out?
 		switch(mode) {
 			case CollectMode.IgnoreGlobal: targetContext.character.statSources = sources; break
 			case CollectMode.Append: targetContext.character.statSources = Object.assign(targetContext.character.statSources, sources); break;

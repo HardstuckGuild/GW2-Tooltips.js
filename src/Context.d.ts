@@ -1,4 +1,4 @@
-// This file is meant for anyone who want to have typings for the tooltips.js context structure 
+// This file is meant for anyone who want to have typings for the tooltips.js context structure
 // Defaults for these structures can be found in TooltipsV2.ts
 
 //NOTE(Rennorb): these are separate window objects to allow using just either or.
@@ -55,16 +55,16 @@ interface StatSource {
 
 
 interface Config {
-	 autoInitialize         		: bool
+	 autoInitialize                 : bool
 	 // only works if auto initialize is turned on
-	 autoCollectRuneCounts  		: bool
+	 autoCollectRuneCounts          : bool
 	 // only works if auto initialize is turned on
-	 autoCollectStatSources 		: bool
+	 autoCollectStatSources         : bool
 	 // only works if auto initialize is turned on
-	 autoInferEquipmentUpgrades 	: bool
-	 adjustIncorrectStatIds 		: bool
-	 legacyCompatibility    		: bool
+	 autoInferEquipmentUpgrades     : bool
+	 adjustIncorrectStatIds         : bool
+	 legacyCompatibility            : bool
 	 preferCorrectnessOverExtraInfo : bool
 
-	 apiImpl?               : () => APIImplementation
+	 apiImpl?                       : () => APIImplementation
 }
