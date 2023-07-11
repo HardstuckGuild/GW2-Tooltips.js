@@ -69,6 +69,10 @@ class GW2TooltipsV2 {
 		},
 	}
 	static createCompleteContext(partialContext : PartialContext) : Context {
+		if(partialContext.gameMode == "Pvp" && partialContext.character?.level && partialContext.character?.level != 80) {
+			console.error('[gw2-tooltips] [init] supplied (partial) context has its gamemode set to pvp, but has a character level specified thats other than 80. In pvp you are always level 80. This will lead to unexpected results; Remove the explicit level or change the gamemode. The (partial) context in question is: ', partialContext);
+		}
+
 		const stats = Object.assign({}, this.defaultContext.character.stats, partialContext.character?.stats);
 		const statSources = Object.assign({}, this.defaultContext.character.statSources, partialContext.character?.statSources);
 		const upgradeCounts = Object.assign({}, partialContext.character?.upgradeCounts);
