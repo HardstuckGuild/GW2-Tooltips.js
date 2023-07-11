@@ -42,28 +42,30 @@ class GW2TooltipsV2 {
 			sex              : "Male",
 			traits           : [],
 			stats: {
-				power         : 1000,
-				toughness     : 1000,
-				vitality      : 1000,
-				precision     : 1000,
-				ferocity      : 1000,
-				conditionDmg  : 0,
-				expertise     : 0,
-				concentration : 0,
-				healing       : 0,
-				critDamage    : 0,
+				power          : 1000,
+				toughness      : 1000,
+				vitality       : 1000,
+				precision      : 1000,
+				ferocity       : 1000,
+				conditionDmg   : 0,
+				expertise      : 0,
+				concentration  : 0,
+				healing        : 0,
+				critDamage     : 0,
+				agonyResistance: 0,
 			},
 			statSources: {
-				power         : [],
-				toughness     : [],
-				vitality      : [],
-				precision     : [],
-				ferocity      : [],
-				conditionDmg  : [],
-				expertise     : [],
-				concentration : [],
-				healing       : [],
-				critDamage    : [],
+				power          : [],
+				toughness      : [],
+				vitality       : [],
+				precision      : [],
+				ferocity       : [],
+				conditionDmg   : [],
+				expertise      : [],
+				concentration  : [],
+				healing        : [],
+				critDamage     : [],
+				agonyResistance: [],
 			},
 			upgradeCounts: {},
 		},
@@ -211,7 +213,7 @@ class GW2TooltipsV2 {
 
 				const data = APICache.storage[type].get(objId);
 				if(data) {
-					if(type == 'items') {
+					if(type == 'items' || type == "pvp/amulets") {
 						const statId = +String(gw2Object.getAttribute('stats')) || undefined;
 						this.tooltip.replaceChildren(this.generateItemTooltip(data as API.Item, context, gw2Object, statId, stackSize));
 					}
@@ -438,7 +440,7 @@ class GW2TooltipsV2 {
 		return tooltip;
 	}
 
-	static resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { override_groups? : API.ContextInformation['override_groups'] }, context : Context) : API.ContextInformation {
+	static resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { facts? : API.Fact[], override_groups? : API.ContextInformation['override_groups'] }, context : Context) : API.ContextInformation {
 		let override = apiObject.override_groups?.find(g => g.context.includes(context.gameMode));
 		let info = Object.assign({}, apiObject, override);
 		if(apiObject.facts && override && override.facts) {
@@ -741,27 +743,29 @@ class GW2TooltipsV2 {
 			if(tier.description) tier_wrap.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(tier.description))));
 
 			//NOTE(Rennorb): facts seem to exist, but almost universally be wrong.
-			/*
-			if(tier.facts) for(const fact of tier.facts) {
-				const { wrapper } = FactsProcessor.generateFact(fact, null as any, context);
-				if(wrapper) tier_wrap.append(wrapper);
-			}
-			*/
-
-			/*
-			if(tier.modifiers) for(const modifier of tier.modifiers) {
-				//TODO(Rennorb) @cleanup: unify this wth the buf fact processing
-				let modifierValue = FactsProcessor.calculateModifier(modifier, context.character)
-
-				let text;
-				if(modifier.flags.includes('FormatPercent')) {
-					text = `${Math.round(modifierValue)}% ${modifier.description}`
-				} else {
-					text = `${Math.round(modifierValue)} ${modifier.description}`
+			else if(tier.facts) {
+				for(const fact of tier.facts) {
+					const { wrapper } = FactsProcessor.generateFact(fact, null as any, context);
+					if(wrapper) tier_wrap.append(wrapper);
 				}
-				tier_wrap.append(TUtilsV2.newElm('te', text));
 			}
-			*/
+
+			else if(tier.modifiers) {
+				tier_wrap.style.flexDirection = "column";
+				for(const modifier of tier.modifiers) {
+					//TODO(Rennorb) @cleanup: unify this wth the buf fact processing
+					let modifierValue = FactsProcessor.calculateModifier(modifier, context.character);
+
+					let text;
+					if(modifier.flags.includes('FormatPercent')) {
+						text = `+${Math.round(modifierValue)}% ${TUtilsV2.mapLocale(modifier.description as any)}`;
+					} else {
+						text = `+${Math.round(modifierValue)} ${TUtilsV2.mapLocale(modifier.description as any)}`;
+					}
+					tier_wrap.append(TUtilsV2.newElm('te', text));
+				}
+			}
+			
 			const w = TUtilsV2.newElm('te', tier_wrap);
 			if(item.subtype == "Rune") {
 				const colorClass = i < (context.character.upgradeCounts[item.id] || 0) ? '.color-stat-green' : '';

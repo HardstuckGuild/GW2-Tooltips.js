@@ -2,6 +2,16 @@ namespace LegacyCompat {
 	type ObjectType = 'skill' | 'trait' | 'item' | 'specialization' | 'pet' | 'pvp/amulet' | 'specialization' | 'effect';
 }
 
+namespace OfficialAPI {
+	type AmuletStats = 'AgonyResistance' | 'BoonDuration' | 'ConditionDamage' | 'ConditionDuration' | 'CritDamage' | 'Healing' | 'Power' | 'Precision' | 'Toughness' | 'Vitality';
+	type Amulet = {
+		id         : number
+		name       : string
+		icon       : string
+		attributes : { [k in AmuletStats] : number }
+	}
+}
+
 namespace API {
 	type Skill = ContextInformation & {
 		id                 : number
@@ -19,7 +29,7 @@ namespace API {
 	type Fact = FactMap[keyof FactMap];
 
 	//TODO(Rennorb) @cleanup: ho over the flag types and decide whether or not the 'none' entry should be included or excluded by default, then stick with one of the two.
-	type Attributes = 'None' | Capitalize<Exclude<keyof Stats, 'level'>>;
+	type Attributes = 'None' | Capitalize<keyof Stats>;
 	type ArmorType  = 'HelmAquatic' | 'Helm' | 'Shoulders' | 'Coat' | 'Gloves' | 'Leggings' | 'Boots';
 	type TrinketType = 'Amulet' | 'Ring' | 'Accessory' | 'Backpiece';
 	type Weapons1H = 'Focus' | 'Shield' | 'Torch' | 'Warhorn' | 'BowShort' | 'Axe' | 'Sword' | 'Dagger' | 'Pistol' | 'Scepter' | 'Mace';
@@ -365,7 +375,9 @@ namespace API {
 		id    : number
 		icon  : string
 		name  : string
-		facts : AttributeAdjustFact[]
+		//TODO @cleanup
+		tiers : [UpgradeComponentDetail['tiers'][0]]
+		flags : ItemFlag[]
 	}
 
 	interface AttributeSet {

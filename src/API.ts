@@ -8,18 +8,31 @@ class FakeAPI implements APIImplementation {
 		if(['specializations', 'pvp/amulets'].includes(endpoint)) {
 			const response = await fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
 			if (endpoint == 'pvp/amulets') {
-				for(const obj of response) {
-					obj.facts = [];
+				const modifierTranslation = {
+					BoonDuration     : "Concentration",
+					ConditionDamage  : "ConditionDmg",
+					ConditionDuration: "Expertise",
+				} as { [k in OfficialAPI.AmuletStats] : Exclude<API.Attributes, 'None'> | undefined }
+
+				for(const obj of response as OfficialAPI.Amulet[]) {
+					const tier : API.UpgradeComponentDetail['tiers'][0] = { modifiers: [] }
 					//hackedy hack hack
-					for(const [attribute, adjustment] of Object.entries(obj.attributes)) {
-						obj.facts.push({
-							type  : 'AttributeAdjust',
-							icon  : '',
-							order : -1,
-							target: attribute,
-							range : [adjustment, adjustment],
-						} as API.AttributeAdjustFact)
+					for(const [attribute_, adjustment] of Object.entries(obj.attributes)) {
+						const attribute = modifierTranslation[attribute_] || attribute_ as Exclude<API.Attributes, 'None'>;
+
+						tier.modifiers!.push({
+							formula       : "NoScaling",
+							base_amount   : adjustment,
+							id            : -1, //TODO unused
+							formula_param1: 0,
+							formula_param2: 0,
+							attribute,
+							description   : attribute,
+							flags         : [],
+						})
 					}
+					(obj as any).tiers = [tier];
+					(obj as any).flags = ["Pvp"];
 				}
 			}
 			return response;

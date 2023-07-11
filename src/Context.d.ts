@@ -34,16 +34,17 @@ interface Character {
 }
 
 interface Stats {
-	power         : number
-	toughness     : number
-	vitality      : number
-	precision     : number
-	ferocity      : number
-	conditionDmg  : number
-	expertise     : number
-	concentration : number
-	healing       : number
-	critDamage    : number
+	power           : number
+	toughness       : number
+	vitality        : number
+	precision       : number
+	ferocity        : number
+	conditionDmg    : number
+	expertise       : number
+	concentration   : number
+	healing         : number
+	critDamage      : number
+	agonyResistance : number
 }
 
 interface StatSource {

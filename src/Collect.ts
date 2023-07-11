@@ -102,68 +102,75 @@ class Collect {
 			concentration  : [],
 			healing        : [],
 			critDamage     : [],
+			agonyResistance: [],
 		};
 
 		//NOTE(Rennorb): We use the existing rune count if given.
 		let upgrades = Object.assign({}, targetContext.character.upgradeCounts);
 
 		for(const element of elements) {
-			let id;
-			if(element.getAttribute('type') !== 'item' || !(id = +String(element.getAttribute('objid')))) continue;
-
-			const item = APICache.storage.items.get(id);
-			if(!item || !('subtype' in item)) continue;
+			let id, type = element.getAttribute('type');
+			if(!(id = +String(element.getAttribute('objid')))) continue;
 
 			let amountToAdd = 1;
+			let tier, item : API.Item | API.Amulet | undefined;
+			if(type == 'item') {
+				item = APICache.storage.items.get(id);
+				if(!item || !('subtype' in item)) continue;
 
-			if(item.type === 'UpgradeComponent' || item.type === 'Consumable') {
-				//NOTE(Rennorb): We count additional runes, but ignore those over the sensible amount.
-				const tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + 1;
-				let tier;
-				if(item.subtype === 'Rune') {
-					//TODO(Rennorb) @bug: this doesn't work if the runes are already collected / manually set. its already at 6 in that case and the value isn't properly processed.
-					if(tierNumber > 6) {
-						//NOTE(Rennorb): Only complain if we are manually counting runes.
-						//TODO(Rennorb) @correctness: Is this the right way to do it? should we just complain when runes are specified but we find one that isn't?
-						if(!targetContext.character.upgradeCounts[item.id])
-							console.warn("[gw2-tooltips] [collect] Found more than 6 runes of the same type. Here is the 7th rune element: ", element);
-						continue;
+				if(item.type === 'UpgradeComponent' || item.type === 'Consumable') {
+					//NOTE(Rennorb): We count additional runes, but ignore those over the sensible amount.
+					const tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + 1;
+					if(item.subtype === 'Rune') {
+						//TODO(Rennorb) @bug: this doesn't work if the runes are already collected / manually set. its already at 6 in that case and the value isn't properly processed.
+						if(tierNumber > 6) {
+							//NOTE(Rennorb): Only complain if we are manually counting runes.
+							//TODO(Rennorb) @correctness: Is this the right way to do it? should we just complain when runes are specified but we find one that isn't?
+							if(!targetContext.character.upgradeCounts[item.id])
+								console.warn("[gw2-tooltips] [collect] Found more than 6 runes of the same type. Here is the 7th rune element: ", element);
+							continue;
+						}
+						tier = item.tiers[tierNumber - 1];
 					}
-					tier = item.tiers[tierNumber - 1];
-				}
-				else {
-					//NOTE(Rennorb): Pvp runes / sigils have type default; should fix this on the api side
-					if(item.subtype == "Default" && !item.flags.includes('Pvp')) {
-						if(!(amountToAdd = +String(element.getAttribute('count')))) { // modern version just has the item count as attribute
+					else {
+						//NOTE(Rennorb): Pvp runes / sigils have type default; should fix this on the api side
+						if(item.subtype == "Default" && !item.flags.includes('Pvp')) {
+							if(!(amountToAdd = +String(element.getAttribute('count')))) { // modern version just has the item count as attribute
 
-							if(GW2TooltipsV2.config.legacyCompatibility) {
-								amountToAdd = this._legacy_getInfusionCount(element)!;
-								if(!amountToAdd) continue;
+								if(GW2TooltipsV2.config.legacyCompatibility) {
+									amountToAdd = this._legacy_getInfusionCount(element)!;
+									if(!amountToAdd) continue;
+								}
+							}
+
+							if(!amountToAdd) {
+								console.warn("[gw2-tooltips] [collect] Could not figure how many infusions to add for sourceElement ", element, ". Will not assume anything and just ignore the stack.");
+										continue
 							}
 						}
-
-						if(!amountToAdd) {
-							console.warn("[gw2-tooltips] [collect] Could not figure how many infusions to add for sourceElement ", element, ". Will not assume anything and just ignore the stack.");
-									continue
+						else if(item.subtype === 'Sigil' && tierNumber > 1) {
+							//NOTE(Rennorb): We only process one sigil, since sigils are unique, but we start complaining at the third identical one since there might be the same sigil twice for different sets.
+							//TODO(Rennorb) @correctness: how to handle asymmetric sets? Right now we would assume all unique sigils are active at once, so if you do [A, B] [B, C] then A, B, C would be considered active.
+							if(tierNumber > 2)
+								console.warn("[gw2-tooltips] [collect] Found more than 2 sigils of the same type. Here is the 3th sigil element: ", element);
+							continue;
 						}
+
+						tier = item.tiers[0];
 					}
-					else if(item.subtype === 'Sigil' && tierNumber > 1) {
-						//NOTE(Rennorb): We only process one sigil, since sigils are unique, but we start complaining at the third identical one since there might be the same sigil twice for different sets.
-						//TODO(Rennorb) @correctness: how to handle asymmetric sets? Right now we would assume all unique sigils are active at once, so if you do [A, B] [B, C] then A, B, C would be considered active.
-						if(tierNumber > 2)
-							console.warn("[gw2-tooltips] [collect] Found more than 2 sigils of the same type. Here is the 3th sigil element: ", element);
-						continue;
-					}
-
-					tier = item.tiers[0];
 				}
+			}
+			else if(type == 'pvp/amulet') {
+				item = APICache.storage['pvp/amulets'].get(id);
+				if(!item) continue;
+				
+				tier = item.tiers[0];
+			}
 
+			if(tier && tier.modifiers) for(const modifier of tier.modifiers!) {
+				if(!modifier.attribute) continue;
 
-				if(tier.modifiers) for(const modifier of tier.modifiers!) {
-					if(!modifier.attribute) continue;
-
-					sources[TUtilsV2.Uncapitalize(modifier.attribute)].push({ modifier, source: item.name, count: amountToAdd })
-				}
+				sources[TUtilsV2.Uncapitalize(modifier.attribute)].push({ modifier, source: item!.name, count: amountToAdd })
 			}
 		}
 

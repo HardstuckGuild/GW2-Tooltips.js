@@ -4,17 +4,28 @@ class FakeAPI {
         if (['specializations', 'pvp/amulets'].includes(endpoint)) {
             const response = await fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
             if (endpoint == 'pvp/amulets') {
+                const modifierTranslation = {
+                    BoonDuration: "Concentration",
+                    ConditionDamage: "ConditionDmg",
+                    ConditionDuration: "Expertise",
+                };
                 for (const obj of response) {
-                    obj.facts = [];
-                    for (const [attribute, adjustment] of Object.entries(obj.attributes)) {
-                        obj.facts.push({
-                            type: 'AttributeAdjust',
-                            icon: '',
-                            order: -1,
-                            target: attribute,
-                            range: [adjustment, adjustment],
+                    const tier = { modifiers: [] };
+                    for (const [attribute_, adjustment] of Object.entries(obj.attributes)) {
+                        const attribute = modifierTranslation[attribute_] || attribute_;
+                        tier.modifiers.push({
+                            formula: "NoScaling",
+                            base_amount: adjustment,
+                            id: -1,
+                            formula_param1: 0,
+                            formula_param2: 0,
+                            attribute,
+                            description: attribute,
+                            flags: [],
                         });
                     }
+                    obj.tiers = [tier];
+                    obj.flags = ["Pvp"];
                 }
             }
             return response;
@@ -260,55 +271,64 @@ class Collect {
             concentration: [],
             healing: [],
             critDamage: [],
+            agonyResistance: [],
         };
         let upgrades = Object.assign({}, targetContext.character.upgradeCounts);
         for (const element of elements) {
-            let id;
-            if (element.getAttribute('type') !== 'item' || !(id = +String(element.getAttribute('objid'))))
-                continue;
-            const item = APICache.storage.items.get(id);
-            if (!item || !('subtype' in item))
+            let id, type = element.getAttribute('type');
+            if (!(id = +String(element.getAttribute('objid'))))
                 continue;
             let amountToAdd = 1;
-            if (item.type === 'UpgradeComponent' || item.type === 'Consumable') {
-                const tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + 1;
-                let tier;
-                if (item.subtype === 'Rune') {
-                    if (tierNumber > 6) {
-                        if (!targetContext.character.upgradeCounts[item.id])
-                            console.warn("[gw2-tooltips] [collect] Found more than 6 runes of the same type. Here is the 7th rune element: ", element);
-                        continue;
+            let tier, item;
+            if (type == 'item') {
+                item = APICache.storage.items.get(id);
+                if (!item || !('subtype' in item))
+                    continue;
+                if (item.type === 'UpgradeComponent' || item.type === 'Consumable') {
+                    const tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + 1;
+                    if (item.subtype === 'Rune') {
+                        if (tierNumber > 6) {
+                            if (!targetContext.character.upgradeCounts[item.id])
+                                console.warn("[gw2-tooltips] [collect] Found more than 6 runes of the same type. Here is the 7th rune element: ", element);
+                            continue;
+                        }
+                        tier = item.tiers[tierNumber - 1];
                     }
-                    tier = item.tiers[tierNumber - 1];
-                }
-                else {
-                    if (item.subtype == "Default" && !item.flags.includes('Pvp')) {
-                        if (!(amountToAdd = +String(element.getAttribute('count')))) {
-                            if (GW2TooltipsV2.config.legacyCompatibility) {
-                                amountToAdd = this._legacy_getInfusionCount(element);
-                                if (!amountToAdd)
-                                    continue;
+                    else {
+                        if (item.subtype == "Default" && !item.flags.includes('Pvp')) {
+                            if (!(amountToAdd = +String(element.getAttribute('count')))) {
+                                if (GW2TooltipsV2.config.legacyCompatibility) {
+                                    amountToAdd = this._legacy_getInfusionCount(element);
+                                    if (!amountToAdd)
+                                        continue;
+                                }
+                            }
+                            if (!amountToAdd) {
+                                console.warn("[gw2-tooltips] [collect] Could not figure how many infusions to add for sourceElement ", element, ". Will not assume anything and just ignore the stack.");
+                                continue;
                             }
                         }
-                        if (!amountToAdd) {
-                            console.warn("[gw2-tooltips] [collect] Could not figure how many infusions to add for sourceElement ", element, ". Will not assume anything and just ignore the stack.");
+                        else if (item.subtype === 'Sigil' && tierNumber > 1) {
+                            if (tierNumber > 2)
+                                console.warn("[gw2-tooltips] [collect] Found more than 2 sigils of the same type. Here is the 3th sigil element: ", element);
                             continue;
                         }
+                        tier = item.tiers[0];
                     }
-                    else if (item.subtype === 'Sigil' && tierNumber > 1) {
-                        if (tierNumber > 2)
-                            console.warn("[gw2-tooltips] [collect] Found more than 2 sigils of the same type. Here is the 3th sigil element: ", element);
-                        continue;
-                    }
-                    tier = item.tiers[0];
                 }
-                if (tier.modifiers)
-                    for (const modifier of tier.modifiers) {
-                        if (!modifier.attribute)
-                            continue;
-                        sources[TUtilsV2.Uncapitalize(modifier.attribute)].push({ modifier, source: item.name, count: amountToAdd });
-                    }
             }
+            else if (type == 'pvp/amulet') {
+                item = APICache.storage['pvp/amulets'].get(id);
+                if (!item)
+                    continue;
+                tier = item.tiers[0];
+            }
+            if (tier && tier.modifiers)
+                for (const modifier of tier.modifiers) {
+                    if (!modifier.attribute)
+                        continue;
+                    sources[TUtilsV2.Uncapitalize(modifier.attribute)].push({ modifier, source: item.name, count: amountToAdd });
+                }
         }
         switch (mode) {
             case 0:
@@ -864,7 +884,7 @@ class GW2TooltipsV2 {
                     return;
                 const data = APICache.storage[type].get(objId);
                 if (data) {
-                    if (type == 'items') {
+                    if (type == 'items' || type == "pvp/amulets") {
                         const statId = +String(gw2Object.getAttribute('stats')) || undefined;
                         this.tooltip.replaceChildren(this.generateItemTooltip(data, context, gw2Object, statId, stackSize));
                     }
@@ -1337,6 +1357,27 @@ class GW2TooltipsV2 {
             let tier_wrap = TUtilsV2.newElm('te');
             if (tier.description)
                 tier_wrap.append(TUtilsV2.newElm('span', TUtilsV2.fromHTML(TUtilsV2.GW2Text2HTML(tier.description))));
+            else if (tier.facts) {
+                for (const fact of tier.facts) {
+                    const { wrapper } = FactsProcessor.generateFact(fact, null, context);
+                    if (wrapper)
+                        tier_wrap.append(wrapper);
+                }
+            }
+            else if (tier.modifiers) {
+                tier_wrap.style.flexDirection = "column";
+                for (const modifier of tier.modifiers) {
+                    let modifierValue = FactsProcessor.calculateModifier(modifier, context.character);
+                    let text;
+                    if (modifier.flags.includes('FormatPercent')) {
+                        text = `+${Math.round(modifierValue)}% ${TUtilsV2.mapLocale(modifier.description)}`;
+                    }
+                    else {
+                        text = `+${Math.round(modifierValue)} ${TUtilsV2.mapLocale(modifier.description)}`;
+                    }
+                    tier_wrap.append(TUtilsV2.newElm('te', text));
+                }
+            }
             const w = TUtilsV2.newElm('te', tier_wrap);
             if (item.subtype == "Rune") {
                 const colorClass = i < (context.character.upgradeCounts[item.id] || 0) ? '.color-stat-green' : '';
@@ -1580,6 +1621,7 @@ GW2TooltipsV2.defaultContext = {
             concentration: 0,
             healing: 0,
             critDamage: 0,
+            agonyResistance: 0,
         },
         statSources: {
             power: [],
@@ -1592,6 +1634,7 @@ GW2TooltipsV2.defaultContext = {
             concentration: [],
             healing: [],
             critDamage: [],
+            agonyResistance: [],
         },
         upgradeCounts: {},
     },
