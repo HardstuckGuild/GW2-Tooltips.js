@@ -189,7 +189,7 @@ namespace API {
 		field_type : ComboFieldType
 	}
 
-	type ComboFinisherType = 'Blast' | 'Leap'  | 'Projectile' | 'Whirl'
+	type ComboFinisherType = 'Blast' | 'Leap'  | 'Projectile' | 'Projectile20' | 'Whirl'
 
 	interface ComboFinisherFact extends BasicFact<'ComboFinisher'> {
 		text?         : string

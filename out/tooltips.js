@@ -820,6 +820,7 @@ class TUtilsV2 {
             case 'CritDamage': return 'Ferocity';
             case 'BowLong': return 'Longbow';
             case 'BowShort': return 'Shortbow';
+            case 'Projectile20': return 'Projectile (20% Chance)';
             default: return type;
         }
     }
