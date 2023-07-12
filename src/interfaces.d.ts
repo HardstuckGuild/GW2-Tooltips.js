@@ -19,7 +19,7 @@ namespace API {
 		name_brief?        : string
 		description?       : string
 		description_brief? : string
-		icon?              : string
+		icon?              : string | number // TODO: move to using numbers
 		categories         : any[]
 		palettes           : Palette[]
 		sub_skills?        : number[]

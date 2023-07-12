@@ -189,6 +189,7 @@ class GW2TooltipsV2 {
 			let type = (gw2Object.getAttribute('type') || 'skill') + 's'
 
 			if(this.config.legacyCompatibility) {
+				//NOTE(Rennorb): weapon swaps are completely synthesized
 				if(type === 'effects') {
 					type = 'skills';
 					objId = this._legacy_transformEffectToSkillObject(gw2Object, _legacy_effectErrorStore);
@@ -899,7 +900,7 @@ class GW2TooltipsV2 {
 				barrier: {
 					id: 1,
 					name: 'Barrier',
-					icon: '1770209.png',
+					icon: this.ICONS.BARRIER,
 					description: "Creates a health barrier that takes damage prior to the health bar. Barrier disappears 5s after being applied. Applying a barrier while one is already active will add to it, but the previously-existing barrier will still disappear 5s after it was originally applied. The amount of barrier generated is based on the source's healing power, and is capped at 50% of the recipient's maximum health.",
 					description_brief: "Creates a health barrier that takes damage prior to the health bar.",
 					categories: [], palettes: [],
@@ -908,7 +909,7 @@ class GW2TooltipsV2 {
 					id: 2,
 					name: 'Stun Break',
 					description: 'Cancel control effects such as stuns.',
-					icon: '156654.png',
+					icon: this.ICONS.STUN_BREAK,
 					categories: [], palettes: [],
 				}
 			} as {[k : string] : API.Skill})[name];
@@ -1061,6 +1062,9 @@ class GW2TooltipsV2 {
 		RANGE           : 156666,
 		DEFIANCE_BREAK  : 1938788,
 		GENERIC_FACT    : 156661,
+		WEAPON_SWAP     : 156583,
+		BARRIER         : 1770209,
+		STUN_BREAK      : 156654,
 	}
 }
 
