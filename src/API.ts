@@ -11,8 +11,8 @@ class FakeAPI implements APIImplementation {
 				const modifierTranslation = {
 					BoonDuration     : "Concentration",
 					ConditionDamage  : "ConditionDmg",
-					ConditionDuration: "Expertise",
-				} as { [k in OfficialAPI.AmuletStats] : Exclude<API.Attributes, 'None'> | undefined }
+					ConditionDuration: "Expertise", 
+				} as { [k in OfficialAPI.AmuletStats]? : Exclude<API.Attributes, 'None'> }
 
 				for(const obj of response as OfficialAPI.Amulet[]) {
 					const tier : API.UpgradeComponentDetail['tiers'][0] = { modifiers: [] }
@@ -26,7 +26,7 @@ class FakeAPI implements APIImplementation {
 							id            : -1, //TODO unused
 							formula_param1: 0,
 							formula_param2: 0,
-							attribute,
+							target_attribute_or_buff: attribute,
 							description   : attribute,
 							flags         : [],
 						})

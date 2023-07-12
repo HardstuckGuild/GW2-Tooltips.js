@@ -168,9 +168,12 @@ class Collect {
 			}
 
 			if(tier && tier.modifiers) for(const modifier of tier.modifiers!) {
-				if(!modifier.attribute) continue;
+				if(!modifier.target_attribute_or_buff) continue;
 
-				sources[TUtilsV2.Uncapitalize(modifier.attribute)].push({ modifier, source: item!.name, count: amountToAdd })
+				if(typeof modifier.target_attribute_or_buff !== 'number')
+					sources[TUtilsV2.Uncapitalize(modifier.target_attribute_or_buff)].push({ modifier, source: item!.name, count: amountToAdd })
+				else
+					{ /*TODO(Rennorb) @incomplete buff duration form items (food / util) */ }
 			}
 		}
 
@@ -343,6 +346,41 @@ class Collect {
 					targetContext.character.traits = traits;
 				}
 			} break
+		}
+	}
+
+	static traitEffects(contexts : Context[]) {
+		for(const context of contexts) {
+			for(const traitId of context.character.traits) {
+				const trait = APICache.storage.traits.get(traitId);
+				if(!trait) {
+					console.error(`[gw2-tooltips] [collect] Trait #${traitId} is apparently missing in the cache.`);
+					continue;
+				}
+
+				const addModifiers = (modifiers : API.Modifier[]) => {
+					for(const mod of modifiers) {
+						if(!mod.target_attribute_or_buff) continue;
+
+						if(typeof mod.target_attribute_or_buff === 'number')
+							context.character.statModifier.outgoingBuffDuration[mod.target_attribute_or_buff] = (context.character.statModifier.outgoingBuffDuration[mod.target_attribute_or_buff] || 0) + mod.base_amount;
+					}
+				};
+				if(trait.modifiers) addModifiers(trait.modifiers);
+
+				const contextBoundInfo = GW2TooltipsV2.resolveTraitsAndOverrides(trait, context);
+				if(contextBoundInfo.facts) for(const fact of contextBoundInfo.facts) {
+					if(!fact.buff) continue;
+					
+					const buff = APICache.storage.skills.get(fact.buff);
+					if(!buff) {
+						console.error(`[gw2-tooltips] [collect] Trait #${fact.buff} is apparently missing in the cache.`);
+						continue;
+					}
+
+					if(buff.modifiers) addModifiers(buff.modifiers);
+				}
+			}
 		}
 	}
 }

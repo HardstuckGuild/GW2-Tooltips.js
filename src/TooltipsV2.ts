@@ -12,6 +12,8 @@
 //TODO(Rennorb): Something with the traits is funky, the facts are clearly incomplete for some of them. The linked/trigger skills are missing afaict.
 //TODO(Rennorb): Amulet enrichment slot is not there.
 //TODO(Rennorb): Defiance break on single effect tooltips.
+//TODO(Rennorb): Change anything percent related to use fractions instead of integers (0.2 instead of 20).
+// The only thing this is good for is to make drawing the facts easier. Since we do quite a few calculations this swap would reduce conversions quite a bit.
 
 /// <reference path="Collect.ts" />
 
@@ -53,6 +55,10 @@ class GW2TooltipsV2 {
 				healing        : 0,
 				critDamage     : 0,
 				agonyResistance: 0,
+			},
+			statModifier: {
+				lifeForce           : 0,
+				outgoingBuffDuration: {},
 			},
 			statSources: {
 				power          : [],
@@ -1126,6 +1132,10 @@ if(GW2TooltipsV2.config.autoInitialize) {
 				else {
 					console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `gw2-build` could be found to use as source. Upgrades will not be collected as there is no way to tell which upgrades belongs to the build and which ones are just in some arbitrary text.");
 				}
+			}
+
+			if(GW2TooltipsV2.config.autoCollectSelectedTraits) {
+				Collect.traitEffects(GW2TooltipsV2.context);
 			}
 
 			if(GW2TooltipsV2.config.autoCollectStatSources) {

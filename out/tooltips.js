@@ -19,7 +19,7 @@ class FakeAPI {
                             id: -1,
                             formula_param1: 0,
                             formula_param2: 0,
-                            attribute,
+                            target_attribute_or_buff: attribute,
                             description: attribute,
                             flags: [],
                         });
@@ -325,9 +325,11 @@ class Collect {
             }
             if (tier && tier.modifiers)
                 for (const modifier of tier.modifiers) {
-                    if (!modifier.attribute)
+                    if (!modifier.target_attribute_or_buff)
                         continue;
-                    sources[TUtilsV2.Uncapitalize(modifier.attribute)].push({ modifier, source: item.name, count: amountToAdd });
+                    if (typeof modifier.target_attribute_or_buff !== 'number')
+                        sources[TUtilsV2.Uncapitalize(modifier.target_attribute_or_buff)].push({ modifier, source: item.name, count: amountToAdd });
+                    else { }
                 }
         }
         switch (mode) {
@@ -480,6 +482,40 @@ class Collect {
                 break;
         }
     }
+    static traitEffects(contexts) {
+        for (const context of contexts) {
+            for (const traitId of context.character.traits) {
+                const trait = APICache.storage.traits.get(traitId);
+                if (!trait) {
+                    console.error(`[gw2-tooltips] [collect] Trait #${traitId} is apparently missing in the cache.`);
+                    continue;
+                }
+                const addModifiers = (modifiers) => {
+                    for (const mod of modifiers) {
+                        if (!mod.target_attribute_or_buff)
+                            continue;
+                        if (typeof mod.target_attribute_or_buff === 'number')
+                            context.character.statModifier.outgoingBuffDuration[mod.target_attribute_or_buff] = (context.character.statModifier.outgoingBuffDuration[mod.target_attribute_or_buff] || 0) + mod.base_amount;
+                    }
+                };
+                if (trait.modifiers)
+                    addModifiers(trait.modifiers);
+                const contextBoundInfo = GW2TooltipsV2.resolveTraitsAndOverrides(trait, context);
+                if (contextBoundInfo.facts)
+                    for (const fact of contextBoundInfo.facts) {
+                        if (!fact.buff)
+                            continue;
+                        const buff = APICache.storage.skills.get(fact.buff);
+                        if (!buff) {
+                            console.error(`[gw2-tooltips] [collect] Trait #${fact.buff} is apparently missing in the cache.`);
+                            continue;
+                        }
+                        if (buff.modifiers)
+                            addModifiers(buff.modifiers);
+                    }
+            }
+        }
+    }
 }
 class FactsProcessor {
     static calculateModifier({ formula, base_amount, formula_param1: level_scaling, formula_param2 }, { level, stats: { power, conditionDmg, healing: healing_power } }) {
@@ -602,6 +638,7 @@ class FactsProcessor {
                 buff = buff || this.MissingBuff;
                 iconSlug = buff.icon || iconSlug;
                 let { duration, apply_count } = fact;
+                duration *= ((context.character.statModifier.outgoingBuffDuration[buff.id] || 0) + 100) / 100;
                 let buffDescription = generateBuffDescription(buff, fact);
                 if (buffDescription) {
                     buffDescription = `: ${buffDescription}`;
@@ -687,6 +724,7 @@ class FactsProcessor {
                     console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                 buff = buff || this.MissingBuff;
                 let { duration, apply_count, text } = fact;
+                duration *= ((context.character.statModifier.outgoingBuffDuration[buff.id] || 0) + 100) / 100;
                 let buffDescription = generateBuffDescription(buff, fact);
                 if (buffDescription) {
                     buffDescription = `: ${buffDescription}`;
@@ -1712,6 +1750,10 @@ GW2TooltipsV2.defaultContext = {
             critDamage: 0,
             agonyResistance: 0,
         },
+        statModifier: {
+            lifeForce: 0,
+            outgoingBuffDuration: {},
+        },
         statSources: {
             power: [],
             toughness: [],
@@ -1797,6 +1839,9 @@ if (GW2TooltipsV2.config.autoInitialize) {
             else {
                 console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `gw2-build` could be found to use as source. Upgrades will not be collected as there is no way to tell which upgrades belongs to the build and which ones are just in some arbitrary text.");
             }
+        }
+        if (GW2TooltipsV2.config.autoCollectSelectedTraits) {
+            Collect.traitEffects(GW2TooltipsV2.context);
         }
         if (GW2TooltipsV2.config.autoCollectStatSources) {
             if (buildNodes.length)

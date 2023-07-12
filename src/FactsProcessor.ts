@@ -160,7 +160,8 @@ class FactsProcessor {
 				iconSlug = buff.icon || iconSlug;
 
 				let {duration, apply_count} = fact;
-				// TODO(mithos) factor in condi/boon duration.
+				// TODO(mithos) factor in condi/boon duration. how to decide which stat to use? 
+				duration *= ((context.character.statModifier.outgoingBuffDuration[buff.id] || 0) + 100) / 100;
 
 				let buffDescription = generateBuffDescription(buff, fact);
 				if(buffDescription) {
@@ -257,7 +258,8 @@ class FactsProcessor {
 				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api
 
 				let {duration, apply_count, text} = fact;
-				// TODO(mithos) factor in condi/boon duration.
+				// TODO(mithos) factor in condi/boon duration. how to decide which stat to use? 
+				duration *=  ((context.character.statModifier.outgoingBuffDuration[buff.id] || 0) + 100) / 100;
 
 				let buffDescription = generateBuffDescription(buff, fact);
 				if(buffDescription) {

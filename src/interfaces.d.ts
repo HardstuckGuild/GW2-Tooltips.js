@@ -58,18 +58,18 @@ namespace API {
 	}
 
 	interface Modifier {
-		id                    : number
-		base_amount           : number
-		formula_param1        : number
-		formula_param2        : number
-		formula               : 'BuffLevelLinear' | 'ConditionDamage' | 'ConditionDamageSquared' | 'CritDamage' | 'CritDamageSquared' | 'BuffFormulaType5' | 'NoScaling' | 'Regeneration' | 'RegenerationSquared' | 'SpawnScaleLinear' | 'TargetLevelLinear' | 'BuffFormulaType11' | 'InfiniteDungeonScale' | 'Power' | 'PowerSquared' | 'BuffFormulaType15'
-		attribute?            : Exclude<Attributes, 'None'>
-		attribute_conversion? : Exclude<Attributes, 'None'>
-		description           : string
-		description_override? : ModifierDescriptionOverride[]
-		flags                 : ('FormatFraction' | 'FormatPercent' | 'SkipNextEntry' | 'MulByDuration' | 'DivDurationBy3' | 'DivDurationBy10' | 'NonStacking' | 'Subtract')[]
-		trait_req?            : number
-		mode?                 : GameMode
+		id                        : number
+		base_amount               : number
+		formula_param1            : number
+		formula_param2            : number
+		formula                   : 'BuffLevelLinear' | 'ConditionDamage' | 'ConditionDamageSquared' | 'CritDamage' | 'CritDamageSquared' | 'BuffFormulaType5' | 'NoScaling' | 'Regeneration' | 'RegenerationSquared' | 'SpawnScaleLinear' | 'TargetLevelLinear' | 'BuffFormulaType11' | 'InfiniteDungeonScale' | 'Power' | 'PowerSquared' | 'BuffFormulaType15'
+		target_attribute_or_buff? : Exclude<Attributes, 'None'> | number
+		attribute_conversion?     : Exclude<Attributes, 'None'>
+		description               : string
+		description_override?     : ModifierDescriptionOverride[]
+		flags                     : ('FormatFraction' | 'FormatPercent' | 'SkipNextEntry' | 'MulByDuration' | 'DivDurationBy3' | 'DivDurationBy10' | 'NonStacking' | 'Subtract')[]
+		trait_req?                : number
+		mode?                     : GameMode
 	}
 
 
@@ -275,6 +275,7 @@ namespace API {
 		description_brief? : string
 		slot               : 'Minor' | 'Major' | 'MadLib' | 'Automatic'; //TODO(Rennorb): fix this on the api side lol
 		provides_weapon_access? : WeaponAccess []
+		modifiers?         : Modifier[]
 	}
 
 	type ContextInformation = ContextGroup & {
