@@ -309,6 +309,11 @@ gw2object[type=specialization][data-label]::before {
 	background: #000;
 }
 
+gw2object[type=specialization] .trait_unselected img {
+	opacity: .7;
+	filter: brightness(0.45);
+}
+
 .gw2objectembed[type="specialization"], .trait_minor {
 	background-color: transparent;
 }

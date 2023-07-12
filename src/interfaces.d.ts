@@ -428,4 +428,5 @@ interface APIImplementation {
 
 interface ScopeElement {
 	getElementsByTagName(qualifiedName: string) : HTMLCollectionOf<Element>
+	querySelectorAll<E extends Element = Element>(selectors : string) : NodeListOf<E>
 }

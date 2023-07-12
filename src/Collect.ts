@@ -263,6 +263,75 @@ class Collect {
 
 		return amountToAdd;
 	}
+
+	static allTraits(contexts : Context[], scope : ScopeElement, mode : CollectMode = CollectMode.PrioritizeGlobal) {
+		const elements = scope.querySelectorAll('gw2object[type=specialization]:not(.gw2objectembed)');
+		for(const pair of contexts.entries()) {
+			const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == pair[0]);
+			this._traits(...pair, elsInCorrectCtx, mode);
+		}
+		const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) >= contexts.length);
+		if(elsWithWrongCtx.length) {
+			console.warn("[gw2-tooltips] [collect] Some targets in scope ", scope, " have the wrong context: ", elsWithWrongCtx);
+		}
+	}
+	static specificTraits(contextIndex : number, targetContext : Context, scope : ScopeElement, mode : CollectMode = CollectMode.PrioritizeGlobal) {
+		this._traits(contextIndex, targetContext, scope.getElementsByTagName('gw2object'), mode);
+	}
+	static _traits(contextIndex : number, targetContext : Context, elements : Iterable<Element>, mode : CollectMode = CollectMode.PrioritizeGlobal) {
+		const traits : number[] = [];
+		for(const specialization of elements) {
+			const selectedPositions = String(specialization.getAttribute('selected_traits')).split(',').map(i => +i).filter(i => !isNaN(i) && 0 <= i && i <= 2);
+			if(selectedPositions.length != 3) {
+				console.warn("[gw2-tooltips] [collect] Specialization object ", specialization, " does not have its 'selected_traits' (properly) set. Add the attribute as `selected_traits=\"0,2,1\"` where the numbers are 0-2 indicating top, middle or bottom selection. Will not assume anything and just ignore the element.");
+				continue;
+			}
+
+			for(const [x, y] of selectedPositions.entries()) {
+				// The expected structure is:
+				// <spec>
+				//  <minor />
+				//  <wrapper><major /><major /><major /></>
+				//  <minor />
+				//  <wrapper><major /><major /><major /></>
+				//  <minor />
+				//  <wrapper><major /><major /><major /></>
+				// </>
+				const traitEl = specialization.children[1 + x * 2].children[y];
+				let id;
+				if(!traitEl || !(id = +String(traitEl.getAttribute('objid')))) {
+					console.warn("[gw2-tooltips] [collect] Trait object ", traitEl, " is selected but does not exist or does not have an objid set. Add the attribute as `objid=\"1234\"`. Will not assume anything and just ignore the element.");
+					continue;
+				}
+				traits.push(id);
+			}
+		}
+
+		//TODO(Rennorb) @cleanup: move this out?
+		switch(mode) {
+			case CollectMode.IgnoreGlobal:
+				// It doest actually make sense to 'overwrite' here, so its just the same as IgnoreGlobal.
+			case CollectMode.OverwriteGlobal: targetContext.character.traits = traits; break
+
+			// It doest actually make sense to 'append' here, so its just the same as PrioritizeGlobal.
+			case CollectMode.Append:
+			case CollectMode.PrioritizeGlobal: {
+				if(window.GW2TooltipsContext instanceof Array) {
+					const set = new Set(window.GW2TooltipsContext[contextIndex].character?.traits);
+					traits.forEach(t => set.add(t));
+					targetContext.character.traits = Array.from(set);
+				}
+				else if(window.GW2TooltipsContext) {
+					const set = new Set(window.GW2TooltipsContext.character?.traits);
+					traits.forEach(t => set.add(t));
+					targetContext.character.traits = Array.from(set);
+				}
+				else {
+					targetContext.character.traits = traits;
+				}
+			} break
+		}
+	}
 }
 
 const enum CollectMode {

@@ -411,6 +411,64 @@ class Collect {
         }
         return amountToAdd;
     }
+    static allTraits(contexts, scope, mode = 1) {
+        const elements = scope.querySelectorAll('gw2object[type=specialization]:not(.gw2objectembed)');
+        for (const pair of contexts.entries()) {
+            const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == pair[0]);
+            this._traits(...pair, elsInCorrectCtx, mode);
+        }
+        const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) >= contexts.length);
+        if (elsWithWrongCtx.length) {
+            console.warn("[gw2-tooltips] [collect] Some targets in scope ", scope, " have the wrong context: ", elsWithWrongCtx);
+        }
+    }
+    static specificTraits(contextIndex, targetContext, scope, mode = 1) {
+        this._traits(contextIndex, targetContext, scope.getElementsByTagName('gw2object'), mode);
+    }
+    static _traits(contextIndex, targetContext, elements, mode = 1) {
+        var _a, _b;
+        const traits = [];
+        for (const specialization of elements) {
+            const selectedPositions = String(specialization.getAttribute('selected_traits')).split(',').map(i => +i).filter(i => !isNaN(i) && 0 <= i && i <= 2);
+            if (selectedPositions.length != 3) {
+                console.warn("[gw2-tooltips] [collect] Specialization object ", specialization, " does not have its 'selected_traits' (properly) set. Add the attribute as `selected_traits=\"0,2,1\"` where the numbers are 0-2 indicating top, middle or bottom selection. Will not assume anything and just ignore the element.");
+                continue;
+            }
+            for (const [x, y] of selectedPositions.entries()) {
+                const traitEl = specialization.children[1 + x * 2].children[y];
+                let id;
+                if (!traitEl || !(id = +String(traitEl.getAttribute('objid')))) {
+                    console.warn("[gw2-tooltips] [collect] Trait object ", traitEl, " is selected but does not exist or does not have an objid set. Add the attribute as `objid=\"1234\"`. Will not assume anything and just ignore the element.");
+                    continue;
+                }
+                traits.push(id);
+            }
+        }
+        switch (mode) {
+            case 0:
+            case 2:
+                targetContext.character.traits = traits;
+                break;
+            case 3:
+            case 1:
+                {
+                    if (window.GW2TooltipsContext instanceof Array) {
+                        const set = new Set((_a = window.GW2TooltipsContext[contextIndex].character) === null || _a === void 0 ? void 0 : _a.traits);
+                        traits.forEach(t => set.add(t));
+                        targetContext.character.traits = Array.from(set);
+                    }
+                    else if (window.GW2TooltipsContext) {
+                        const set = new Set((_b = window.GW2TooltipsContext.character) === null || _b === void 0 ? void 0 : _b.traits);
+                        traits.forEach(t => set.add(t));
+                        targetContext.character.traits = Array.from(set);
+                    }
+                    else {
+                        targetContext.character.traits = traits;
+                    }
+                }
+                break;
+        }
+    }
 }
 class FactsProcessor {
     static calculateModifier({ formula, base_amount, formula_param1: level_scaling, formula_param2 }, { level, stats: { power, conditionDmg, healing: healing_power } }) {
@@ -950,8 +1008,27 @@ class GW2TooltipsV2 {
         gw2Object.append(wikiLink);
     }
     static inflateSpecialization(gw2Object, spec) {
-        gw2Object.style.backgroundImage = `url(${spec.background})`;
-        gw2Object.dataset.label = spec.name;
+        if (gw2Object.classList.contains('gw2objectembed')) {
+        }
+        else {
+            gw2Object.style.backgroundImage = `url(${spec.background})`;
+            gw2Object.dataset.label = spec.name;
+            const selectedPositions = String(gw2Object.getAttribute('selected_traits')).split(',').map(i => +i).filter(i => !isNaN(i) && 0 <= i && i <= 2);
+            if (selectedPositions.length != 3) {
+                console.warn("[gw2-tooltips] [inflator] Specialization object ", gw2Object, " does not have its 'selected_traits' (properly) set. Add the attribute as `selected_traits=\"0,2,1\"` where the numbers are 0-2 indicating top, middle or bottom selection.");
+                return;
+            }
+            for (const [x, y] of selectedPositions.entries()) {
+                const column = gw2Object.children[1 + x * 2];
+                if (!column) {
+                    console.warn("[gw2-tooltips] [inflator] Cannot mark selected trait object in column #", x, " for specialization object ", gw2Object, " because the column doesn't seem to exist. Either mark the specialization object as inline or add the missing column.");
+                    continue;
+                }
+                for (const [i, traitEl] of Array.prototype.entries.call(column.children)) {
+                    traitEl.classList.toggle('trait_unselected', i !== y);
+                }
+            }
+        }
     }
     static getSlotName(skill) {
         let skillSlot;
@@ -1643,6 +1720,7 @@ GW2TooltipsV2.defaultConfig = {
     autoInitialize: true,
     autoCollectRuneCounts: true,
     autoCollectStatSources: true,
+    autoCollectSelectedTraits: true,
     adjustIncorrectStatIds: true,
     autoInferEquipmentUpgrades: true,
     legacyCompatibility: true,
@@ -1689,21 +1767,28 @@ GW2TooltipsV2.ICONS = {
 };
 GW2TooltipsV2._constructor();
 if (GW2TooltipsV2.config.autoInitialize) {
+    const buildNodes = document.getElementsByClassName('gw2-build');
+    if (GW2TooltipsV2.config.autoCollectSelectedTraits) {
+        if (buildNodes.length)
+            for (const target of buildNodes)
+                Collect.allTraits(GW2TooltipsV2.context, target);
+        else {
+            console.warn("[gw2-tooltips] [collect] `config.autoCollectSelectedTraits` is active, but no element with class `gw2-build` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
+        }
+    }
     GW2TooltipsV2.hookDocument(document)
         .then(_ => {
         if (GW2TooltipsV2.config.autoCollectRuneCounts) {
-            const targets = document.getElementsByClassName('gw2-build');
-            if (targets.length)
-                for (const target of targets)
+            if (buildNodes.length)
+                for (const target of buildNodes)
                     Collect.allUpgradeCounts(GW2TooltipsV2.context, target);
             else {
                 console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `gw2-build` could be found to use as source. Upgrades will not be collected as there is no way to tell which upgrades belongs to the build and which ones are just in some arbitrary text.");
             }
         }
         if (GW2TooltipsV2.config.autoCollectStatSources) {
-            const targets = document.getElementsByClassName('gw2-build');
-            if (targets.length)
-                for (const target of targets)
+            if (buildNodes.length)
+                for (const target of buildNodes)
                     Collect.allStatSources(GW2TooltipsV2.context, target);
             else {
                 console.warn("[gw2-tooltips] [collect] `config.autoCollectStatSources` is active, but no element with class `gw2-build` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");

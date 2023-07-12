@@ -11,7 +11,7 @@ declare interface Window {
 
 type PartialContext = PartialR<Context>
 
-type PartialR<T> = { [P in keyof T]?: (T[P] extends string | number | StatSource ? T[P] : PartialR<T[P]>) | undefined; }
+type PartialR<T> = { [P in keyof T]?: (T[P] extends string | number | StatSource | number[] ? T[P] : PartialR<T[P]>) | undefined; }
 
 interface Context {
 	gameMode    : GameMode
@@ -61,6 +61,8 @@ interface Config {
 	 autoCollectRuneCounts          : bool
 	 // only works if auto initialize is turned on
 	 autoCollectStatSources         : bool
+	 // only works if auto initialize is turned on
+	 autoCollectSelectedTraits      : bool
 	 // only works if auto initialize is turned on
 	 autoInferEquipmentUpgrades     : bool
 	 adjustIncorrectStatIds         : bool

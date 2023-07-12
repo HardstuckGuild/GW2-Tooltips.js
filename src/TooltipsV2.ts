@@ -87,6 +87,7 @@ class GW2TooltipsV2 {
 		autoInitialize                : true,
 		autoCollectRuneCounts         : true,
 		autoCollectStatSources        : true,
+		autoCollectSelectedTraits     : true,
 		adjustIncorrectStatIds        : true,
 		autoInferEquipmentUpgrades    : true,
 		legacyCompatibility           : true,
@@ -278,9 +279,41 @@ class GW2TooltipsV2 {
 		gw2Object.append(wikiLink);
 	}
 	static inflateSpecialization(gw2Object : HTMLElement, spec: API.Specialization) {
-		//TODO(Rennorb): this is probably wrong for inlines
-		gw2Object.style.backgroundImage = `url(${spec.background})`;
-		gw2Object.dataset.label = spec.name;
+		if(gw2Object.classList.contains('gw2objectembed')) {
+			//TODO(Rennorb): inlines
+		}
+		else {
+			gw2Object.style.backgroundImage = `url(${spec.background})`;
+			gw2Object.dataset.label = spec.name;
+
+			const selectedPositions = String(gw2Object.getAttribute('selected_traits')).split(',').map(i => +i).filter(i => !isNaN(i) && 0 <= i && i <= 2);
+			if(selectedPositions.length != 3) {
+				console.warn("[gw2-tooltips] [inflator] Specialization object ", gw2Object, " does not have its 'selected_traits' (properly) set. Add the attribute as `selected_traits=\"0,2,1\"` where the numbers are 0-2 indicating top, middle or bottom selection.");
+				return;
+			}
+
+			for(const [x, y] of selectedPositions.entries()) {
+				// The expected structure is:
+				// <spec>
+				//  <minor />
+				//  <wrapper><major /><major /><major /></>
+				//  <minor />
+				//  <wrapper><major /><major /><major /></>
+				//  <minor />
+				//  <wrapper><major /><major /><major /></>
+				// </>
+				const column = gw2Object.children[1 + x * 2];
+				if(!column) {
+					console.warn("[gw2-tooltips] [inflator] Cannot mark selected trait object in column #", x, " for specialization object ", gw2Object,  " because the column doesn't seem to exist. Either mark the specialization object as inline or add the missing column.");
+					continue;
+				}
+
+				for(const [i, traitEl] of Array.prototype.entries.call(column.children)) {
+					traitEl.classList.toggle('trait_unselected', i !== y);
+				}
+				//TODO(Rennorb): can probably merge trait collection into here since its basically the same code
+			}
+		}
 	}
 
 	//TODO(Rennorb): this is neither complete, nor reliable
@@ -1074,13 +1107,21 @@ type SupportedTTTypes = API.Skill | API.Trait | API.Amulet; //TODO(Rennorb) @cle
 
 GW2TooltipsV2._constructor();
 if(GW2TooltipsV2.config.autoInitialize) {
+	const buildNodes = document.getElementsByClassName('gw2-build');
+	if(GW2TooltipsV2.config.autoCollectSelectedTraits) {
+		if(buildNodes.length) for(const target of buildNodes)
+			Collect.allTraits(GW2TooltipsV2.context, target)
+		else {
+			console.warn("[gw2-tooltips] [collect] `config.autoCollectSelectedTraits` is active, but no element with class `gw2-build` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
+		}
+	}
+
 	GW2TooltipsV2.hookDocument(document)
 		.then(_ => {
 			//TODO(Rennorb) @cleanup: those routines could probably be combined into one when both options are active
 			if(GW2TooltipsV2.config.autoCollectRuneCounts) {
 				//TODO(Rennorb) @correctness: this might not work properly with multiple builds on one page
-				const targets = document.getElementsByClassName('gw2-build');
-				if(targets.length) for(const target of targets)
+				if(buildNodes.length) for(const target of buildNodes)
 					Collect.allUpgradeCounts(GW2TooltipsV2.context, target)
 				else {
 					console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `gw2-build` could be found to use as source. Upgrades will not be collected as there is no way to tell which upgrades belongs to the build and which ones are just in some arbitrary text.");
@@ -1088,8 +1129,7 @@ if(GW2TooltipsV2.config.autoInitialize) {
 			}
 
 			if(GW2TooltipsV2.config.autoCollectStatSources) {
-				const targets = document.getElementsByClassName('gw2-build');
-				if(targets.length) for(const target of targets)
+				if(buildNodes.length) for(const target of buildNodes)
 					Collect.allStatSources(GW2TooltipsV2.context, target)
 				else {
 					console.warn("[gw2-tooltips] [collect] `config.autoCollectStatSources` is active, but no element with class `gw2-build` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
