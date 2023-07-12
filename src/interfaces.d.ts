@@ -24,6 +24,7 @@ namespace API {
 		palettes           : Palette[]
 		sub_skills?        : number[]
 		modifiers?         : Modifier[]
+		buff_type?         : 'Boon' | 'Buff' | 'Condition' | 'BuffType4' | 'Food' | 'Guild' | 'Item' | 'Persistent' | 'Purchased' | 'Species' | 'Training' | 'Trait' | 'Transformation' | 'Utility' | 'Wvw' | 'BuffType16' | 'BuffType17' | 'MapShared'
 	}
 
 	type Fact = FactMap[keyof FactMap];

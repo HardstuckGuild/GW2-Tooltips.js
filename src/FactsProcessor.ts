@@ -162,18 +162,31 @@ class FactsProcessor {
 				const dataStack : string[] = []; //@debug
 				
 				let {duration, apply_count} = fact;
-				// TODO(mithos) factor in condi/boon duration. how to decide which stat to use?
-				dataStack.push(`base duration: ${TUtilsV2.drawFractional(duration / 1000)}s`);
-				//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
-				let durModStack = context.character.statSources[buff.id];
-				if(durModStack) {
+				{
+					dataStack.push(`base duration: ${TUtilsV2.drawFractional(duration / 1000)}s`);
 					let durMod = 1;
-					for(const {source, modifier, count} of durModStack) {
-						const mod = this.calculateModifier(modifier, context.character);
-						dataStack.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
-						durMod += mod * count;
+
+					const relevantStat : keyof Stats | false = (buff.buff_type == 'Boon' && 'concentration') || (buff.buff_type == 'Condition' && 'expertise');
+					if(relevantStat) {
+						const rawValue = context.character.stats[relevantStat];
+						// every 15 points add 1%
+						durMod += rawValue / 15 * 0.01;
+						if(rawValue > 0)
+							dataStack.push(`${rawValue} ${relevantStat}: +${TUtilsV2.withUpToNDigits('toFixed', rawValue / 15, 2)}%`);
 					}
-					duration *= (100 + durMod) / 100;
+
+					//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
+					let durModStack = context.character.statSources[buff.id];
+					if(durModStack) {
+						let percentMod = 100;
+						for(const { source, modifier, count } of durModStack) {
+							const mod = this.calculateModifier(modifier, context.character);
+							dataStack.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+							percentMod += mod;
+						}
+						durMod += percentMod / 100;
+					}
+					duration *= durMod;
 				}
 
 				let buffDescription = generateBuffDescription(buff, fact);
@@ -283,14 +296,24 @@ class FactsProcessor {
 				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api
 
 				let {duration, apply_count, text} = fact;
-				// TODO(mithos) factor in condi/boon duration. how to decide which stat to use? 
-				//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
-				let durModStack = context.character.statSources[buff.id];
-				if(durModStack) {
+				{
 					let durMod = 1;
-					for(const { modifier } of durModStack)
-						durMod += this.calculateModifier(modifier, context.character);
-					duration *= (100 + durMod) / 100;
+
+					const relevantStat : keyof Stats | false = (buff.buff_type == 'Boon' && 'concentration') || (buff.buff_type == 'Condition' && 'expertise');
+					if(relevantStat) {
+						// every 15 points add 1%
+						durMod += context.character.stats[relevantStat] / 15 * 0.01;
+					}
+
+					//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
+					let durModStack = context.character.statSources[buff.id];
+					if(durModStack) {
+						let percentMod = 100;
+						for(const { modifier } of durModStack)
+							percentMod += this.calculateModifier(modifier, context.character);
+						durMod += percentMod / 100;
+					}
+					duration *= durMod;
 				}
 
 				let buffDescription = generateBuffDescription(buff, fact);

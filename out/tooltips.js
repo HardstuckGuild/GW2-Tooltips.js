@@ -327,9 +327,9 @@ class Collect {
                 for (const modifier of tier.modifiers) {
                     if (!modifier.target_attribute_or_buff)
                         continue;
-                    if (typeof modifier.target_attribute_or_buff !== 'number')
-                        sources[TUtilsV2.Uncapitalize(modifier.target_attribute_or_buff)].push({ modifier, source: item.name, count: amountToAdd });
-                    else { }
+                    (typeof modifier.target_attribute_or_buff !== 'number'
+                        ? sources[TUtilsV2.Uncapitalize(modifier.target_attribute_or_buff)]
+                        : sources[modifier.target_attribute_or_buff]).push({ modifier, source: item.name, count: amountToAdd });
                 }
         }
         switch (mode) {
@@ -642,16 +642,27 @@ class FactsProcessor {
                 iconSlug = buff.icon || iconSlug;
                 const dataStack = [];
                 let { duration, apply_count } = fact;
-                dataStack.push(`base duration: ${TUtilsV2.drawFractional(duration / 1000)}s`);
-                let durModStack = context.character.statSources[buff.id];
-                if (durModStack) {
+                {
+                    dataStack.push(`base duration: ${TUtilsV2.drawFractional(duration / 1000)}s`);
                     let durMod = 1;
-                    for (const { source, modifier, count } of durModStack) {
-                        const mod = this.calculateModifier(modifier, context.character);
-                        dataStack.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
-                        durMod += mod * count;
+                    const relevantStat = (buff.buff_type == 'Boon' && 'concentration') || (buff.buff_type == 'Condition' && 'expertise');
+                    if (relevantStat) {
+                        const rawValue = context.character.stats[relevantStat];
+                        durMod += rawValue / 15 * 0.01;
+                        if (rawValue > 0)
+                            dataStack.push(`${rawValue} ${relevantStat}: +${TUtilsV2.withUpToNDigits('toFixed', rawValue / 15, 2)}%`);
                     }
-                    duration *= (100 + durMod) / 100;
+                    let durModStack = context.character.statSources[buff.id];
+                    if (durModStack) {
+                        let percentMod = 100;
+                        for (const { source, modifier, count } of durModStack) {
+                            const mod = this.calculateModifier(modifier, context.character);
+                            dataStack.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+                            percentMod += mod;
+                        }
+                        durMod += percentMod / 100;
+                    }
+                    duration *= durMod;
                 }
                 let buffDescription = generateBuffDescription(buff, fact);
                 if (buffDescription) {
@@ -749,12 +760,20 @@ class FactsProcessor {
                     console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                 buff = buff || this.MissingBuff;
                 let { duration, apply_count, text } = fact;
-                let durModStack = context.character.statSources[buff.id];
-                if (durModStack) {
+                {
                     let durMod = 1;
-                    for (const { modifier } of durModStack)
-                        durMod += this.calculateModifier(modifier, context.character);
-                    duration *= (100 + durMod) / 100;
+                    const relevantStat = (buff.buff_type == 'Boon' && 'concentration') || (buff.buff_type == 'Condition' && 'expertise');
+                    if (relevantStat) {
+                        durMod += context.character.stats[relevantStat] / 15 * 0.01;
+                    }
+                    let durModStack = context.character.statSources[buff.id];
+                    if (durModStack) {
+                        let percentMod = 100;
+                        for (const { modifier } of durModStack)
+                            percentMod += this.calculateModifier(modifier, context.character);
+                        durMod += percentMod / 100;
+                    }
+                    duration *= durMod;
                 }
                 let buffDescription = generateBuffDescription(buff, fact);
                 if (buffDescription) {

@@ -75,7 +75,7 @@ class Collect {
 		}
 	}
 
-
+	//TODO(Rennorb) @correctness @incomplete: +x to all stats not working right now
 	static allStatSources(contexts : Context[], scope : ScopeElement, mode : CollectMode = CollectMode.PrioritizeGlobal) {
 		const elements = scope.getElementsByTagName('gw2object');
 		for(const pair of contexts.entries()) {
@@ -170,10 +170,10 @@ class Collect {
 			if(tier && tier.modifiers) for(const modifier of tier.modifiers!) {
 				if(!modifier.target_attribute_or_buff) continue;
 
-				if(typeof modifier.target_attribute_or_buff !== 'number')
-					sources[TUtilsV2.Uncapitalize(modifier.target_attribute_or_buff)].push({ modifier, source: item!.name, count: amountToAdd })
-				else
-					{ /*TODO(Rennorb) @incomplete buff duration form items (food / util) */ }
+				(typeof modifier.target_attribute_or_buff !== 'number'
+					? sources[TUtilsV2.Uncapitalize(modifier.target_attribute_or_buff)] //TODO(Rennorb) @cleanup: another reason to fix naming
+					: sources[modifier.target_attribute_or_buff]
+				).push({ modifier, source: item!.name, count: amountToAdd })
 			}
 		}
 
