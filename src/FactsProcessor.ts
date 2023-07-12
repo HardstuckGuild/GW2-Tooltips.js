@@ -178,7 +178,7 @@ class FactsProcessor {
 					//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
 					let durModStack = context.character.statSources[buff.id];
 					if(durModStack) {
-						let percentMod = 100;
+						let percentMod = 0;
 						for(const { source, modifier, count } of durModStack) {
 							const mod = this.calculateModifier(modifier, context.character);
 							dataStack.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
@@ -308,7 +308,7 @@ class FactsProcessor {
 					//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
 					let durModStack = context.character.statSources[buff.id];
 					if(durModStack) {
-						let percentMod = 100;
+						let percentMod = 0;
 						for(const { modifier } of durModStack)
 							percentMod += this.calculateModifier(modifier, context.character);
 						durMod += percentMod / 100;
