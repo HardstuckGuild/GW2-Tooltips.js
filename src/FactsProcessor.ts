@@ -159,9 +159,22 @@ class FactsProcessor {
 				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api
 				iconSlug = buff.icon || iconSlug;
 
+				const dataStack : string[] = []; //@debug
+				
 				let {duration, apply_count} = fact;
-				// TODO(mithos) factor in condi/boon duration. how to decide which stat to use? 
-				duration *= ((context.character.statModifier.outgoingBuffDuration[buff.id] || 0) + 100) / 100;
+				// TODO(mithos) factor in condi/boon duration. how to decide which stat to use?
+				dataStack.push(`base duration: ${TUtilsV2.drawFractional(duration / 1000)}s`);
+				//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
+				let durModStack = context.character.statSources[buff.id];
+				if(durModStack) {
+					let durMod = 1;
+					for(const {source, modifier, count} of durModStack) {
+						const mod = this.calculateModifier(modifier, context.character);
+						dataStack.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+						durMod += mod * count;
+					}
+					duration *= (100 + durMod) / 100;
+				}
 
 				let buffDescription = generateBuffDescription(buff, fact);
 				if(buffDescription) {
@@ -170,7 +183,19 @@ class FactsProcessor {
 
 				const seconds = duration > 0 ? `(${TUtilsV2.drawFractional(duration / 1000)}s)`: '';
 
-				let node = [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`)]
+				const descNode = TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
+				if(dataStack.length > 1) { //@debug
+					descNode.append(...dataStack.map(d => {
+						const x = TUtilsV2.newElm('span', d)
+						x.style.color = "gray";
+						x.style.fontSize = "1em";
+						return x;
+					}));
+					descNode.style.display = 'flex';
+					descNode.style.flexDirection = 'column';
+				}
+
+				let node = [descNode]
 				if(apply_count > 1) {
 					node.push(TUtilsV2.newElm('div.buffcount', apply_count.toString()));
 				}
@@ -259,7 +284,14 @@ class FactsProcessor {
 
 				let {duration, apply_count, text} = fact;
 				// TODO(mithos) factor in condi/boon duration. how to decide which stat to use? 
-				duration *=  ((context.character.statModifier.outgoingBuffDuration[buff.id] || 0) + 100) / 100;
+				//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
+				let durModStack = context.character.statSources[buff.id];
+				if(durModStack) {
+					let durMod = 1;
+					for(const { modifier } of durModStack)
+						durMod += this.calculateModifier(modifier, context.character);
+					duration *= (100 + durMod) / 100;
+				}
 
 				let buffDescription = generateBuffDescription(buff, fact);
 				if(buffDescription) {

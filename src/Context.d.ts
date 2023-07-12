@@ -29,8 +29,7 @@ interface Character {
 	profession?   : Profession
 	traits        : number[] //TODO(Rennorb): add a collect function that can take them from existing specialization objects
 	stats         : Stats
-	statModifier  : AdditionalModifiers
-	statSources   : { [k in keyof Stats]: StatSource[] }
+	statSources   : { [k in keyof Stats | number]: StatSource[] }
 	upgradeCounts : { [k : number]: number }
 }
 
@@ -46,12 +45,6 @@ interface Stats {
 	healing         : number
 	critDamage      : number
 	agonyResistance : number
-}
-
-interface AdditionalModifiers {
-	lifeForce            : number
-	//TODO(Rennorb): we might need to split this in boon / condi or add another field for that as there are some modes that just generally add +10% boon duration wich don't have a target set
-	outgoingBuffDuration : { [buffId : number] : number }
 }
 
 interface StatSource {

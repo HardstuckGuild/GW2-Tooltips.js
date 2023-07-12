@@ -17,7 +17,7 @@
 
 /// <reference path="Collect.ts" />
 
-type TypeBridge<T, K extends keyof T> = [K, T[K]]
+type TypeBridge<T, K extends keyof T> = [K extends number ? string : K, T[K]]
 declare interface ObjectConstructor {
 	entries<T>(obj : T) : TypeBridge<T, keyof T>[]
 }
@@ -55,10 +55,6 @@ class GW2TooltipsV2 {
 				healing        : 0,
 				critDamage     : 0,
 				agonyResistance: 0,
-			},
-			statModifier: {
-				lifeForce           : 0,
-				outgoingBuffDuration: {},
 			},
 			statSources: {
 				power          : [],
@@ -826,7 +822,7 @@ class GW2TooltipsV2 {
 				let item;
 				//NOTE(Rennorb): Pvp runes / sigils have type default; should fix this on the api side
 				if((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Default' && !item.flags.includes('Pvp'))
-					counts[id] = c;
+					counts[+id] = c;
 			}
 			return counts;
 		});
@@ -1134,16 +1130,16 @@ if(GW2TooltipsV2.config.autoInitialize) {
 				}
 			}
 
-			if(GW2TooltipsV2.config.autoCollectSelectedTraits) {
-				Collect.traitEffects(GW2TooltipsV2.context);
-			}
-
 			if(GW2TooltipsV2.config.autoCollectStatSources) {
 				if(buildNodes.length) for(const target of buildNodes)
 					Collect.allStatSources(GW2TooltipsV2.context, target)
 				else {
 					console.warn("[gw2-tooltips] [collect] `config.autoCollectStatSources` is active, but no element with class `gw2-build` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
 				}
+			}
+
+			if(GW2TooltipsV2.config.autoCollectSelectedTraits) {
+				Collect.traitEffects(GW2TooltipsV2.context);
 			}
 
 			if(GW2TooltipsV2.config.autoInferEquipmentUpgrades) {

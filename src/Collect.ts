@@ -224,7 +224,10 @@ class Collect {
 			targetContext.character.stats = baseStats;
 
 			//TODO(Rennorb) @correctnes: 'for every x healing power' is not treated correctly by this approach.
-			for(const [attrib, sources] of Object.entries(targetContext.character.statSources)) {
+			//NOTE(Rennorb): Force the key to be keyof stats. Ts dost understand the guard here
+			for(const [attrib, sources] of Object.entries(targetContext.character.statSources) as [keyof Stats, StatSource[]][]) {
+				if(!isNaN(+attrib)) continue; //discard direct boon mods
+
 				for(const { modifier, source, count } of sources.filter(s => !s.modifier.flags.includes('FormatPercent'))) {
 					targetContext.character.stats[attrib] += FactsProcessor.calculateModifier(modifier, targetContext.character) * count
 					console.log(`[gw2-tooltips] [collect] ${source}${count > 1 ? (' x '+count) : ''}: Flat ${attrib} => ${targetContext.character.stats[attrib]}`)
@@ -363,7 +366,8 @@ class Collect {
 						if(!mod.target_attribute_or_buff) continue;
 
 						if(typeof mod.target_attribute_or_buff === 'number')
-							context.character.statModifier.outgoingBuffDuration[mod.target_attribute_or_buff] = (context.character.statModifier.outgoingBuffDuration[mod.target_attribute_or_buff] || 0) + mod.base_amount;
+							(context.character.statSources[mod.target_attribute_or_buff] || (context.character.statSources[mod.target_attribute_or_buff] = []))
+								.push({source: trait.name, modifier: mod, count: 1});
 					}
 				};
 				if(trait.modifiers) addModifiers(trait.modifiers);

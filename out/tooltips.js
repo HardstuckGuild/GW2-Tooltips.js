@@ -379,6 +379,8 @@ class Collect {
             }
             targetContext.character.stats = baseStats;
             for (const [attrib, sources] of Object.entries(targetContext.character.statSources)) {
+                if (!isNaN(+attrib))
+                    continue;
                 for (const { modifier, source, count } of sources.filter(s => !s.modifier.flags.includes('FormatPercent'))) {
                     targetContext.character.stats[attrib] += FactsProcessor.calculateModifier(modifier, targetContext.character) * count;
                     console.log(`[gw2-tooltips] [collect] ${source}${count > 1 ? (' x ' + count) : ''}: Flat ${attrib} => ${targetContext.character.stats[attrib]}`);
@@ -495,7 +497,8 @@ class Collect {
                         if (!mod.target_attribute_or_buff)
                             continue;
                         if (typeof mod.target_attribute_or_buff === 'number')
-                            context.character.statModifier.outgoingBuffDuration[mod.target_attribute_or_buff] = (context.character.statModifier.outgoingBuffDuration[mod.target_attribute_or_buff] || 0) + mod.base_amount;
+                            (context.character.statSources[mod.target_attribute_or_buff] || (context.character.statSources[mod.target_attribute_or_buff] = []))
+                                .push({ source: trait.name, modifier: mod, count: 1 });
                     }
                 };
                 if (trait.modifiers)
@@ -637,14 +640,36 @@ class FactsProcessor {
                     console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                 buff = buff || this.MissingBuff;
                 iconSlug = buff.icon || iconSlug;
+                const dataStack = [];
                 let { duration, apply_count } = fact;
-                duration *= ((context.character.statModifier.outgoingBuffDuration[buff.id] || 0) + 100) / 100;
+                dataStack.push(`base duration: ${TUtilsV2.drawFractional(duration / 1000)}s`);
+                let durModStack = context.character.statSources[buff.id];
+                if (durModStack) {
+                    let durMod = 1;
+                    for (const { source, modifier, count } of durModStack) {
+                        const mod = this.calculateModifier(modifier, context.character);
+                        dataStack.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+                        durMod += mod * count;
+                    }
+                    duration *= (100 + durMod) / 100;
+                }
                 let buffDescription = generateBuffDescription(buff, fact);
                 if (buffDescription) {
                     buffDescription = `: ${buffDescription}`;
                 }
                 const seconds = duration > 0 ? `(${TUtilsV2.drawFractional(duration / 1000)}s)` : '';
-                let node = [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`)];
+                const descNode = TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
+                if (dataStack.length > 1) {
+                    descNode.append(...dataStack.map(d => {
+                        const x = TUtilsV2.newElm('span', d);
+                        x.style.color = "gray";
+                        x.style.fontSize = "1em";
+                        return x;
+                    }));
+                    descNode.style.display = 'flex';
+                    descNode.style.flexDirection = 'column';
+                }
+                let node = [descNode];
                 if (apply_count > 1) {
                     node.push(TUtilsV2.newElm('div.buffcount', apply_count.toString()));
                 }
@@ -724,7 +749,13 @@ class FactsProcessor {
                     console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                 buff = buff || this.MissingBuff;
                 let { duration, apply_count, text } = fact;
-                duration *= ((context.character.statModifier.outgoingBuffDuration[buff.id] || 0) + 100) / 100;
+                let durModStack = context.character.statSources[buff.id];
+                if (durModStack) {
+                    let durMod = 1;
+                    for (const { modifier } of durModStack)
+                        durMod += this.calculateModifier(modifier, context.character);
+                    duration *= (100 + durMod) / 100;
+                }
                 let buffDescription = generateBuffDescription(buff, fact);
                 if (buffDescription) {
                     buffDescription = `: ${buffDescription}`;
@@ -1520,7 +1551,7 @@ class GW2TooltipsV2 {
             for (const [id, c] of Object.entries(ctx.character.upgradeCounts)) {
                 let item;
                 if ((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Default' && !item.flags.includes('Pvp'))
-                    counts[id] = c;
+                    counts[+id] = c;
             }
             return counts;
         });
@@ -1750,10 +1781,6 @@ GW2TooltipsV2.defaultContext = {
             critDamage: 0,
             agonyResistance: 0,
         },
-        statModifier: {
-            lifeForce: 0,
-            outgoingBuffDuration: {},
-        },
         statSources: {
             power: [],
             toughness: [],
@@ -1840,9 +1867,6 @@ if (GW2TooltipsV2.config.autoInitialize) {
                 console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `gw2-build` could be found to use as source. Upgrades will not be collected as there is no way to tell which upgrades belongs to the build and which ones are just in some arbitrary text.");
             }
         }
-        if (GW2TooltipsV2.config.autoCollectSelectedTraits) {
-            Collect.traitEffects(GW2TooltipsV2.context);
-        }
         if (GW2TooltipsV2.config.autoCollectStatSources) {
             if (buildNodes.length)
                 for (const target of buildNodes)
@@ -1850,6 +1874,9 @@ if (GW2TooltipsV2.config.autoInitialize) {
             else {
                 console.warn("[gw2-tooltips] [collect] `config.autoCollectStatSources` is active, but no element with class `gw2-build` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
             }
+        }
+        if (GW2TooltipsV2.config.autoCollectSelectedTraits) {
+            Collect.traitEffects(GW2TooltipsV2.context);
         }
         if (GW2TooltipsV2.config.autoInferEquipmentUpgrades) {
             const targets = document.querySelectorAll('.weapon, .armor, .trinket');
