@@ -443,20 +443,21 @@ class GW2TooltipsV2 {
 
 	static resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { facts? : API.Fact[], override_groups? : API.ContextInformation['override_groups'] }, context : Context) : API.ContextInformation {
 		let override = apiObject.override_groups?.find(g => g.context.includes(context.gameMode));
-		let info = Object.assign({}, apiObject, override);
+		let result = Object.assign({}, apiObject, override);
 		if(apiObject.facts && override && override.facts) {
-			info.facts = apiObject.facts.slice(); //clone the array
-			for(const fact of override.facts) {
+			result.facts = apiObject.facts.slice(); //clone the array
+			//NOTE(Rennorb): need to reverse here to be able to insert and override facts without shifting earlier indices
+			for(const fact of override.facts.reverse()) {
 				if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
 
-				if(fact.overrides) info.facts[fact.overrides] = fact;
-				else info.facts.push(fact);
+				if(fact.overrides) result.facts[fact.overrides] = fact;
+				else result.facts.push(fact);
 			}
 		}
-		if(info.facts) {
-			info.facts = info.facts.filter(f => !f.requires_trait || !f.requires_trait.some(t => !context.character.traits.includes(t)));
+		if(result.facts) {
+			result.facts = result.facts.filter(f => !f.requires_trait || !f.requires_trait.some(t => !context.character.traits.includes(t)));
 		}
-		return info;
+		return result;
 	}
 
 	//TODO(Rennorb) @correctness: this does not take traits into consideration

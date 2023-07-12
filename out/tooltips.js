@@ -1079,22 +1079,22 @@ class GW2TooltipsV2 {
     static resolveTraitsAndOverrides(apiObject, context) {
         var _a, _b;
         let override = (_a = apiObject.override_groups) === null || _a === void 0 ? void 0 : _a.find(g => g.context.includes(context.gameMode));
-        let info = Object.assign({}, apiObject, override);
+        let result = Object.assign({}, apiObject, override);
         if (apiObject.facts && override && override.facts) {
-            info.facts = apiObject.facts.slice();
-            for (const fact of override.facts) {
+            result.facts = apiObject.facts.slice();
+            for (const fact of override.facts.reverse()) {
                 if ((_b = fact.requires_trait) === null || _b === void 0 ? void 0 : _b.some(t => !context.character.traits.includes(t)))
                     continue;
                 if (fact.overrides)
-                    info.facts[fact.overrides] = fact;
+                    result.facts[fact.overrides] = fact;
                 else
-                    info.facts.push(fact);
+                    result.facts.push(fact);
             }
         }
-        if (info.facts) {
-            info.facts = info.facts.filter(f => !f.requires_trait || !f.requires_trait.some(t => !context.character.traits.includes(t)));
+        if (result.facts) {
+            result.facts = result.facts.filter(f => !f.requires_trait || !f.requires_trait.some(t => !context.character.traits.includes(t)));
         }
-        return info;
+        return result;
     }
     static getHealth(character) {
         const baseHealth = !character.profession
