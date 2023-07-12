@@ -435,13 +435,24 @@ class Collect {
                 continue;
             }
             for (const [x, y] of selectedPositions.entries()) {
-                const traitEl = specialization.children[1 + x * 2].children[y];
-                let id;
-                if (!traitEl || !(id = +String(traitEl.getAttribute('objid')))) {
-                    console.warn("[gw2-tooltips] [collect] Trait object ", traitEl, " is selected but does not exist or does not have an objid set. Add the attribute as `objid=\"1234\"`. Will not assume anything and just ignore the element.");
-                    continue;
+                {
+                    const traitEl = specialization.children[1 + x * 2].children[y];
+                    let id;
+                    if (!traitEl || !(id = +String(traitEl.getAttribute('objid')))) {
+                        console.warn("[gw2-tooltips] [collect] Trait object ", traitEl, " is selected but does not exist or does not have an objid set. Add the attribute as `objid=\"1234\"`. Will not assume anything and just ignore the element.");
+                        continue;
+                    }
+                    traits.push(id);
                 }
-                traits.push(id);
+                {
+                    const traitEl = specialization.children[x * 2];
+                    let id;
+                    if (!(id = +String(traitEl.getAttribute('objid')))) {
+                        console.warn("[gw2-tooltips] [collect] Minor trait object ", traitEl, " does not have an objid set. Add the attribute as `objid=\"1234\"`. Will not assume anything and just ignore the element.");
+                        continue;
+                    }
+                    traits.push(id);
+                }
             }
         }
         switch (mode) {
