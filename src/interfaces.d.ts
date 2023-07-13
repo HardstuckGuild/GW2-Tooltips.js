@@ -76,6 +76,7 @@ namespace API {
 
 	interface BasicFact<Type extends keyof FactMap> {
 		type            : Type
+		icon            : string
 		order           : number
 		requires_trait? : number[]
 		defiance_break? : number
@@ -87,7 +88,6 @@ namespace API {
 
 	interface AdjustByAttributeAndLevelHealingFact extends BasicFact<'AdjustByAttributeAndLevelHealing'> {
 		text?                : string
-		icon?                : string
 		value                : number
 		target               : Attributes,
 		attribute_multiplier : number
@@ -98,14 +98,12 @@ namespace API {
 
 	interface AttributeAdjustFact extends BasicFact<'AttributeAdjust'> {
 		text?  : string
-		icon?  : string
 		range  : number[]
 		target : Attributes
 	}
 
 	interface BuffFact extends BasicFact<'Buff'> {
 		text?       : string
-		icon?       : string
 		buff        : number
 		apply_count : number
 		duration    : Milliseconds
@@ -118,13 +116,11 @@ namespace API {
 
 	interface DistanceFact extends BasicFact<'Distance'> {
 		text?    : string
-		icon?    : string
 		distance : number
 	}
 
 	interface HealthAdjustHealingFact extends BasicFact<'HealthAdjustHealing'> {
 		text?      : string
-		icon?      : string
 		value      : number
 		attribute  : Attributes
 		multiplier : number
@@ -133,50 +129,42 @@ namespace API {
 
 	interface NumberFact extends BasicFact<'Number'> {
 		text? : string
-		icon? : string
 		value : number
 	}
 
 	interface PercentFact extends BasicFact<'Percent'> {
 		text?   : string
-		icon?   : string
 		percent : number
 	}
 
 	interface PercentDamageFact extends BasicFact<'PercentDamage'> {
 		text?   : string
-		icon?   : string
 		percent : number
 	}
 
 	interface PercentLifeForceAdjustFact extends BasicFact<'PercentLifeForceAdjust'> {
 		text?   : string
-		icon?   : string
 		percent : number
 	}
 
 	interface PercentHealthFact extends BasicFact<'PercentHealth'> {
 		text?   : string
-		icon?   : string
 		percent : number
 	}
 
 	interface LifeForceAdjustFact extends BasicFact<'LifeForceAdjust'> {
 		text?   : string
-		icon?   : string
 		percent : number
 	}
 
 	interface DamageFact extends BasicFact<'Damage'> {
 		text?          : string
-		icon?          : string
 		hit_count      : number
 		dmg_multiplier : number
 	}
 
 	interface TimeFact extends BasicFact<'Time'> {
 		text?    : string
-		icon?    : string
 		duration : Milliseconds;
 	}
 
@@ -186,7 +174,6 @@ namespace API {
 
 	interface ComboFieldFact extends BasicFact<'ComboField'> {
 		text?      : string
-		icon?      : string
 		field_type : ComboFieldType
 	}
 
@@ -194,13 +181,11 @@ namespace API {
 
 	interface ComboFinisherFact extends BasicFact<'ComboFinisher'> {
 		text?         : string
-		icon?         : string
 		finisher_type : ComboFinisherType
 	}
 
 	interface BuffConversionFact extends BasicFact<'BuffConversion'> {
 		text?   : string
-		icon?   : string
 		source  : Attributes
 		target  : Attributes
 		percent : number
@@ -208,12 +193,10 @@ namespace API {
 
 	interface NoDataFact extends BasicFact<'NoData'> {
 		text?: string
-		icon?: string
 	}
 
 	interface PrefixedBuffFact extends BasicFact<'PrefixedBuff'>{
 		text?       : string
-		icon?       : string
 		apply_count : number
 		buff        : number
 		prefix      : number
@@ -222,7 +205,6 @@ namespace API {
 
 	interface PrefixedBuffBriefFact extends BasicFact<'PrefixedBuffBrief'>{
 		text?  : string
-		icon?  : string
 		buff   : number
 		prefix : number
 	}
@@ -230,14 +212,11 @@ namespace API {
 	// Custom facts
 	interface RangeFact extends BasicFact<'Range'> {
 		text? : string
-		icon? : string
 		min?  : number
 		max   : number
 	}
 
-	interface StunBreakFact extends BasicFact<'StunBreak'> {
-		icon? : string
-	}
+	interface StunBreakFact extends BasicFact<'StunBreak'> {}
 
 	type FactMap = {
 		AdjustByAttributeAndLevelHealing : AdjustByAttributeAndLevelHealingFact
@@ -284,10 +263,13 @@ namespace API {
 	}
 
 	type ContextGroup = {
-		recharge?      : number
-		activation?    : number
-		resource_cost? : number
-		facts?         : Fact[]
+		recharge?       : number
+		activation?     : number
+		resource_cost?  : number
+		endurance_cost? : number
+		supply_cost?    : number
+		upkeep_cost?    : number
+		facts?          : Fact[]
 	}
 
 	type Item = ItemDetail & ItemBase

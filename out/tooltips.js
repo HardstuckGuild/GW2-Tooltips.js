@@ -565,7 +565,7 @@ class FactsProcessor {
         return factWraps;
     }
     static generateFact(fact, weapon_strength, context) {
-        let iconSlug = fact.icon || GW2TooltipsV2.ICONS.GENERIC_FACT;
+        let iconSlug = fact.icon || 0;
         const generateBuffDescription = (buff, fact) => {
             let modsArray = [];
             if (buff.modifiers) {
@@ -1180,16 +1180,32 @@ class GW2TooltipsV2 {
         const headerElements = [TUtilsV2.newElm('teb', TUtilsV2.GW2Text2HTML(apiObject.name))];
         headerElements.push(TUtilsV2.newElm('div.flexbox-fill'));
         const currentContextInformation = this.resolveTraitsAndOverrides(apiObject, context);
-        if (currentContextInformation.resource_cost) {
-            headerElements.push(TUtilsV2.newElm('ter', String(currentContextInformation.resource_cost), TUtilsV2.newImg(this.ICONS.RESOURCE, 'iconsmall')));
+        if (0) {
+            headerElements.push(TUtilsV2.newImg(this.ICONS.NO_UNDERWATER, 'iconsmall'));
         }
         if (currentContextInformation.activation) {
             const value = TUtilsV2.drawFractional(currentContextInformation.activation / 1000);
-            headerElements.push(TUtilsV2.newElm('ter', value + 's', TUtilsV2.newImg(this.ICONS.ACTIVATION, 'iconsmall')));
+            if (value != '0') {
+                headerElements.push(TUtilsV2.newElm('ter', value, TUtilsV2.newImg(this.ICONS.ACTIVATION, 'iconsmall')));
+            }
+        }
+        if (currentContextInformation.resource_cost) {
+            headerElements.push(TUtilsV2.newElm('ter', String(currentContextInformation.resource_cost), TUtilsV2.newImg(context.character.profession == 'Revenant' ? this.ICONS.RESOURCE_REV : this.ICONS.RESOURCE_THIEF, 'iconsmall')));
+        }
+        if (currentContextInformation.endurance_cost) {
+            headerElements.push(TUtilsV2.newElm('ter', String(Math.round(currentContextInformation.endurance_cost)), TUtilsV2.newImg(this.ICONS.ENDURANCE_COST, 'iconsmall')));
+        }
+        if (currentContextInformation.upkeep_cost) {
+            headerElements.push(TUtilsV2.newElm('ter', String(currentContextInformation.upkeep_cost), TUtilsV2.newImg(this.ICONS.UPKEEP_COST, 'iconsmall')));
         }
         if (currentContextInformation.recharge) {
             const value = TUtilsV2.drawFractional(currentContextInformation.recharge / 1000);
-            headerElements.push(TUtilsV2.newElm('ter', value + 's', TUtilsV2.newImg(this.ICONS.RECHARGE, 'iconsmall')));
+            if (value != '0') {
+                headerElements.push(TUtilsV2.newElm('ter', value, TUtilsV2.newImg(this.ICONS.RECHARGE, 'iconsmall')));
+            }
+        }
+        if (currentContextInformation.supply_cost) {
+            headerElements.push(TUtilsV2.newElm('ter', String(currentContextInformation.supply_cost), TUtilsV2.newImg(this.ICONS.SUPPLY_COST, 'iconsmall')));
         }
         const secondHeaderRow = [];
         {
@@ -1855,12 +1871,16 @@ GW2TooltipsV2.ICONS = {
     SLOT_Upgrade: 517197,
     SLOT_Infusion: 517202,
     SLOT_Enrichment: 517204,
-    RESOURCE: 156649,
+    RESOURCE_THIEF: 156649,
+    RESOURCE_REV: 156647,
+    UPKEEP_COST: 156058,
+    SUPPLY_COST: 2111003,
+    ENDURANCE_COST: 156649,
+    NO_UNDERWATER: 358417,
     RECHARGE: 156651,
     ACTIVATION: 496252,
     RANGE: 156666,
     DEFIANCE_BREAK: 1938788,
-    GENERIC_FACT: 156661,
     WEAPON_SWAP: 156583,
     BARRIER: 1770209,
     STUN_BREAK: 156654,

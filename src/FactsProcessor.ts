@@ -68,7 +68,7 @@ class FactsProcessor {
 
 	/** @param fact should already be context resolved */
 	static generateFact(fact : API.Fact, weapon_strength : number, context : Context) : { wrapper? : HTMLElement, defiance_break : number } {
-		let iconSlug = fact.icon || GW2TooltipsV2.ICONS.GENERIC_FACT; // setting the default fact icon should happen on the api side
+		let iconSlug = fact.icon || 0 // temporary hack
 
 		const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact) => {
 			let modsArray: string[] = []
