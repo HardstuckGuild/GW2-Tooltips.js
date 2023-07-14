@@ -106,7 +106,8 @@
   gap: 0 1ch;
   white-space: nowrap;
 }
-.tooltipWrapper tet.small {
+.tooltipWrapper .detail {
+	color: gray;
 	font-size: var(--gw2-tt-font-size-s);
 }
 .tooltip:not(.item) tet teb {
@@ -116,8 +117,8 @@
 
 .tooltipWrapper teb, .tooltipWrapper te {
   display: flex;
+	align-items: start;
   gap: 0 .5ch;
-	position: relative;
 }
 .tooltipWrapper te img,
 .tooltipWrapper tet>img {
@@ -134,12 +135,15 @@
 	color: var(--gw2-tt-color-tt-desc);
 }
 
-.tooltipWrapper .buffcount {
+.tooltipWrapper .buff-ico {
+	position: relative;
+}
+.tooltipWrapper .buff-ico[count]::after {
+	content: attr(count);
   position: absolute;
-  top: 1.8rem;
-  transform: translateY(-50%);
   z-index: 1;
-  width: 1.8rem;
+	right: 0;
+	bottom: 0;
   color: var(--gw2-tt-color-text-accent);
   font-weight: var(--gw2-tt-font-weight-thick);
   font-size: var(--gw2-tt-font-size-s);
@@ -160,6 +164,10 @@
 
 .tooltipWrapper te tem {
 	align-self: center;
+}
+.tooltipWrapper .with-detail {
+	display: flex;
+	flex-direction: column;
 }
 
 

@@ -1,6 +1,6 @@
 //TODO(Rennorb) @issues:
 //TODO(Rennorb): Provide a clean way to construct custom tooltips. Currently with the old version we manipulate the cache before the hook function gets called, which really isn't the the best.
-//TODO(Rennorb): Think about bundling everything with something like rollup so way we can also easily produce minified versions, although we will have to introduce node-modules for that which i strongly dislike.
+//TODO(Rennorb): Think about bundling everything with something like rollup. That way we can also easily produce minified versions, although we will have to introduce node-modules for that which i strongly dislike.
 //TODO(Rennorb): Multi skill tooltips (multiple boxes) (kindof works nit not complete)
 //TODO(Rennorb): Option to show whole skill-chain (maybe on button hold)?
 //TODO(Rennorb): Stop using these jank custom tags. There is no reason to do so and its technically not legal per html spec.
@@ -8,12 +8,12 @@
 //TODO(Rennorb): Figure out how to handle boon descriptions. Have a toggle between 'realistic as in game' and 'full information'
 //TODO(Rennorb): Link minion skills to minion summon skill.
 //TODO(Rennorb): specs, pets, and amulets endpoints.
-//TODO(Rennorb): translation for attributes into 'human readable' (in game) names
 //TODO(Rennorb): Something with the traits is funky, the facts are clearly incomplete for some of them. The linked/trigger skills are missing afaict.
 //TODO(Rennorb): Amulet enrichment slot is not there.
 //TODO(Rennorb): Defiance break on single effect tooltips.
 //TODO(Rennorb): Change anything percent related to use fractions instead of integers (0.2 instead of 20).
 // The only thing this is good for is to make drawing the facts easier. Since we do quite a few calculations this swap would reduce conversions quite a bit.
+//TODO(Rennorb): Note the specialization a trait belongs to on the trait tooltip (probably instead of the slot).
 
 /// <reference path="Collect.ts" />
 
@@ -385,10 +385,10 @@ class GW2TooltipsV2 {
 
 		if(currentContextInformation.activation) {
 			const value = TUtilsV2.drawFractional(currentContextInformation.activation / 1000);
-			if (value != '0') {
+			if (value != '0') { //in case we rounded down a fractional value just above 0
 				headerElements.push(TUtilsV2.newElm('ter',
-				value,
-				TUtilsV2.newImg(this.ICONS.ACTIVATION, 'iconsmall')
+					value,
+					TUtilsV2.newImg(this.ICONS.ACTIVATION, 'iconsmall')
 				));
 			}
 		}
@@ -426,8 +426,8 @@ class GW2TooltipsV2 {
 
 		if(currentContextInformation.supply_cost) {
 			headerElements.push(TUtilsV2.newElm('ter',
-			String(currentContextInformation.supply_cost),
-			TUtilsV2.newImg(this.ICONS.SUPPLY_COST, 'iconsmall')
+				String(currentContextInformation.supply_cost),
+				TUtilsV2.newImg(this.ICONS.SUPPLY_COST, 'iconsmall')
 			));
 		}
 
@@ -473,10 +473,12 @@ class GW2TooltipsV2 {
 		}
 
 		const parts : HTMLElement[] = [TUtilsV2.newElm('tet', ...headerElements)];
-		if(secondHeaderRow.length > 1) parts.push(TUtilsV2.newElm('tet.small', ...secondHeaderRow));
+		if(secondHeaderRow.length > 1) parts.push(TUtilsV2.newElm('tet.detail', ...secondHeaderRow));
 
 		if('description' in apiObject && apiObject.description) {
 			const description = document.createElement('ted')
+			description.style.marginTop = '.5em'; //TODO(Rennorb) @cleanup
+			description.style.marginBottom = '.5em';
 			description.innerHTML = `<teh>${TUtilsV2.GW2Text2HTML(apiObject.description)}</teh>`
 			parts.push(description)
 		}

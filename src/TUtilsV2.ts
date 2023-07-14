@@ -50,6 +50,7 @@ class TUtilsV2 {
 		return str;
 	}
 
+	//TODO(Rennorb) @cleanup
 	static drawFractional(value: number) {
 		if (window.GW2TooltipsConfig?.preferCorrectnessOverExtraInfo) {
 			const sign = value < 0 ? '-' : '';
@@ -92,6 +93,7 @@ class TUtilsV2 {
 		switch (type) {
 			case 'ConditionDmg': return 'Condition Damage';
 			case 'CritDamage'  : return 'Ferocity';
+			case 'Healing'     : return 'Healing Power';
 			case 'BowLong'     : return 'Longbow';
 			case 'BowShort'    : return 'Shortbow';
 			case 'Projectile20': return 'Projectile (20% Chance)';

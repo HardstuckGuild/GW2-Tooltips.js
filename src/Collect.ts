@@ -172,7 +172,7 @@ class Collect {
 
 				(typeof modifier.target_attribute_or_buff !== 'number'
 					? sources[TUtilsV2.Uncapitalize(modifier.target_attribute_or_buff)] //TODO(Rennorb) @cleanup: another reason to fix naming
-					: sources[modifier.target_attribute_or_buff]
+					: (sources[modifier.target_attribute_or_buff] || (sources[modifier.target_attribute_or_buff] = []))
 				).push({ modifier, source: item!.name, count: amountToAdd })
 			}
 		}

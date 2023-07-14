@@ -68,11 +68,13 @@ class FactsProcessor {
 
 	/** @param fact should already be context resolved */
 	static generateFact(fact : API.Fact, weapon_strength : number, context : Context) : { wrapper? : HTMLElement, defiance_break : number } {
-		let iconSlug = fact.icon || 0 // temporary hack
+		let iconSlug : Parameters<typeof TUtilsV2.newImg>[0] = fact.icon;
+		let buffStackSize = 1;
 
 		const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact) => {
 			let modsArray: string[] = []
 			if(buff.modifiers) {
+				//TODO(Rennorb) @consistency: gamemode splitting for mods (?)
 				const relevantModifiers = buff.modifiers.filter(modifier => (
 					   (!modifier.trait_req || context.character.traits.includes(modifier.trait_req))
 					&& (!modifier.mode || modifier.mode === context.gameMode)
@@ -139,14 +141,49 @@ class FactsProcessor {
 			return TUtilsV2.GW2Text2HTML(buff.description_brief || modsArray.join(', ') || buff.description)
 		}
 
+		const calculateBuffDuration = (duration : number, buff : API.Skill, detailStack : string[]) : number => {
+			detailStack.push(`base duration: ${TUtilsV2.drawFractional(duration / 1000)}s`);
+			let durMod = 1;
+
+			const relevantStat : keyof Stats | false = (buff.buff_type == 'Boon' && 'concentration') || (buff.buff_type == 'Condition' && 'expertise');
+			if(relevantStat) {
+				const rawValue = context.character.stats[relevantStat];
+				// every 15 points add 1%
+				durMod += rawValue / 15 * 0.01;
+				if(rawValue > 0)
+					detailStack.push(`+${TUtilsV2.withUpToNDigits('toFixed', rawValue / 15, 2)}% from ${rawValue} ${relevantStat}`);
+			}
+
+			//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
+			let durModStack = context.character.statSources[buff.id];
+			if(durModStack) {
+				let percentMod = 0;
+				for(const { source, modifier, count } of durModStack) {
+					const mod = this.calculateModifier(modifier, context.character);
+					detailStack.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+					percentMod += mod;
+				}
+				durMod += percentMod / 100;
+			}
+			duration *= durMod;
+
+			return duration;
+		}
+
 		const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => HTMLElement[] } = {
 			AdjustByAttributeAndLevelHealing : ({fact}) =>  {
-				//TODO(Rennorb) @cleanup
-				const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0;
+				const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0; //TODO(Rennorb) @cleanup
 				const value = Math.round((fact.value + attribute * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count);
-				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(attribute);
-				const coefficent = window.GW2TooltipsConfig?.preferCorrectnessOverExtraInfo ? '' : ` (${TUtilsV2.withUpToNDigits('toFixed', fact.attribute_multiplier, 4)})`;
-				return [TUtilsV2.newElm('tem', `${text}: ${value}${coefficent}`)];
+				const descNode = TUtilsV2.newElm('tem.with-detail', `${TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(attribute)}: ${value}`);
+
+				if(!window.GW2TooltipsConfig?.preferCorrectnessOverExtraInfo) {
+					descNode.append(TUtilsV2.newElm('span.detail', `${fact.value} base value`));
+					if(fact.level_multiplier) descNode.append(TUtilsV2.newElm('span.detail', `+ ${context.character.level ** fact.level_exponent * fact.level_multiplier} from lvl ${context.character.level} ^ ${fact.level_exponent} level exp. * ${fact.level_multiplier} level mul.`));
+					if(attribute) descNode.append(TUtilsV2.newElm('span.detail', `+ ${fact.value + attribute} from ${attribute} ${TUtilsV2.mapLocale(fact.target)} * ${fact.attribute_multiplier} attrib mod.`));
+					if(fact.hit_count != 1) descNode.append(TUtilsV2.newElm('span.detail', ` * ${fact.hit_count} hits`));
+				}
+
+				return [descNode];
 			},
 			AttributeAdjust : ({fact}) => {
 				const value = Math.round((fact.range[1] - fact.range[0]) / (context.character.level / 80) + fact.range[0]);
@@ -159,35 +196,10 @@ class FactsProcessor {
 				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api
 				iconSlug = buff.icon || iconSlug;
 
-				const dataStack : string[] = []; //@debug
-				
 				let {duration, apply_count} = fact;
-				{
-					dataStack.push(`base duration: ${TUtilsV2.drawFractional(duration / 1000)}s`);
-					let durMod = 1;
 
-					const relevantStat : keyof Stats | false = (buff.buff_type == 'Boon' && 'concentration') || (buff.buff_type == 'Condition' && 'expertise');
-					if(relevantStat) {
-						const rawValue = context.character.stats[relevantStat];
-						// every 15 points add 1%
-						durMod += rawValue / 15 * 0.01;
-						if(rawValue > 0)
-							dataStack.push(`${rawValue} ${relevantStat}: +${TUtilsV2.withUpToNDigits('toFixed', rawValue / 15, 2)}%`);
-					}
-
-					//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
-					let durModStack = context.character.statSources[buff.id];
-					if(durModStack) {
-						let percentMod = 0;
-						for(const { source, modifier, count } of durModStack) {
-							const mod = this.calculateModifier(modifier, context.character);
-							dataStack.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
-							percentMod += mod;
-						}
-						durMod += percentMod / 100;
-					}
-					duration *= durMod;
-				}
+				const detailStack : string[] = [];
+				duration = calculateBuffDuration(duration, buff, detailStack);
 
 				let buffDescription = generateBuffDescription(buff, fact);
 				if(buffDescription) {
@@ -196,23 +208,13 @@ class FactsProcessor {
 
 				const seconds = duration > 0 ? `(${TUtilsV2.drawFractional(duration / 1000)}s)`: '';
 
-				const descNode = TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
-				if(dataStack.length > 1) { //@debug
-					descNode.append(...dataStack.map(d => {
-						const x = TUtilsV2.newElm('span', d)
-						x.style.color = "gray";
-						x.style.fontSize = "1em";
-						return x;
-					}));
-					descNode.style.display = 'flex';
-					descNode.style.flexDirection = 'column';
+				const descNode = TUtilsV2.newElm('tem.with-detail', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
+				if(detailStack.length > 1) {
+					descNode.append(...detailStack.map(d => TUtilsV2.newElm('span.detail', d)));
 				}
 
-				let node = [descNode]
-				if(apply_count > 1) {
-					node.push(TUtilsV2.newElm('div.buffcount', apply_count.toString()));
-				}
-				return node;
+				buffStackSize = apply_count;
+				return [descNode];
 			},
 			BuffBrief : ({fact, buff}) =>  {
 				if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
@@ -260,28 +262,30 @@ class FactsProcessor {
 				const raw = Math.round(GW2TooltipsV2.getHealth(context.character) * 0.69 * percent * 0.01);
 				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`)];
 			},
-			Damage : ({fact, weaponStrength}) => {
-				const {dmg_multiplier, hit_count, text} = fact;
+			Damage : ({fact: {dmg_multiplier, hit_count, text}, weaponStrength}) => {
 				const times = hit_count > 1 ? `(${hit_count}x)` : '';
-				const damage = hit_count * weaponStrength * dmg_multiplier * context.character.stats.power / context.targetArmor;
-				const coefficent = window.GW2TooltipsConfig?.preferCorrectnessOverExtraInfo ? '' : ` (${TUtilsV2.withUpToNDigits('toFixed', dmg_multiplier * hit_count, 4)})`;
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}${times}: ${Math.round(damage)}${coefficent}`)];
+				const damage = dmg_multiplier * hit_count * weaponStrength * context.character.stats.power / context.targetArmor;
+				const descNode = TUtilsV2.newElm('tem.with-detail', `${TUtilsV2.GW2Text2HTML(text)}${times}: ${Math.round(damage)}`);
+
+				if(!GW2TooltipsV2.config.preferCorrectnessOverExtraInfo) {
+					descNode.append(TUtilsV2.newElm('span.detail', `${context.character.stats.power} power * ${weaponStrength} avg. weapon str. / ${context.targetArmor} target armor`));
+					descNode.append(TUtilsV2.newElm('span.detail', `* ${TUtilsV2.withUpToNDigits('toFixed', dmg_multiplier, 4)} internal mod.`));
+					if(hit_count != 1) descNode.append(TUtilsV2.newElm('span.detail', `* ${hit_count} hits`));
+				}
+				return [descNode];
 			},
 			Time : ({fact}) => {
-				const {duration, text} = fact;
-				const time = duration != 1000 ? 'seconds' : 'second';
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(duration / 1000)} ${time}`)];
+				const time = fact.duration != 1000 ? 'seconds' : 'second';
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.duration / 1000)} ${time}`)];
 			},
 			ComboField : ({fact}) =>  {
-				const {field_type, text} = fact;
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.mapLocale(field_type)}`)];
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.mapLocale(fact.field_type)}`)];
 			},
 			ComboFinisher : ({fact}) => {
-				const {finisher_type, text} = fact;
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.mapLocale(finisher_type)}`)];
+				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.mapLocale(fact.finisher_type)}`)];
 			},
 			BuffConversion : ({fact}) => {
-				return [TUtilsV2.newElm('tem', `Gain ${fact.target} Based on a Percentage of ${fact.source}: ${fact.percent}%`)];
+				return [TUtilsV2.newElm('tem', `Gain ${TUtilsV2.mapLocale(fact.target)} Based on a Percentage of ${TUtilsV2.mapLocale(fact.source)}: ${fact.percent}%`)];
 			},
 			NoData : ({fact}) => {
 				return [TUtilsV2.newElm('tem', TUtilsV2.GW2Text2HTML(fact.text))];
@@ -296,25 +300,9 @@ class FactsProcessor {
 				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api
 
 				let {duration, apply_count, text} = fact;
-				{
-					let durMod = 1;
 
-					const relevantStat : keyof Stats | false = (buff.buff_type == 'Boon' && 'concentration') || (buff.buff_type == 'Condition' && 'expertise');
-					if(relevantStat) {
-						// every 15 points add 1%
-						durMod += context.character.stats[relevantStat] / 15 * 0.01;
-					}
-
-					//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
-					let durModStack = context.character.statSources[buff.id];
-					if(durModStack) {
-						let percentMod = 0;
-						for(const { modifier } of durModStack)
-							percentMod += this.calculateModifier(modifier, context.character);
-						durMod += percentMod / 100;
-					}
-					duration *= durMod;
-				}
+				const detailStack : string[] = [];
+				duration = calculateBuffDuration(duration, buff, detailStack);
 
 				let buffDescription = generateBuffDescription(buff, fact);
 				if(buffDescription) {
@@ -323,14 +311,12 @@ class FactsProcessor {
 
 				const seconds = duration > 0 ? `(${TUtilsV2.drawFractional(duration / 1000)}s)`: '';
 
-				let node = TUtilsV2.newElm('te',
-					TUtilsV2.newImg(buff.icon, 'iconmed'),
-					TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`)
-				);
-
-				if(apply_count > 1) {
-					node.appendChild(TUtilsV2.newElm('div.buffcount', apply_count.toString()));
+				const descNode = TUtilsV2.newElm('tem.with-detail', `${TUtilsV2.GW2Text2HTML(text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
+				if(detailStack.length > 1) {
+					descNode.append(...detailStack.map(d => TUtilsV2.newElm('span.detail', d)));
 				}
+
+				let node = TUtilsV2.newElm('te', this.generateBuffIcon(buff.icon, apply_count), descNode);
 				return [node];
 			},
 			PrefixedBuffBrief : ({fact, buff}) => {
@@ -369,9 +355,21 @@ class FactsProcessor {
 		if(fact.requires_trait) {
 			wrapper.classList.add('color-traited-fact')
 		}
-		wrapper.append(TUtilsV2.newImg(iconSlug, 'iconmed'))
+		wrapper.append(this.generateBuffIcon(iconSlug, buffStackSize))
 		wrapper.append(... text)
 
 		return { wrapper, defiance_break: fact.defiance_break || 0 }
+	}
+
+	static generateBuffIcon(icon : Parameters<typeof TUtilsV2.newImg>[0], stackSize = 1) : HTMLElement {
+		const img = TUtilsV2.newImg(icon);
+		if(stackSize == 1) {
+			return img;
+		}
+		else {
+			const wrap = TUtilsV2.newElm('span.buff-ico', img);
+			wrap.setAttribute('count', String(stackSize));
+			return wrap;
+		}
 	}
 }
