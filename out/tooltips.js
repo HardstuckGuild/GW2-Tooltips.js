@@ -559,7 +559,7 @@ class FactsProcessor {
         })
             .filter(d => d);
         if (totalDefianceBreak > 0) {
-            const defianceWrap = TUtilsV2.newElm('te.defiance', TUtilsV2.newImg(GW2TooltipsV2.ICONS.DEFIANCE_BREAK, 'iconmed'), TUtilsV2.newElm('tem.color-defiance-fact', `Defiance Break: ${totalDefianceBreak}`));
+            const defianceWrap = TUtilsV2.newElm('div.fact', TUtilsV2.newImg(GW2TooltipsV2.ICONS.DEFIANCE_BREAK, 'iconmed'), TUtilsV2.newElm('div.color-defiance-fact', `Defiance Break: ${totalDefianceBreak}`));
             factWraps.push(defianceWrap);
         }
         return factWraps;
@@ -567,6 +567,7 @@ class FactsProcessor {
     static generateFact(fact, weapon_strength, context) {
         let iconSlug = fact.icon;
         let buffStackSize = 1;
+        let buffDuration = fact.duration;
         const generateBuffDescription = (buff, fact) => {
             let modsArray = [];
             if (buff.modifiers) {
@@ -671,16 +672,17 @@ class FactsProcessor {
                     console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                 buff = buff || this.MissingBuff;
                 iconSlug = buff.icon || iconSlug;
-                let { duration, apply_count } = fact;
-                const lines = [];
-                duration = calculateBuffDuration(duration, buff, lines);
+                const details = [];
+                buffDuration = calculateBuffDuration(fact.duration, buff, details);
                 let buffDescription = generateBuffDescription(buff, fact);
                 if (buffDescription) {
                     buffDescription = `: ${buffDescription}`;
                 }
-                const seconds = duration > 0 ? `(${TUtilsV2.drawFractional(duration / 1000)}s)` : '';
-                lines.unshift(`${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
-                buffStackSize = apply_count;
+                const seconds = buffDuration > 0 ? `(${TUtilsV2.drawFractional(buffDuration / 1000)}s)` : '';
+                const lines = [`${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`];
+                if (details.length > 1)
+                    lines.push(...details);
+                buffStackSize = fact.apply_count;
                 return lines;
             },
             BuffBrief: ({ fact, buff }) => {
@@ -758,17 +760,16 @@ class FactsProcessor {
                     console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                 buff = buff || this.MissingBuff;
                 let { duration, apply_count, text } = fact;
-                const detailStack = [];
-                duration = calculateBuffDuration(duration, buff, detailStack);
+                const details = [];
+                buffDuration = calculateBuffDuration(duration, buff, details);
                 let buffDescription = generateBuffDescription(buff, fact);
                 if (buffDescription) {
                     buffDescription = `: ${buffDescription}`;
                 }
-                const seconds = duration > 0 ? `(${TUtilsV2.drawFractional(duration / 1000)}s)` : '';
+                const seconds = buffDuration > 0 ? `(${TUtilsV2.drawFractional(buffDuration / 1000)}s)` : '';
                 const list = [TUtilsV2.newElm('div', this.generateBuffIcon(buff.icon, apply_count), TUtilsV2.newElm('span', `${TUtilsV2.GW2Text2HTML(text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`))];
-                if (detailStack.length > 1) {
-                    list.push(...detailStack.map(d => TUtilsV2.newElm('span.detail', d)));
-                }
+                if (details.length > 1)
+                    list.push(...details);
                 return list;
             },
             PrefixedBuffBrief: ({ fact, buff }) => {
@@ -800,9 +801,15 @@ class FactsProcessor {
         if (fact.requires_trait) {
             wrapper.classList.add('color-traited-fact');
         }
+        let defianceBreak = 0;
+        if (fact.defiance_break) {
+            defianceBreak = fact.defiance_break * (buffDuration || 1000) / 1000;
+            const breakDetail = (buffDuration != undefined && buffDuration != 1000) ? ` (${fact.defiance_break}/s)` : '';
+            remainingDetail.push(TUtilsV2.newElm('span.detail.color-defiance-fact', `Defiance Break: ${defianceBreak}${breakDetail}`));
+        }
         wrapper.append(this.generateBuffIcon(iconSlug, buffStackSize));
         wrapper.append(TUtilsV2.newElm('div', firstLine, ...remainingDetail.map(d => typeof d == 'string' ? TUtilsV2.newElm('span.detail', d) : d)));
-        return { wrapper, defiance_break: fact.defiance_break || 0 };
+        return { wrapper, defiance_break: defianceBreak };
     }
     static generateBuffIcon(icon, stackSize = 1) {
         const img = TUtilsV2.newImg(icon);

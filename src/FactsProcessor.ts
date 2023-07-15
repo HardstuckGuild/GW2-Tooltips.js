@@ -56,9 +56,9 @@ class FactsProcessor {
 
 		//TODO(Rennorb): This should use order 1003
 		if(totalDefianceBreak > 0) {
-			const defianceWrap = TUtilsV2.newElm('te.defiance',
+			const defianceWrap = TUtilsV2.newElm('div.fact',
 				TUtilsV2.newImg(GW2TooltipsV2.ICONS.DEFIANCE_BREAK, 'iconmed'),
-				TUtilsV2.newElm('tem.color-defiance-fact', `Defiance Break: ${totalDefianceBreak}`)
+				TUtilsV2.newElm('div.color-defiance-fact', `Defiance Break: ${totalDefianceBreak}`)
 			)
 			factWraps.push(defianceWrap)
 		}
@@ -70,6 +70,7 @@ class FactsProcessor {
 	static generateFact(fact : API.Fact, weapon_strength : number, context : Context) : { wrapper? : HTMLElement, defiance_break : number } {
 		let iconSlug : Parameters<typeof TUtilsV2.newImg>[0] = fact.icon;
 		let buffStackSize = 1;
+		let buffDuration = fact.duration;
 
 		const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact) => {
 			let modsArray: string[] = []
@@ -141,7 +142,7 @@ class FactsProcessor {
 			return TUtilsV2.GW2Text2HTML(buff.description_brief || modsArray.join(', ') || buff.description)
 		}
 
-		const calculateBuffDuration = (duration : number, buff : API.Skill, detailStack : string[]) : number => {
+		const calculateBuffDuration = (duration : Milliseconds, buff : API.Skill, detailStack : string[]) : number => {
 			detailStack.push(`base duration: ${TUtilsV2.drawFractional(duration / 1000)}s`);
 			let durMod = 1;
 
@@ -197,20 +198,20 @@ class FactsProcessor {
 				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api
 				iconSlug = buff.icon || iconSlug;
 
-				let {duration, apply_count} = fact;
-
-				const lines : string[] = [];
-				duration = calculateBuffDuration(duration, buff, lines);
+				const details : string[] = [];
+				buffDuration = calculateBuffDuration(fact.duration, buff, details);
 
 				let buffDescription = generateBuffDescription(buff, fact);
 				if(buffDescription) {
 					buffDescription = `: ${buffDescription}`;
 				}
 
-				const seconds = duration > 0 ? `(${TUtilsV2.drawFractional(duration / 1000)}s)`: '';
-				lines.unshift(`${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
+				const seconds = buffDuration > 0 ? `(${TUtilsV2.drawFractional(buffDuration / 1000)}s)`: '';
+				const lines = [`${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`];
+				// only push if we have more than a base value
+				if(details.length > 1) lines.push(...details);
 
-				buffStackSize = apply_count;
+				buffStackSize = fact.apply_count;
 				return lines;
 			},
 			BuffBrief : ({fact, buff}) =>  {
@@ -299,23 +300,22 @@ class FactsProcessor {
 
 				let {duration, apply_count, text} = fact;
 
-				const detailStack : string[] = [];
-				duration = calculateBuffDuration(duration, buff, detailStack);
+				const details : string[] = [];
+				buffDuration = calculateBuffDuration(duration, buff, details);
 
 				let buffDescription = generateBuffDescription(buff, fact);
 				if(buffDescription) {
 					buffDescription = `: ${buffDescription}`;
 				}
 
-				const seconds = duration > 0 ? `(${TUtilsV2.drawFractional(duration / 1000)}s)`: '';
+				const seconds = buffDuration > 0 ? `(${TUtilsV2.drawFractional(buffDuration / 1000)}s)`: '';
 
 				const list : (string|HTMLElement)[] = [TUtilsV2.newElm('div',
 					this.generateBuffIcon(buff.icon, apply_count),
 					TUtilsV2.newElm('span', `${TUtilsV2.GW2Text2HTML(text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`)
 				)];
-				if(detailStack.length > 1) {
-					list.push(...detailStack.map(d => TUtilsV2.newElm('span.detail', d)));
-				}
+				// only push if we have more than a base value
+				if(details.length > 1) list.push(...details);
 
 				return list;
 			},
@@ -348,15 +348,23 @@ class FactsProcessor {
 
 		const buff = APICache.storage.skills.get(fact.buff || 0)
 		const data : HandlerParams = { fact, buff, weaponStrength: weapon_strength }
-		const [firstLine, ...remainingDetail]  = factInflators[fact.type](data as any)
+		const [firstLine, ...remainingDetail] = factInflators[fact.type](data as any)
 		const wrapper = TUtilsV2.newElm('div.fact')
 		if(fact.requires_trait) {
 			wrapper.classList.add('color-traited-fact')
 		}
+
+		let defianceBreak = 0;
+		if(fact.defiance_break) {
+			defianceBreak = fact.defiance_break * (buffDuration || 1000) / 1000;
+			const breakDetail = (buffDuration != undefined && buffDuration != 1000) ? ` (${fact.defiance_break}/s)` : '';
+			remainingDetail.push(TUtilsV2.newElm('span.detail.color-defiance-fact', `Defiance Break: ${defianceBreak}${breakDetail}`))
+		}
+
 		wrapper.append(this.generateBuffIcon(iconSlug, buffStackSize))
 		wrapper.append(TUtilsV2.newElm('div', firstLine, ...remainingDetail.map(d => typeof d == 'string' ? TUtilsV2.newElm('span.detail', d) : d)));
 
-		return { wrapper, defiance_break: fact.defiance_break || 0 }
+		return { wrapper, defiance_break: defianceBreak }
 	}
 
 	static generateBuffIcon(icon : Parameters<typeof TUtilsV2.newImg>[0], stackSize = 1) : HTMLElement {
