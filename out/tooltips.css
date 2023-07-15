@@ -162,14 +162,26 @@
 	vertical-align: bottom;
 }
 
-.tooltipWrapper te tem {
-	align-self: center;
+.tooltipWrapper .fact,
+.tooltipWrapper .fact>:nth-child(2)>:first-child {
+	display: flex;
+	flex-direction: row;
+	align-items: start;
+	gap: 0 .5ch;
 }
-.tooltipWrapper .with-detail {
+.tooltipWrapper .fact img {
+	width: 32px;
+	height: 32px;
+	flex: 0 0 auto
+}
+.tooltipWrapper .fact>:nth-child(2) {
+	align-self: center;
 	display: flex;
 	flex-direction: column;
 }
-
+.tooltipWrapper .fact>:nth-child(2)>:first-child>:nth-child(2)  {
+	align-self: center;
+}
 
 
 gw2object {

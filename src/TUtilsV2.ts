@@ -43,8 +43,8 @@ class TUtilsV2 {
 	//TODO(Rennorb) @cleanup: we should just use consistent names.
 	static Uncapitalize = <T extends string>(str : T) => str.charAt(0).toLowerCase() + str.slice(1) as Uncapitalize<T>;
 
-	static withUpToNDigits(mode : 'toPrecision' | 'toFixed', x : number, digits : number) {
-		let str = (x)[mode](digits);
+	static withUpToNDigits(x : number, digits : number) {
+		let str = x.toFixed(digits);
 		while(str.charAt(str.length - 1) === '0') str = str.slice(0, -1);
 		if(str.charAt(str.length - 1) === '.') str = str.slice(0, -1);
 		return str;
@@ -85,7 +85,7 @@ class TUtilsV2 {
 			}
 			return `${sign}${value > 0 ? value : ''}${fraction}`;
 		} else {
-			return this.withUpToNDigits('toFixed', value, 3);
+			return this.withUpToNDigits(value, 3);
 		}
 	}
 

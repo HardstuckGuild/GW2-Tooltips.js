@@ -151,7 +151,7 @@ class FactsProcessor {
 				// every 15 points add 1%
 				durMod += rawValue / 15 * 0.01;
 				if(rawValue > 0)
-					detailStack.push(`+${TUtilsV2.withUpToNDigits('toFixed', rawValue / 15, 2)}% from ${rawValue} ${relevantStat}`);
+					detailStack.push(`+${TUtilsV2.withUpToNDigits(rawValue / 15, 2)}% from ${rawValue} ${relevantStat}`);
 			}
 
 			//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
@@ -170,26 +170,27 @@ class FactsProcessor {
 			return duration;
 		}
 
-		const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => HTMLElement[] } = {
+		const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => (string|HTMLElement)[] } = {
 			AdjustByAttributeAndLevelHealing : ({fact}) =>  {
 				const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0; //TODO(Rennorb) @cleanup
 				const value = Math.round((fact.value + attribute * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count);
-				const descNode = TUtilsV2.newElm('tem.with-detail', `${TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(attribute)}: ${value}`);
 
-				if(!window.GW2TooltipsConfig?.preferCorrectnessOverExtraInfo) {
-					descNode.append(TUtilsV2.newElm('span.detail', `${fact.value} base value`));
-					if(fact.level_multiplier) descNode.append(TUtilsV2.newElm('span.detail', `+ ${context.character.level ** fact.level_exponent * fact.level_multiplier} from lvl ${context.character.level} ^ ${fact.level_exponent} level exp. * ${fact.level_multiplier} level mul.`));
-					if(attribute) descNode.append(TUtilsV2.newElm('span.detail', `+ ${fact.value + attribute} from ${attribute} ${TUtilsV2.mapLocale(fact.target)} * ${fact.attribute_multiplier} attrib mod.`));
-					if(fact.hit_count != 1) descNode.append(TUtilsV2.newElm('span.detail', ` * ${fact.hit_count} hits`));
+				const lines = [`${TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(attribute)}: ${value}`];
+
+				if(!GW2TooltipsV2.config.preferCorrectnessOverExtraInfo) {
+					lines.push(`${fact.value} base value`);
+					if(fact.level_multiplier) lines.push(`+ ${TUtilsV2.withUpToNDigits(context.character.level ** fact.level_exponent * fact.level_multiplier, 2)} from lvl ${context.character.level} ^ ${fact.level_exponent} level exp. * ${fact.level_multiplier} level mul.`);
+					if(attribute) lines.push(`+ ${fact.value + attribute} from ${attribute} ${TUtilsV2.mapLocale(fact.target)} * ${fact.attribute_multiplier} attrib mod.`);
+					if(fact.hit_count != 1) lines.push(` * ${fact.hit_count} hits`);
 				}
 
-				return [descNode];
+				return lines;
 			},
 			AttributeAdjust : ({fact}) => {
 				const value = Math.round((fact.range[1] - fact.range[0]) / (context.character.level / 80) + fact.range[0]);
 				const sign = value > 0 ? '+' : ''
 				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(fact.target);
-				return [TUtilsV2.newElm('tem', `${text}: ${sign}${value}`)];
+				return [`${text}: ${sign}${value}`];
 			},
 			Buff : ({fact, buff}) =>  {
 				if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
@@ -198,8 +199,8 @@ class FactsProcessor {
 
 				let {duration, apply_count} = fact;
 
-				const detailStack : string[] = [];
-				duration = calculateBuffDuration(duration, buff, detailStack);
+				const lines : string[] = [];
+				duration = calculateBuffDuration(duration, buff, lines);
 
 				let buffDescription = generateBuffDescription(buff, fact);
 				if(buffDescription) {
@@ -207,24 +208,20 @@ class FactsProcessor {
 				}
 
 				const seconds = duration > 0 ? `(${TUtilsV2.drawFractional(duration / 1000)}s)`: '';
-
-				const descNode = TUtilsV2.newElm('tem.with-detail', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
-				if(detailStack.length > 1) {
-					descNode.append(...detailStack.map(d => TUtilsV2.newElm('span.detail', d)));
-				}
+				lines.unshift(`${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
 
 				buffStackSize = apply_count;
-				return [descNode];
+				return lines;
 			},
 			BuffBrief : ({fact, buff}) =>  {
 				if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
 				buff = buff || this.MissingBuff;
 				iconSlug = buff.icon || iconSlug;
 
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text).replace("%str1%", buff.name)}`)];
+				return [`${TUtilsV2.GW2Text2HTML(fact.text).replace("%str1%", buff.name)}`];
 			},
 			Distance : ({fact}) => {
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${Math.round(fact.distance)}`)];
+				return [`${TUtilsV2.GW2Text2HTML(fact.text)}: ${Math.round(fact.distance)}`];
 			},
 			HealthAdjustHealing: ({ fact }) => {
 				//TODO(Rennorb) @cleanup
@@ -232,63 +229,64 @@ class FactsProcessor {
 				const value = Math.round((fact.value + attribute * fact.multiplier) * fact.hit_count);
 				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(fact.attribute);
 
-				return [TUtilsV2.newElm('tem', `${text}: ${value}`)];
+				return [`${text}: ${value}`];
 			},
 			Number : ({fact}) => {
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.value)}`)];
+				return [`${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.value)}`];
 			},
 			Percent : ({fact}) => {
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.percent)}%`)];
+				return [`${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.percent)}%`];
 			},
 			PercentDamage : ({fact}) => {
 				// TODO(mithos) game shows an actual raw number here. to implement this we need to get the characters damage
 				//NOTE(Rennorb): this is going to be verry difficult if not impossible
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.percent)}%`)];
+				return [`${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.percent)}%`];
 			},
 			PercentLifeForceAdjust : ({fact: {percent, text}}) => {
 				//NOTE(Rennorb): lifeforce is 69% of the hp pool
 				//TODO(Rennorb): traits
 				const raw = Math.round(GW2TooltipsV2.getHealth(context.character) * 0.69 * percent * 0.01);
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`)];
+				return [`${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`];
 			},
 			PercentHealth : ({fact: {percent, text}}) => {
 				const raw = Math.round((GW2TooltipsV2.getHealth(context.character) * percent) * 0.01);
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`)];
+				return [`${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`];
 			},
 			//TODO(Rennorb): this seems to be verry much percent based. Whats the difference to PercentLifeForceAdjust here?
 			LifeForceAdjust : ({fact: {percent, text}}) => {
 				//NOTE(Rennorb): lifeforce is 69% of the hp pool
 				//TODO(Rennorb): traits
 				const raw = Math.round(GW2TooltipsV2.getHealth(context.character) * 0.69 * percent * 0.01);
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`)];
+				return [`${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`];
 			},
 			Damage : ({fact: {dmg_multiplier, hit_count, text}, weaponStrength}) => {
 				const times = hit_count > 1 ? `(${hit_count}x)` : '';
 				const damage = dmg_multiplier * hit_count * weaponStrength * context.character.stats.power / context.targetArmor;
-				const descNode = TUtilsV2.newElm('tem.with-detail', `${TUtilsV2.GW2Text2HTML(text)}${times}: ${Math.round(damage)}`);
 
+				const lines = [`${TUtilsV2.GW2Text2HTML(text)}${times}: ${Math.round(damage)}`];
 				if(!GW2TooltipsV2.config.preferCorrectnessOverExtraInfo) {
-					descNode.append(TUtilsV2.newElm('span.detail', `${context.character.stats.power} power * ${weaponStrength} avg. weapon str. / ${context.targetArmor} target armor`));
-					descNode.append(TUtilsV2.newElm('span.detail', `* ${TUtilsV2.withUpToNDigits('toFixed', dmg_multiplier, 4)} internal mod.`));
-					if(hit_count != 1) descNode.append(TUtilsV2.newElm('span.detail', `* ${hit_count} hits`));
+					lines.push(`${context.character.stats.power} power * ${weaponStrength} avg. weapon str. / ${context.targetArmor} target armor`);
+					lines.push(`* ${TUtilsV2.withUpToNDigits(dmg_multiplier, 4)} internal mod.`);
+					if(hit_count != 1) lines.push(`* ${hit_count} hits`);
 				}
-				return [descNode];
+
+				return lines;
 			},
 			Time : ({fact}) => {
 				const time = fact.duration != 1000 ? 'seconds' : 'second';
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.duration / 1000)} ${time}`)];
+				return [`${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.duration / 1000)} ${time}`];
 			},
 			ComboField : ({fact}) =>  {
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.mapLocale(fact.field_type)}`)];
+				return [`${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.mapLocale(fact.field_type)}`];
 			},
 			ComboFinisher : ({fact}) => {
-				return [TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.mapLocale(fact.finisher_type)}`)];
+				return [`${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.mapLocale(fact.finisher_type)}`];
 			},
 			BuffConversion : ({fact}) => {
-				return [TUtilsV2.newElm('tem', `Gain ${TUtilsV2.mapLocale(fact.target)} Based on a Percentage of ${TUtilsV2.mapLocale(fact.source)}: ${fact.percent}%`)];
+				return [`Gain ${TUtilsV2.mapLocale(fact.target)} Based on a Percentage of ${TUtilsV2.mapLocale(fact.source)}: ${fact.percent}%`];
 			},
 			NoData : ({fact}) => {
-				return [TUtilsV2.newElm('tem', TUtilsV2.GW2Text2HTML(fact.text))];
+				return [TUtilsV2.GW2Text2HTML(fact.text)];
 			},
 			PrefixedBuff : ({fact, buff}) => {
 				let prefix = APICache.storage.skills.get(fact.prefix);
@@ -311,13 +309,15 @@ class FactsProcessor {
 
 				const seconds = duration > 0 ? `(${TUtilsV2.drawFractional(duration / 1000)}s)`: '';
 
-				const descNode = TUtilsV2.newElm('tem.with-detail', `${TUtilsV2.GW2Text2HTML(text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
+				const list : (string|HTMLElement)[] = [TUtilsV2.newElm('div',
+					this.generateBuffIcon(buff.icon, apply_count),
+					TUtilsV2.newElm('span', `${TUtilsV2.GW2Text2HTML(text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`)
+				)];
 				if(detailStack.length > 1) {
-					descNode.append(...detailStack.map(d => TUtilsV2.newElm('span.detail', d)));
+					list.push(...detailStack.map(d => TUtilsV2.newElm('span.detail', d)));
 				}
 
-				let node = TUtilsV2.newElm('te', this.generateBuffIcon(buff.icon, apply_count), descNode);
-				return [node];
+				return list;
 			},
 			PrefixedBuffBrief : ({fact, buff}) => {
 				let prefix = APICache.storage.skills.get(fact.prefix)
@@ -328,35 +328,33 @@ class FactsProcessor {
 				if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
 				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api
 
-				let node = TUtilsV2.newElm('te',
-					TUtilsV2.newImg(buff.icon, 'iconmed'),
-					TUtilsV2.newElm('tem', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name}`)
+				let node = TUtilsV2.newElm('div',
+					TUtilsV2.newImg(buff.icon),
+					TUtilsV2.newElm('span', `${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name}`)
 				);
 
 				return [node]
 			},
-			Range : ({fact}) => {
-				const {min ,max} = fact;
-				if(window.GW2TooltipsConfig?.preferCorrectnessOverExtraInfo) {
-					return [TUtilsV2.newElm('tem', `Range: ${max}`)];
+			Range : ({fact: {min, max}}) => {
+				if(GW2TooltipsV2.config.preferCorrectnessOverExtraInfo) {
+					return [`Range: ${max}`];
 				}
-				const range = min ? `${min} - ${max}` : max;
-				return [TUtilsV2.newElm('tem', `Range: ${range}`)];
+				return [`Range: ${min ? `${min} - ${max}` : max}`];
 			},
-			StunBreak : ({fact}) => {
-				return [TUtilsV2.newElm('tem', "Breaks Stun")];
+			StunBreak : () => {
+				return ["Breaks Stun"];
 			},
 		}
 
 		const buff = APICache.storage.skills.get(fact.buff || 0)
 		const data : HandlerParams = { fact, buff, weaponStrength: weapon_strength }
-		const text = factInflators[fact.type](data as any)
-		const wrapper = TUtilsV2.newElm('te')
+		const [firstLine, ...remainingDetail]  = factInflators[fact.type](data as any)
+		const wrapper = TUtilsV2.newElm('div.fact')
 		if(fact.requires_trait) {
 			wrapper.classList.add('color-traited-fact')
 		}
 		wrapper.append(this.generateBuffIcon(iconSlug, buffStackSize))
-		wrapper.append(... text)
+		wrapper.append(TUtilsV2.newElm('div', firstLine, ...remainingDetail.map(d => typeof d == 'string' ? TUtilsV2.newElm('span.detail', d) : d)));
 
 		return { wrapper, defiance_break: fact.defiance_break || 0 }
 	}
