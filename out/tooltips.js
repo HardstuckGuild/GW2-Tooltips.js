@@ -1752,7 +1752,7 @@ class GW2TooltipsV2 {
             }
         }
         name = name.replace('%str1%', arg1).replace('%str2%', arg2).replace('%str3%', arg3).replace('%str4%', arg4);
-        if (item.flags.includes('Pvp') || item.flags.includes('PvpLobby'))
+        if (!item.flags.includes('Pve') && (item.flags.includes('Pvp') || item.flags.includes('PvpLobby')))
             name += " (PvP)";
         return name.replaceAll('[s]', stackSize > 1 ? 's' : '')
             .replaceAll(/(\S+)\[pl:"(.+?)"]/g, stackSize > 1 ? '$2' : '$1')
