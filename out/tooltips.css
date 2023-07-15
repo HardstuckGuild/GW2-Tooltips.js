@@ -85,8 +85,8 @@
 	background-blend-mode: hard-light;
 	color: var(--gw2-tt-color-text);
 }
-.tooltipWrapper > :not(.tooltip.active) te {
-	display: none;
+.tooltipWrapper > :not(.tooltip.active) .fact {
+	display: none; /*TODO(Rennorb) @correctness: this isn't the best as it only really works with traits / skills*/
 }
 
 .tooltip .group {
