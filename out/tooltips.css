@@ -200,12 +200,12 @@ gw2object.gw2objectembed[count]::before {
 
 gw2object:empty,
 gw2object[type=specialization]:not(.gw2objectembed):not([data-label]) {
-	min-width: 10ch;
 	background-image: linear-gradient(to right, transparent 40%, var(--gw2-tt-color-loading) 50%, transparent 60%);
 	background-size: 100vw 100%;
 	animation: 4s forwards infinite cubic-bezier(.46,.03,.52,.96) glint;
 }
 gw2object.gw2objectembed:empty {
+	min-width: 10ch;
 	vertical-align: bottom;
 }
 @keyframes glint {
