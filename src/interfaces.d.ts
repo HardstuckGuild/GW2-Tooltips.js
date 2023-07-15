@@ -64,7 +64,7 @@ namespace API {
 		formula_param1            : number
 		formula_param2            : number
 		formula                   : 'BuffLevelLinear' | 'ConditionDamage' | 'ConditionDamageSquared' | 'CritDamage' | 'CritDamageSquared' | 'BuffFormulaType5' | 'NoScaling' | 'Regeneration' | 'RegenerationSquared' | 'SpawnScaleLinear' | 'TargetLevelLinear' | 'BuffFormulaType11' | 'InfiniteDungeonScale' | 'Power' | 'PowerSquared' | 'BuffFormulaType15'
-		target_attribute_or_buff? : Exclude<Attributes, 'None'> | number
+		target_attribute_or_buff? : Exclude<Attributes, 'None'> | number | 'Damage' | 'LifeForce'
 		attribute_conversion?     : Exclude<Attributes, 'None'>
 		description               : string
 		description_override?     : ModifierDescriptionOverride[]

@@ -272,6 +272,8 @@ class Collect {
             healing: [],
             critDamage: [],
             agonyResistance: [],
+            damage: [],
+            lifeForce: [],
         };
         let upgrades = Object.assign({}, targetContext.character.upgradeCounts);
         for (const element of elements) {
@@ -496,9 +498,9 @@ class Collect {
                     for (const mod of modifiers) {
                         if (!mod.target_attribute_or_buff)
                             continue;
-                        if (typeof mod.target_attribute_or_buff === 'number')
-                            (context.character.statSources[mod.target_attribute_or_buff] || (context.character.statSources[mod.target_attribute_or_buff] = []))
-                                .push({ source: trait.name, modifier: mod, count: 1 });
+                        (typeof mod.target_attribute_or_buff === 'number'
+                            ? (context.character.statSources[mod.target_attribute_or_buff] || (context.character.statSources[mod.target_attribute_or_buff] = []))
+                            : context.character.statSources[TUtilsV2.Uncapitalize(mod.target_attribute_or_buff)]).push({ source: trait.name, modifier: mod, count: 1 });
                     }
                 };
                 if (trait.modifiers)
@@ -711,27 +713,67 @@ class FactsProcessor {
                 return [`${TUtilsV2.GW2Text2HTML(fact.text)}: ${TUtilsV2.drawFractional(fact.percent)}%`];
             },
             PercentLifeForceAdjust: ({ fact: { percent, text } }) => {
-                const raw = Math.round(GW2TooltipsV2.getHealth(context.character) * 0.69 * percent * 0.01);
-                return [`${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`];
+                const hpPool = GW2TooltipsV2.getHealth(context.character);
+                const lines = [];
+                if (!GW2TooltipsV2.config.preferCorrectnessOverExtraInfo) {
+                    if (context.character.statSources.lifeForce.length) {
+                        lines.push(`${percent * hpPool * 0.69} from ${percent}% * (${hpPool} HP * 0.69) base pool`);
+                        let percentMod = 100;
+                        for (const { source, modifier, count } of context.character.statSources.lifeForce) {
+                            const mod = this.calculateModifier(modifier, context.character);
+                            lines.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+                            percentMod += mod;
+                        }
+                        percent *= percentMod / 100;
+                    }
+                }
+                let raw = Math.round(hpPool * 0.69 * percent * 0.01);
+                lines.unshift(`${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`);
+                return lines;
             },
             PercentHealth: ({ fact: { percent, text } }) => {
                 const raw = Math.round((GW2TooltipsV2.getHealth(context.character) * percent) * 0.01);
                 return [`${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`];
             },
             LifeForceAdjust: ({ fact: { percent, text } }) => {
-                const raw = Math.round(GW2TooltipsV2.getHealth(context.character) * 0.69 * percent * 0.01);
-                return [`${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`];
+                const hpPool = GW2TooltipsV2.getHealth(context.character);
+                const lines = [];
+                if (!GW2TooltipsV2.config.preferCorrectnessOverExtraInfo) {
+                    if (context.character.statSources.lifeForce.length) {
+                        lines.push(`${percent * 0.01 * hpPool * 0.69} from ${percent}% * (${hpPool} HP * 0.69) base pool`);
+                        let percentMod = 100;
+                        for (const { source, modifier, count } of context.character.statSources.lifeForce) {
+                            const mod = this.calculateModifier(modifier, context.character);
+                            lines.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+                            percentMod += mod;
+                        }
+                        percent *= percentMod / 100;
+                    }
+                }
+                let raw = Math.round(hpPool * 0.69 * percent * 0.01);
+                lines.unshift(`${TUtilsV2.GW2Text2HTML(text)}: ${TUtilsV2.drawFractional(percent)}% (${raw})`);
+                return lines;
             },
             Damage: ({ fact: { dmg_multiplier, hit_count, text }, weaponStrength }) => {
                 const times = hit_count > 1 ? `(${hit_count}x)` : '';
-                const damage = dmg_multiplier * hit_count * weaponStrength * context.character.stats.power / context.targetArmor;
-                const lines = [`${TUtilsV2.GW2Text2HTML(text)}${times}: ${Math.round(damage)}`];
+                let damage = dmg_multiplier * hit_count * weaponStrength * context.character.stats.power / context.targetArmor;
+                const lines = [];
                 if (!GW2TooltipsV2.config.preferCorrectnessOverExtraInfo) {
                     lines.push(`${context.character.stats.power} power * ${weaponStrength} avg. weapon str. / ${context.targetArmor} target armor`);
                     lines.push(`* ${TUtilsV2.withUpToNDigits(dmg_multiplier, 4)} internal mod.`);
                     if (hit_count != 1)
                         lines.push(`* ${hit_count} hits`);
+                    if (context.character.statSources.damage.length) {
+                        let percentMod = 100;
+                        for (const { source, modifier, count } of context.character.statSources.damage) {
+                            const mod = this.calculateModifier(modifier, context.character);
+                            lines.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+                            percentMod += mod;
+                        }
+                        damage *= percentMod / 100;
+                    }
                 }
+                lines.unshift(`${TUtilsV2.GW2Text2HTML(text)}${times}: ${Math.round(damage)}`);
                 return lines;
             },
             Time: ({ fact }) => {
@@ -1831,6 +1873,8 @@ GW2TooltipsV2.defaultContext = {
             healing: [],
             critDamage: [],
             agonyResistance: [],
+            damage: [],
+            lifeForce: [],
         },
         upgradeCounts: {},
     },
@@ -1890,7 +1934,7 @@ GW2TooltipsV2.ICONS = {
 };
 GW2TooltipsV2._constructor();
 if (GW2TooltipsV2.config.autoInitialize) {
-    const buildNodes = document.getElementsByClassName('gw2-build');
+    const buildNodes = document.getElementsByClassName('gw2-build-wrapper');
     if (GW2TooltipsV2.config.autoCollectSelectedTraits) {
         if (buildNodes.length)
             for (const target of buildNodes)

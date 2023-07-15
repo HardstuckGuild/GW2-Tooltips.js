@@ -68,6 +68,8 @@ class GW2TooltipsV2 {
 				healing        : [],
 				critDamage     : [],
 				agonyResistance: [],
+				damage         : [],
+				lifeForce      : [],
 			},
 			upgradeCounts: {},
 		},
@@ -1145,7 +1147,7 @@ type SupportedTTTypes = API.Skill | API.Trait | API.Amulet; //TODO(Rennorb) @cle
 
 GW2TooltipsV2._constructor();
 if(GW2TooltipsV2.config.autoInitialize) {
-	const buildNodes = document.getElementsByClassName('gw2-build');
+	const buildNodes = document.getElementsByClassName('gw2-build-wrapper');
 	if(GW2TooltipsV2.config.autoCollectSelectedTraits) {
 		if(buildNodes.length) for(const target of buildNodes)
 			Collect.allTraits(GW2TooltipsV2.context, target)

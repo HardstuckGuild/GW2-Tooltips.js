@@ -1,3 +1,5 @@
+//TODO(Rennorb): stat source collection contexts are fucked somehow
+
 class Collect {
 	static allUpgradeCounts(contexts : Context[], scope : ScopeElement, mode : CollectMode = CollectMode.PrioritizeGlobal) {
 		const elements = scope.getElementsByTagName('gw2object');
@@ -103,6 +105,8 @@ class Collect {
 			healing        : [],
 			critDamage     : [],
 			agonyResistance: [],
+			damage         : [],
+			lifeForce      : [],
 		};
 
 		//NOTE(Rennorb): We use the existing rune count if given.
@@ -365,9 +369,10 @@ class Collect {
 					for(const mod of modifiers) {
 						if(!mod.target_attribute_or_buff) continue;
 
-						if(typeof mod.target_attribute_or_buff === 'number')
-							(context.character.statSources[mod.target_attribute_or_buff] || (context.character.statSources[mod.target_attribute_or_buff] = []))
-								.push({source: trait.name, modifier: mod, count: 1});
+						(typeof mod.target_attribute_or_buff === 'number'
+							? (context.character.statSources[mod.target_attribute_or_buff] || (context.character.statSources[mod.target_attribute_or_buff] = []))
+							: context.character.statSources[TUtilsV2.Uncapitalize(mod.target_attribute_or_buff)]
+						).push({source: trait.name, modifier: mod, count: 1});
 					}
 				};
 				if(trait.modifiers) addModifiers(trait.modifiers);
