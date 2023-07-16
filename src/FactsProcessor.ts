@@ -70,7 +70,7 @@ class FactsProcessor {
 	static generateFact(fact : API.Fact, weapon_strength : number, context : Context) : { wrapper? : HTMLElement, defiance_break : number } {
 		let iconSlug : Parameters<typeof TUtilsV2.newImg>[0] = fact.icon;
 		let buffStackSize = 1;
-		let buffDuration = fact.duration;
+		let buffDuration = (fact as API.BuffFact).duration;
 
 		const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact) => {
 			let modsArray: string[] = []
@@ -394,7 +394,7 @@ class FactsProcessor {
 			},
 		}
 
-		const buff = APICache.storage.skills.get(fact.buff || 0)
+		const buff = APICache.storage.skills.get((fact as API.BuffFact).buff || 0)
 		const data : HandlerParams = { fact, buff, weaponStrength: weapon_strength }
 		const [firstLine, ...remainingDetail] = factInflators[fact.type](data as any)
 		const wrapper = TUtilsV2.newElm('div.fact')

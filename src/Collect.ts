@@ -400,7 +400,7 @@ class Collect {
 
 				const contextBoundInfo = GW2TooltipsV2.resolveTraitsAndOverrides(trait, context);
 				if(contextBoundInfo.facts) for(const fact of contextBoundInfo.facts) {
-					if(!fact.buff) continue;
+					if(!('buff' in fact)) continue;
 					
 					const buff = APICache.storage.skills.get(fact.buff);
 					if(!buff) {

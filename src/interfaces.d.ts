@@ -80,10 +80,8 @@ namespace API {
 		order           : number
 		requires_trait? : number[]
 		defiance_break? : number
-		overrides?      : number
-
-		//NOTE(Rennorb): This is here so we can just use `Fact.buff` and similar. Otherwise ts wont like us calling that on the `Fact` union because the prop doesn't exist on some of the constituents.
-		[k : string] : undefined
+		insert_before?  : number
+		skip_next?      : true
 	}
 
 	interface AdjustByAttributeAndLevelHealingFact extends BasicFact<'AdjustByAttributeAndLevelHealing'> {

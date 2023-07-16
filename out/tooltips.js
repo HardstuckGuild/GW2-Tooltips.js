@@ -525,7 +525,7 @@ class Collect {
                 const contextBoundInfo = GW2TooltipsV2.resolveTraitsAndOverrides(trait, context);
                 if (contextBoundInfo.facts)
                     for (const fact of contextBoundInfo.facts) {
-                        if (!fact.buff)
+                        if (!('buff' in fact))
                             continue;
                         const buff = APICache.storage.skills.get(fact.buff);
                         if (!buff) {
@@ -1321,22 +1321,31 @@ class GW2TooltipsV2 {
         return tooltip;
     }
     static resolveTraitsAndOverrides(apiObject, context) {
-        var _a, _b;
+        var _a, _b, _c;
         let override = (_a = apiObject.override_groups) === null || _a === void 0 ? void 0 : _a.find(g => g.context.includes(context.gameMode));
         let result = Object.assign({}, apiObject, override);
         if (apiObject.facts && override && override.facts) {
             result.facts = apiObject.facts.slice();
-            for (const fact of override.facts.reverse()) {
+            for (const fact of override.facts) {
                 if ((_b = fact.requires_trait) === null || _b === void 0 ? void 0 : _b.some(t => !context.character.traits.includes(t)))
                     continue;
-                if (fact.overrides)
-                    result.facts[fact.overrides] = fact;
+                if (fact.insert_before)
+                    result.facts.splice(fact.insert_before, 0, fact);
                 else
                     result.facts.push(fact);
             }
         }
         if (result.facts) {
-            result.facts = result.facts.filter(f => !f.requires_trait || !f.requires_trait.some(t => !context.character.traits.includes(t)));
+            const finalFacts = [];
+            for (let i = 0; i < result.facts.length; i++) {
+                const fact = result.facts[i];
+                if ((_c = fact.requires_trait) === null || _c === void 0 ? void 0 : _c.some(t => !context.character.traits.includes(t)))
+                    continue;
+                finalFacts.push(fact);
+                if (fact.skip_next)
+                    i++;
+            }
+            result.facts = finalFacts;
         }
         return result;
     }

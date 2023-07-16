@@ -454,17 +454,29 @@ class GW2TooltipsV2 {
 		let result = Object.assign({}, apiObject, override);
 		if(apiObject.facts && override && override.facts) {
 			result.facts = apiObject.facts.slice(); //clone the array
-			//NOTE(Rennorb): need to reverse here to be able to insert and override facts without shifting earlier indices
-			for(const fact of override.facts.reverse()) {
+			for(const fact of override.facts) {
 				if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
 
-				if(fact.overrides) result.facts[fact.overrides] = fact;
+				if(fact.insert_before) result.facts.splice(fact.insert_before, 0, fact);
 				else result.facts.push(fact);
 			}
 		}
+
 		if(result.facts) {
-			result.facts = result.facts.filter(f => !f.requires_trait || !f.requires_trait.some(t => !context.character.traits.includes(t)));
+			const finalFacts = [];
+			for(let i = 0; i < result.facts.length; i++) {
+				const fact = result.facts[i];
+
+				if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
+
+				finalFacts.push(fact);
+				
+				if(fact.skip_next) i++;
+			}
+
+			result.facts = finalFacts;
 		}
+
 		return result;
 	}
 
