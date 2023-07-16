@@ -5,7 +5,8 @@ class Collect {
 		const elements = scope.getElementsByTagName('gw2object');
 		for(const pair of contexts.entries()) {
 			const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == pair[0]);
-			this._upgradeCounts(...pair, elsInCorrectCtx, mode);
+			if(elsInCorrectCtx.length)
+				this._upgradeCounts(...pair, elsInCorrectCtx, mode);
 		}
 		//TODO(Rennorb): rethink this or at least make it uniform
 		const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) >= contexts.length);
@@ -41,6 +42,9 @@ class Collect {
 					console.warn("[gw2-tooltips] [collect] Could not figure how many infusions to add for sourceElement ", element, ". Will not assume anything and just ignore the stack.");
 							continue
 				}
+			}
+			else if(targetContext.gameMode == "Pvp" && item.subtype == 'Rune') {
+				amountToAdd = 6;
 			}
 
 			counts[item.id] = (counts[item.id] || 0) + amountToAdd;
@@ -81,7 +85,8 @@ class Collect {
 		const elements = scope.getElementsByTagName('gw2object');
 		for(const pair of contexts.entries()) {
 			const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == pair[0]);
-			this._statSources(...pair, elsInCorrectCtx, mode);
+			if(elsInCorrectCtx.length)
+				this._statSources(...pair, elsInCorrectCtx, mode);
 		}
 		const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) >= contexts.length);
 		if(elsWithWrongCtx.length) {
@@ -108,24 +113,32 @@ class Collect {
 			lifeForce      : [],
 		};
 
-		//NOTE(Rennorb): We use the existing rune count if given.
-		let upgrades = Object.assign({}, targetContext.character.upgradeCounts);
+		//NOTE(Rennorb): Cant really use the existing upgrade counts since we want to add tiers individually.
+		//TODO(Rennorb): MAybe we can? Maybe we should?
+		let upgrades = {} as { [k : number] : number };
 
 		for(const element of elements) {
 			let id, type = element.getAttribute('type');
 			if(!(id = +String(element.getAttribute('objid')))) continue;
 
 			let amountToAdd = 1;
-			let tier, item : API.Item | API.Amulet | undefined;
+			let tiersToProcess, item : API.Item | API.Amulet | undefined;
 			if(type == 'item') {
 				item = APICache.storage.items.get(id);
 				if(!item || !('subtype' in item)) continue;
 
 				if(item.type === 'UpgradeComponent' || item.type === 'Consumable') {
+					if(item.subtype === 'Rune' && item.flags.includes('Pvp')) {
+						amountToAdd = 6;
+					}
+
 					//NOTE(Rennorb): We count additional runes, but ignore those over the sensible amount.
-					const tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + 1;
+					//NOTE(Rennorb): For pvp runes we get the wrong tier number here, it doesn't matter tho because we need to treat it differently anyways.
+					// Since pvp builds only have one rune we need to add all tiers from just one item.
+					// We still want to increase the upgrade count to do the warnings if we find more than expected.
+					const tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + amountToAdd;
+
 					if(item.subtype === 'Rune') {
-						//TODO(Rennorb) @bug: this doesn't work if the runes are already collected / manually set. its already at 6 in that case and the value isn't properly processed.
 						if(tierNumber > 6) {
 							//NOTE(Rennorb): Only complain if we are manually counting runes.
 							//TODO(Rennorb) @correctness: Is this the right way to do it? should we just complain when runes are specified but we find one that isn't?
@@ -133,7 +146,12 @@ class Collect {
 								console.warn("[gw2-tooltips] [collect] Found more than 6 runes of the same type. Here is the 7th rune element: ", element);
 							continue;
 						}
-						tier = item.tiers[tierNumber - 1];
+
+						//NOTE(Rennorb): Since pvp builds only have one rune we need to add all tiers from just one item.
+						if(item.flags.includes('Pvp'))
+							tiersToProcess = item.tiers;
+						else
+							tiersToProcess = [item.tiers[tierNumber - 1]];
 					}
 					else {
 						if(item.subtype == 'Infusion' || item.subtype == 'Enrichment') {
@@ -158,7 +176,7 @@ class Collect {
 							continue;
 						}
 
-						tier = item.tiers[0];
+						tiersToProcess = item.tiers; //should only ever be one anyways
 					}
 				}
 			}
@@ -166,16 +184,18 @@ class Collect {
 				item = APICache.storage['pvp/amulets'].get(id);
 				if(!item) continue;
 				
-				tier = item.tiers[0];
+				tiersToProcess = item.tiers; //should only ever be one anyways
 			}
 
-			if(tier && tier.modifiers) for(const modifier of tier.modifiers!) {
-				if(!modifier.target_attribute_or_buff) continue;
+			if(tiersToProcess) for(const tier of tiersToProcess) {
+				if(tier.modifiers) for(const modifier of tier.modifiers!) {
+					if(!modifier.target_attribute_or_buff) continue;
 
-				(typeof modifier.target_attribute_or_buff !== 'number'
-					? sources[TUtilsV2.Uncapitalize(modifier.target_attribute_or_buff)] //TODO(Rennorb) @cleanup: another reason to fix naming
-					: (sources[modifier.target_attribute_or_buff] || (sources[modifier.target_attribute_or_buff] = []))
-				).push({ modifier, source: item!.name, count: amountToAdd })
+					(typeof modifier.target_attribute_or_buff !== 'number'
+						? sources[TUtilsV2.Uncapitalize(modifier.target_attribute_or_buff)] //TODO(Rennorb) @cleanup: another reason to fix naming
+						: (sources[modifier.target_attribute_or_buff] || (sources[modifier.target_attribute_or_buff] = []))
+					).push({ modifier, source: item!.name, count: amountToAdd })
+				}
 			}
 		}
 
@@ -231,16 +251,18 @@ class Collect {
 				if(!isNaN(+attrib)) continue; //discard direct boon mods
 
 				for(const { modifier, source, count } of sources.filter(s => !s.modifier.flags.includes('FormatPercent'))) {
-					targetContext.character.stats[attrib] += FactsProcessor.calculateModifier(modifier, targetContext.character) * count
-					console.log(`[gw2-tooltips] [collect] ${source}${count > 1 ? (' x '+count) : ''}: Flat ${attrib} => ${targetContext.character.stats[attrib]}`)
+					const mod = FactsProcessor.calculateModifier(modifier, targetContext.character) * count
+					targetContext.character.stats[attrib] += mod;
+					console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] ${source}${count > 1 ? (' x '+count) : ''}: Flat ${attrib} ${mod > 0 ? '+' : ''}${mod} => ${targetContext.character.stats[attrib]}`)
 				}
 				for(const { modifier, source, count } of sources.filter(s => s.modifier.flags.includes('FormatPercent'))) {
 					const value = FactsProcessor.calculateModifier(modifier, targetContext.character);
-					targetContext.character.stats[attrib] += (modifier.formula == 'NoScaling'
+					const mod =  (modifier.formula == 'NoScaling'
 						? targetContext.character.stats[attrib] * value
 						: value)
 							* count; //TODO(Rennorb) @correctness
-					console.log(`[gw2-tooltips] [collect] ${source}${count > 1 ? (' x '+count) : ''}: Percent ${attrib} => ${targetContext.character.stats[attrib]}`)
+					targetContext.character.stats[attrib] += mod;
+					console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] ${source}${count > 1 ? (' x '+count) : ''}: Percent ${attrib} ${mod > 0 ? '+' : ''}${mod}% => ${targetContext.character.stats[attrib]}`)
 				}
 			}
 		}
@@ -276,7 +298,8 @@ class Collect {
 		const elements = scope.querySelectorAll('gw2object[type=specialization]:not(.gw2objectembed)');
 		for(const pair of contexts.entries()) {
 			const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == pair[0]);
-			this._traits(...pair, elsInCorrectCtx, mode);
+			if(elsInCorrectCtx.length)
+				this._traits(...pair, elsInCorrectCtx, mode);
 		}
 		const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) >= contexts.length);
 		if(elsWithWrongCtx.length) {
@@ -370,7 +393,7 @@ class Collect {
 						(typeof mod.target_attribute_or_buff === 'number'
 							? (context.character.statSources[mod.target_attribute_or_buff] || (context.character.statSources[mod.target_attribute_or_buff] = []))
 							: context.character.statSources[TUtilsV2.Uncapitalize(mod.target_attribute_or_buff)]
-						).push({source: trait.name, modifier: mod, count: 1});
+						).push({source: `Trait '${trait.name}'`, modifier: mod, count: 1});
 					}
 				};
 				if(trait.modifiers) addModifiers(trait.modifiers);

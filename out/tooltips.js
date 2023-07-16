@@ -173,7 +173,8 @@ class Collect {
         const elements = scope.getElementsByTagName('gw2object');
         for (const pair of contexts.entries()) {
             const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == pair[0]);
-            this._upgradeCounts(...pair, elsInCorrectCtx, mode);
+            if (elsInCorrectCtx.length)
+                this._upgradeCounts(...pair, elsInCorrectCtx, mode);
         }
         const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) >= contexts.length);
         if (elsWithWrongCtx.length) {
@@ -206,6 +207,9 @@ class Collect {
                     console.warn("[gw2-tooltips] [collect] Could not figure how many infusions to add for sourceElement ", element, ". Will not assume anything and just ignore the stack.");
                     continue;
                 }
+            }
+            else if (targetContext.gameMode == "Pvp" && item.subtype == 'Rune') {
+                amountToAdd = 6;
             }
             counts[item.id] = (counts[item.id] || 0) + amountToAdd;
         }
@@ -248,7 +252,8 @@ class Collect {
         const elements = scope.getElementsByTagName('gw2object');
         for (const pair of contexts.entries()) {
             const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == pair[0]);
-            this._statSources(...pair, elsInCorrectCtx, mode);
+            if (elsInCorrectCtx.length)
+                this._statSources(...pair, elsInCorrectCtx, mode);
         }
         const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) >= contexts.length);
         if (elsWithWrongCtx.length) {
@@ -275,26 +280,32 @@ class Collect {
             damage: [],
             lifeForce: [],
         };
-        let upgrades = Object.assign({}, targetContext.character.upgradeCounts);
+        let upgrades = {};
         for (const element of elements) {
             let id, type = element.getAttribute('type');
             if (!(id = +String(element.getAttribute('objid'))))
                 continue;
             let amountToAdd = 1;
-            let tier, item;
+            let tiersToProcess, item;
             if (type == 'item') {
                 item = APICache.storage.items.get(id);
                 if (!item || !('subtype' in item))
                     continue;
                 if (item.type === 'UpgradeComponent' || item.type === 'Consumable') {
-                    const tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + 1;
+                    if (item.subtype === 'Rune' && item.flags.includes('Pvp')) {
+                        amountToAdd = 6;
+                    }
+                    const tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + amountToAdd;
                     if (item.subtype === 'Rune') {
                         if (tierNumber > 6) {
                             if (!targetContext.character.upgradeCounts[item.id])
                                 console.warn("[gw2-tooltips] [collect] Found more than 6 runes of the same type. Here is the 7th rune element: ", element);
                             continue;
                         }
-                        tier = item.tiers[tierNumber - 1];
+                        if (item.flags.includes('Pvp'))
+                            tiersToProcess = item.tiers;
+                        else
+                            tiersToProcess = [item.tiers[tierNumber - 1]];
                     }
                     else {
                         if (item.subtype == 'Infusion' || item.subtype == 'Enrichment') {
@@ -315,7 +326,7 @@ class Collect {
                                 console.warn("[gw2-tooltips] [collect] Found more than 2 sigils of the same type. Here is the 3th sigil element: ", element);
                             continue;
                         }
-                        tier = item.tiers[0];
+                        tiersToProcess = item.tiers;
                     }
                 }
             }
@@ -323,15 +334,18 @@ class Collect {
                 item = APICache.storage['pvp/amulets'].get(id);
                 if (!item)
                     continue;
-                tier = item.tiers[0];
+                tiersToProcess = item.tiers;
             }
-            if (tier && tier.modifiers)
-                for (const modifier of tier.modifiers) {
-                    if (!modifier.target_attribute_or_buff)
-                        continue;
-                    (typeof modifier.target_attribute_or_buff !== 'number'
-                        ? sources[TUtilsV2.Uncapitalize(modifier.target_attribute_or_buff)]
-                        : (sources[modifier.target_attribute_or_buff] || (sources[modifier.target_attribute_or_buff] = []))).push({ modifier, source: item.name, count: amountToAdd });
+            if (tiersToProcess)
+                for (const tier of tiersToProcess) {
+                    if (tier.modifiers)
+                        for (const modifier of tier.modifiers) {
+                            if (!modifier.target_attribute_or_buff)
+                                continue;
+                            (typeof modifier.target_attribute_or_buff !== 'number'
+                                ? sources[TUtilsV2.Uncapitalize(modifier.target_attribute_or_buff)]
+                                : (sources[modifier.target_attribute_or_buff] || (sources[modifier.target_attribute_or_buff] = []))).push({ modifier, source: item.name, count: amountToAdd });
+                        }
                 }
         }
         switch (mode) {
@@ -384,16 +398,18 @@ class Collect {
                 if (!isNaN(+attrib))
                     continue;
                 for (const { modifier, source, count } of sources.filter(s => !s.modifier.flags.includes('FormatPercent'))) {
-                    targetContext.character.stats[attrib] += FactsProcessor.calculateModifier(modifier, targetContext.character) * count;
-                    console.log(`[gw2-tooltips] [collect] ${source}${count > 1 ? (' x ' + count) : ''}: Flat ${attrib} => ${targetContext.character.stats[attrib]}`);
+                    const mod = FactsProcessor.calculateModifier(modifier, targetContext.character) * count;
+                    targetContext.character.stats[attrib] += mod;
+                    console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] ${source}${count > 1 ? (' x ' + count) : ''}: Flat ${attrib} ${mod > 0 ? '+' : ''}${mod} => ${targetContext.character.stats[attrib]}`);
                 }
                 for (const { modifier, source, count } of sources.filter(s => s.modifier.flags.includes('FormatPercent'))) {
                     const value = FactsProcessor.calculateModifier(modifier, targetContext.character);
-                    targetContext.character.stats[attrib] += (modifier.formula == 'NoScaling'
+                    const mod = (modifier.formula == 'NoScaling'
                         ? targetContext.character.stats[attrib] * value
                         : value)
                         * count;
-                    console.log(`[gw2-tooltips] [collect] ${source}${count > 1 ? (' x ' + count) : ''}: Percent ${attrib} => ${targetContext.character.stats[attrib]}`);
+                    targetContext.character.stats[attrib] += mod;
+                    console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] ${source}${count > 1 ? (' x ' + count) : ''}: Percent ${attrib} ${mod > 0 ? '+' : ''}${mod}% => ${targetContext.character.stats[attrib]}`);
                 }
             }
         }
@@ -421,7 +437,8 @@ class Collect {
         const elements = scope.querySelectorAll('gw2object[type=specialization]:not(.gw2objectembed)');
         for (const pair of contexts.entries()) {
             const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == pair[0]);
-            this._traits(...pair, elsInCorrectCtx, mode);
+            if (elsInCorrectCtx.length)
+                this._traits(...pair, elsInCorrectCtx, mode);
         }
         const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) >= contexts.length);
         if (elsWithWrongCtx.length) {
@@ -500,7 +517,7 @@ class Collect {
                             continue;
                         (typeof mod.target_attribute_or_buff === 'number'
                             ? (context.character.statSources[mod.target_attribute_or_buff] || (context.character.statSources[mod.target_attribute_or_buff] = []))
-                            : context.character.statSources[TUtilsV2.Uncapitalize(mod.target_attribute_or_buff)]).push({ source: trait.name, modifier: mod, count: 1 });
+                            : context.character.statSources[TUtilsV2.Uncapitalize(mod.target_attribute_or_buff)]).push({ source: `Trait '${trait.name}'`, modifier: mod, count: 1 });
                     }
                 };
                 if (trait.modifiers)
@@ -721,7 +738,7 @@ class FactsProcessor {
                         let percentMod = 100;
                         for (const { source, modifier, count } of context.character.statSources.lifeForce) {
                             const mod = this.calculateModifier(modifier, context.character);
-                            lines.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+                            lines.push(`${source}${count > 1 ? ` (x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
                             percentMod += mod;
                         }
                         percent *= percentMod / 100;
@@ -744,7 +761,7 @@ class FactsProcessor {
                         let percentMod = 100;
                         for (const { source, modifier, count } of context.character.statSources.lifeForce) {
                             const mod = this.calculateModifier(modifier, context.character);
-                            lines.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+                            lines.push(`${source}${count > 1 ? ` (x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
                             percentMod += mod;
                         }
                         percent *= percentMod / 100;
@@ -767,7 +784,7 @@ class FactsProcessor {
                         let percentMod = 100;
                         for (const { source, modifier, count } of context.character.statSources.damage) {
                             const mod = this.calculateModifier(modifier, context.character);
-                            lines.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+                            lines.push(`${source}${count > 1 ? ` (x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
                             percentMod += mod;
                         }
                         damage *= percentMod / 100;

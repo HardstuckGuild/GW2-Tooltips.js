@@ -254,7 +254,7 @@ class FactsProcessor {
 						let percentMod = 100;
 						for(const { source, modifier, count } of context.character.statSources.lifeForce) {
 							const mod = this.calculateModifier(modifier, context.character);
-							lines.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+							lines.push(`${source}${count > 1 ? ` (x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
 							percentMod += mod;
 						}
 						percent *= percentMod / 100;
@@ -283,7 +283,7 @@ class FactsProcessor {
 						let percentMod = 100;
 						for(const { source, modifier, count } of context.character.statSources.lifeForce) {
 							const mod = this.calculateModifier(modifier, context.character);
-							lines.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+							lines.push(`${source}${count > 1 ? ` (x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
 							percentMod += mod;
 						}
 						percent *= percentMod / 100;
@@ -310,7 +310,7 @@ class FactsProcessor {
 						let percentMod = 100;
 						for(const { source, modifier, count } of context.character.statSources.damage) {
 							const mod = this.calculateModifier(modifier, context.character);
-							lines.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+							lines.push(`${source}${count > 1 ? ` (x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
 							percentMod += mod;
 						}
 						damage *= percentMod / 100;
