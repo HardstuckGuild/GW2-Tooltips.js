@@ -24,12 +24,11 @@ class Collect {
 			if(element.getAttribute('type') !== 'item' || !(id = +String(element.getAttribute('objid')))) continue;
 
 			const item = APICache.storage.items.get(id);
-			if(!item || !('subtype' in item) || (item.subtype != 'Rune' && item.subtype != 'Default')) continue;
+			if(!item || !('subtype' in item) || (!['Rune', 'Infusion'].includes(item.subtype))) continue;
 
 			let amountToAdd = 1;
 
-			//NOTE(Rennorb): Pvp runes / sigils have type default; should fix this on the api side
-			if(item.subtype == "Default" && !item.flags.includes('Pvp')) {
+			if(item.subtype == "Infusion") {
 				if(!(amountToAdd = +String(element.getAttribute('count')))) { // modern version just has the item count as attribute
 
 					if(GW2TooltipsV2.config.legacyCompatibility) {
@@ -137,8 +136,7 @@ class Collect {
 						tier = item.tiers[tierNumber - 1];
 					}
 					else {
-						//NOTE(Rennorb): Pvp runes / sigils have type default; should fix this on the api side
-						if(item.subtype == "Default" && !item.flags.includes('Pvp')) {
+						if(item.subtype == 'Infusion' || item.subtype == 'Enrichment') {
 							if(!(amountToAdd = +String(element.getAttribute('count')))) { // modern version just has the item count as attribute
 
 								if(GW2TooltipsV2.config.legacyCompatibility) {

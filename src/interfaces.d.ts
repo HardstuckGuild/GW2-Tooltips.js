@@ -330,7 +330,7 @@ namespace API {
 
 	type UpgradeComponentDetail = {
 		type    : 'UpgradeComponent'
-		subtype : 'Rune' | 'Sigil' | 'Gem' | 'Default'
+		subtype : 'Rune' | 'Sigil' | 'Gem' | 'Infusion' | 'Enrichment'
 		tiers   : {
 			description? : string
 			facts?       : Fact[]

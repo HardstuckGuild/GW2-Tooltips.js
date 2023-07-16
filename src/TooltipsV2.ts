@@ -9,7 +9,6 @@
 //TODO(Rennorb): Link minion skills to minion summon skill.
 //TODO(Rennorb): specs, pets, and amulets endpoints.
 //TODO(Rennorb): Something with the traits is funky, the facts are clearly incomplete for some of them. The linked/trigger skills are missing afaict.
-//TODO(Rennorb): Amulet enrichment slot is not there.
 //TODO(Rennorb): Defiance break on single effect tooltips.
 //TODO(Rennorb): Change anything percent related to use fractions instead of integers (0.2 instead of 20).
 // The only thing this is good for is to make drawing the facts easier. Since we do quite a few calculations this swap would reduce conversions quite a bit.
@@ -695,7 +694,7 @@ class GW2TooltipsV2 {
 		}
 
 		const countPrefix = stackSize > 1 ? stackSize + ' ' : '';
-		const upgradeNameSource = slottedItems?.find(i => i.subtype !== 'Default') || slottedItems?.[0];
+		const upgradeNameSource = slottedItems?.find(i => !['Infusion', 'Enrichment'].includes(i.subtype)) || slottedItems?.[0];
 		const name = countPrefix + this.formatItemName(item, context, statSet, upgradeNameSource, stackSize);
 		const parts = [TUtilsV2.newElm('tet', TUtilsV2.newImg(item.icon),  TUtilsV2.newElm('teb.color-rarity-'+item.rarity, name), TUtilsV2.newElm('div.flexbox-fill'))];
 
@@ -747,14 +746,15 @@ class GW2TooltipsV2 {
 			}));
 		}
 
-		if('slots' in item && slottedItems) {
+		if('slots' in item) {
 			parts.push(TUtilsV2.newElm('div.group.slots', ...item.slots.map(s => {
-				let slottedItemIdx;
-				//TODO(Rennorb) @correctness @cleanup: this should use UpgradeComponent Flags
-				switch(s) {
-					case 'Upgrade'   : slottedItemIdx = slottedItems!.findIndex(i => ['Rune', 'Sigil', 'Gem'].includes(i.subtype) || (i.subtype == 'Default' && i.flags.includes('Pvp'))); break;
-					case 'Infusion'  : slottedItemIdx = slottedItems!.findIndex(i => i.subtype == 'Default'); break;
-					case 'Enrichment': slottedItemIdx = slottedItems!.findIndex(i => i.subtype == 'Default'); break;
+				let slottedItemIdx = -1;
+				if(slottedItems) {
+					switch(s) {
+						case 'Upgrade'   : slottedItemIdx = slottedItems.findIndex(i => ['Rune', 'Sigil', 'Gem'].includes(i.subtype)); break;
+						case 'Infusion'  : slottedItemIdx = slottedItems.findIndex(i => i.subtype == 'Infusion'); break;
+						case 'Enrichment': slottedItemIdx = slottedItems.findIndex(i => i.subtype == 'Enrichment'); break;
+					}
 				}
 
 				if(slottedItemIdx > -1) {
@@ -854,12 +854,18 @@ class GW2TooltipsV2 {
 			const counts : Character['upgradeCounts'] = {};
 			for(const [id, c] of Object.entries(ctx.character.upgradeCounts)) {
 				let item;
-				//NOTE(Rennorb): Pvp runes / sigils have type default; should fix this on the api side
-				if((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Default' && !item.flags.includes('Pvp'))
+				if((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Infusion')
 					counts[+id] = c;
 			}
 			return counts;
 		});
+		const enrichmentByContext = this.context.map(ctx => {
+			for(const [id, c] of Object.entries(ctx.character.upgradeCounts)) {
+				let item;
+				if((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Enrichment')
+					return id;
+			}
+		})
 
 		for(const wrapper of wrappers) {
 		if(wrapper.childElementCount < 2) return;
@@ -888,7 +894,10 @@ class GW2TooltipsV2 {
 								break;
 							}
 						}
-						//TODO(Rennorb): properly do enrichments
+						else if(slot == 'Enrichment') {
+							const enrichment = enrichmentByContext[itemCtx];
+							if(enrichment) upgradeIds.push(enrichment);
+						}
 					}
 				}
 			}

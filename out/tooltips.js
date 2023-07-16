@@ -191,10 +191,10 @@ class Collect {
             if (element.getAttribute('type') !== 'item' || !(id = +String(element.getAttribute('objid'))))
                 continue;
             const item = APICache.storage.items.get(id);
-            if (!item || !('subtype' in item) || (item.subtype != 'Rune' && item.subtype != 'Default'))
+            if (!item || !('subtype' in item) || (!['Rune', 'Infusion'].includes(item.subtype)))
                 continue;
             let amountToAdd = 1;
-            if (item.subtype == "Default" && !item.flags.includes('Pvp')) {
+            if (item.subtype == "Infusion") {
                 if (!(amountToAdd = +String(element.getAttribute('count')))) {
                     if (GW2TooltipsV2.config.legacyCompatibility) {
                         amountToAdd = this._legacy_getInfusionCount(element);
@@ -297,7 +297,7 @@ class Collect {
                         tier = item.tiers[tierNumber - 1];
                     }
                     else {
-                        if (item.subtype == "Default" && !item.flags.includes('Pvp')) {
+                        if (item.subtype == 'Infusion' || item.subtype == 'Enrichment') {
                             if (!(amountToAdd = +String(element.getAttribute('count')))) {
                                 if (GW2TooltipsV2.config.legacyCompatibility) {
                                     amountToAdd = this._legacy_getInfusionCount(element);
@@ -1480,7 +1480,7 @@ class GW2TooltipsV2 {
             slottedItems = (_a = target.getAttribute('slotted')) === null || _a === void 0 ? void 0 : _a.split(',').map(id => APICache.storage.items.get(+String(id) || 0)).filter(i => i && 'subtype' in i);
         }
         const countPrefix = stackSize > 1 ? stackSize + ' ' : '';
-        const upgradeNameSource = (slottedItems === null || slottedItems === void 0 ? void 0 : slottedItems.find(i => i.subtype !== 'Default')) || (slottedItems === null || slottedItems === void 0 ? void 0 : slottedItems[0]);
+        const upgradeNameSource = (slottedItems === null || slottedItems === void 0 ? void 0 : slottedItems.find(i => !['Infusion', 'Enrichment'].includes(i.subtype))) || (slottedItems === null || slottedItems === void 0 ? void 0 : slottedItems[0]);
         const name = countPrefix + this.formatItemName(item, context, statSet, upgradeNameSource, stackSize);
         const parts = [TUtilsV2.newElm('tet', TUtilsV2.newImg(item.icon), TUtilsV2.newElm('teb.color-rarity-' + item.rarity, name), TUtilsV2.newElm('div.flexbox-fill'))];
         if ('defense' in item && item.defense) {
@@ -1527,19 +1527,21 @@ class GW2TooltipsV2 {
                 return TUtilsV2.newElm('te', TUtilsV2.newElm('tem.color-stat-green', `+${computedValue} ${attribute}`));
             }));
         }
-        if ('slots' in item && slottedItems) {
+        if ('slots' in item) {
             parts.push(TUtilsV2.newElm('div.group.slots', ...item.slots.map(s => {
-                let slottedItemIdx;
-                switch (s) {
-                    case 'Upgrade':
-                        slottedItemIdx = slottedItems.findIndex(i => ['Rune', 'Sigil', 'Gem'].includes(i.subtype) || (i.subtype == 'Default' && i.flags.includes('Pvp')));
-                        break;
-                    case 'Infusion':
-                        slottedItemIdx = slottedItems.findIndex(i => i.subtype == 'Default');
-                        break;
-                    case 'Enrichment':
-                        slottedItemIdx = slottedItems.findIndex(i => i.subtype == 'Default');
-                        break;
+                let slottedItemIdx = -1;
+                if (slottedItems) {
+                    switch (s) {
+                        case 'Upgrade':
+                            slottedItemIdx = slottedItems.findIndex(i => ['Rune', 'Sigil', 'Gem'].includes(i.subtype));
+                            break;
+                        case 'Infusion':
+                            slottedItemIdx = slottedItems.findIndex(i => i.subtype == 'Infusion');
+                            break;
+                        case 'Enrichment':
+                            slottedItemIdx = slottedItems.findIndex(i => i.subtype == 'Enrichment');
+                            break;
+                    }
                 }
                 if (slottedItemIdx > -1) {
                     const slottedItem = slottedItems.splice(slottedItemIdx, 1)[0];
@@ -1630,10 +1632,17 @@ class GW2TooltipsV2 {
             const counts = {};
             for (const [id, c] of Object.entries(ctx.character.upgradeCounts)) {
                 let item;
-                if ((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Default' && !item.flags.includes('Pvp'))
+                if ((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Infusion')
                     counts[+id] = c;
             }
             return counts;
+        });
+        const enrichmentByContext = this.context.map(ctx => {
+            for (const [id, c] of Object.entries(ctx.character.upgradeCounts)) {
+                let item;
+                if ((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Enrichment')
+                    return id;
+            }
         });
         for (const wrapper of wrappers) {
             if (wrapper.childElementCount < 2)
@@ -1658,6 +1667,11 @@ class GW2TooltipsV2 {
                                 }
                                 break;
                             }
+                        }
+                        else if (slot == 'Enrichment') {
+                            const enrichment = enrichmentByContext[itemCtx];
+                            if (enrichment)
+                                upgradeIds.push(enrichment);
                         }
                     }
                 }
