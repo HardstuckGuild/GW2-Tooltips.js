@@ -371,13 +371,13 @@ class Collect {
         {
             let baseStats;
             if (window.GW2TooltipsContext instanceof Array) {
-                baseStats = Object.assign({}, (_e = window.GW2TooltipsContext[contextIndex].character) === null || _e === void 0 ? void 0 : _e.stats, GW2TooltipsV2.defaultContext.character.stats);
+                baseStats = Object.assign({}, (_e = window.GW2TooltipsContext[contextIndex].character) === null || _e === void 0 ? void 0 : _e.stats, GW2TooltipsV2.DEFAULT_CONTEXT.character.stats);
             }
             else if (window.GW2TooltipsContext) {
-                baseStats = Object.assign({}, (_f = window.GW2TooltipsContext.character) === null || _f === void 0 ? void 0 : _f.stats, GW2TooltipsV2.defaultContext.character.stats);
+                baseStats = Object.assign({}, (_f = window.GW2TooltipsContext.character) === null || _f === void 0 ? void 0 : _f.stats, GW2TooltipsV2.DEFAULT_CONTEXT.character.stats);
             }
             else {
-                baseStats = Object.assign({}, GW2TooltipsV2.defaultContext.character.stats);
+                baseStats = Object.assign({}, GW2TooltipsV2.DEFAULT_CONTEXT.character.stats);
             }
             targetContext.character.stats = baseStats;
             for (const [attrib, sources] of Object.entries(targetContext.character.statSources)) {
@@ -969,17 +969,6 @@ TUtilsV2.GW2Text2HTML = (text, tag = 'span') => text
     : '';
 TUtilsV2.Uncapitalize = (str) => str.charAt(0).toLowerCase() + str.slice(1);
 class GW2TooltipsV2 {
-    static createCompleteContext(partialContext) {
-        var _a, _b, _c, _d, _e;
-        if (partialContext.gameMode == "Pvp" && ((_a = partialContext.character) === null || _a === void 0 ? void 0 : _a.level) && ((_b = partialContext.character) === null || _b === void 0 ? void 0 : _b.level) != 80) {
-            console.error('[gw2-tooltips] [init] supplied (partial) context has its gamemode set to pvp, but has a character level specified thats other than 80. In pvp you are always level 80. This will lead to unexpected results; Remove the explicit level or change the gamemode. The (partial) context in question is: ', partialContext);
-        }
-        const stats = Object.assign({}, this.defaultContext.character.stats, (_c = partialContext.character) === null || _c === void 0 ? void 0 : _c.stats);
-        const statSources = Object.assign({}, this.defaultContext.character.statSources, (_d = partialContext.character) === null || _d === void 0 ? void 0 : _d.statSources);
-        const upgradeCounts = Object.assign({}, (_e = partialContext.character) === null || _e === void 0 ? void 0 : _e.upgradeCounts);
-        const character = Object.assign({}, this.defaultContext.character, partialContext.character, { stats, statSources, upgradeCounts });
-        return Object.assign({}, this.defaultContext, partialContext, { character });
-    }
     static _constructor() {
         if (window.GW2TooltipsContext instanceof Array) {
             for (const partialContext of window.GW2TooltipsContext)
@@ -991,7 +980,7 @@ class GW2TooltipsV2 {
         else {
             this.context.push(GW2TooltipsV2.createCompleteContext({}));
         }
-        this.config = Object.assign({}, GW2TooltipsV2.defaultConfig, window.GW2TooltipsConfig);
+        this.config = Object.assign({}, GW2TooltipsV2.DEFAULT_CONFIG, window.GW2TooltipsConfig);
         if (this.config.apiImpl)
             APICache.apiImpl = this.config.apiImpl();
         this.tooltip = TUtilsV2.newElm('div.tooltipWrapper');
@@ -1851,10 +1840,21 @@ class GW2TooltipsV2 {
             case 'Trident': return true;
         }
     }
+    static createCompleteContext(partialContext) {
+        var _a, _b, _c, _d, _e;
+        if (partialContext.gameMode == "Pvp" && ((_a = partialContext.character) === null || _a === void 0 ? void 0 : _a.level) && ((_b = partialContext.character) === null || _b === void 0 ? void 0 : _b.level) != 80) {
+            console.error('[gw2-tooltips] [init] supplied (partial) context has its gamemode set to pvp, but has a character level specified thats other than 80. In pvp you are always level 80. This will lead to unexpected results; Remove the explicit level or change the gamemode. The (partial) context in question is: ', partialContext);
+        }
+        const stats = Object.assign({}, this.DEFAULT_CONTEXT.character.stats, (_c = partialContext.character) === null || _c === void 0 ? void 0 : _c.stats);
+        const statSources = Object.assign({}, this.DEFAULT_CONTEXT.character.statSources, (_d = partialContext.character) === null || _d === void 0 ? void 0 : _d.statSources);
+        const upgradeCounts = Object.assign({}, (_e = partialContext.character) === null || _e === void 0 ? void 0 : _e.upgradeCounts);
+        const character = Object.assign({}, this.DEFAULT_CONTEXT.character, partialContext.character, { stats, statSources, upgradeCounts });
+        return Object.assign({}, this.DEFAULT_CONTEXT, partialContext, { character });
+    }
 }
 GW2TooltipsV2.cycling = false;
 GW2TooltipsV2.context = [];
-GW2TooltipsV2.defaultContext = {
+GW2TooltipsV2.DEFAULT_CONTEXT = {
     gameMode: 'Pve',
     targetArmor: 2597,
     character: {
@@ -1893,7 +1893,7 @@ GW2TooltipsV2.defaultContext = {
         upgradeCounts: {},
     },
 };
-GW2TooltipsV2.defaultConfig = {
+GW2TooltipsV2.DEFAULT_CONFIG = {
     autoInitialize: true,
     autoCollectRuneCounts: true,
     autoCollectStatSources: true,

@@ -24,7 +24,7 @@ declare interface ObjectConstructor {
 //TODO(Rennorb) @cleanup: make static class or just turn the whole project into a module with functions only.
 // Instances aren't needed for anything here.
 class GW2TooltipsV2 {
-	static tooltip      : HTMLElement
+	static tooltip : HTMLElement
 
 	static cycleTooltipsHandler? : VoidFunction;
 	static cycling = false
@@ -34,68 +34,7 @@ class GW2TooltipsV2 {
 	static lastMouseY  : number
 
 	static context : Context[] = [];
-	static defaultContext : Context = {
-		gameMode           : 'Pve',
-		targetArmor        : 2597,
-		character: {
-			level            : 80,
-			isPlayer         : true,
-			sex              : "Male",
-			traits           : [],
-			stats: {
-				power          : 1000,
-				toughness      : 1000,
-				vitality       : 1000,
-				precision      : 1000,
-				ferocity       : 1000,
-				conditionDmg   : 0,
-				expertise      : 0,
-				concentration  : 0,
-				healing        : 0,
-				critDamage     : 0,
-				agonyResistance: 0,
-			},
-			statSources: {
-				power          : [],
-				toughness      : [],
-				vitality       : [],
-				precision      : [],
-				ferocity       : [],
-				conditionDmg   : [],
-				expertise      : [],
-				concentration  : [],
-				healing        : [],
-				critDamage     : [],
-				agonyResistance: [],
-				damage         : [],
-				lifeForce      : [],
-			},
-			upgradeCounts: {},
-		},
-	}
-	static createCompleteContext(partialContext : PartialContext) : Context {
-		if(partialContext.gameMode == "Pvp" && partialContext.character?.level && partialContext.character?.level != 80) {
-			console.error('[gw2-tooltips] [init] supplied (partial) context has its gamemode set to pvp, but has a character level specified thats other than 80. In pvp you are always level 80. This will lead to unexpected results; Remove the explicit level or change the gamemode. The (partial) context in question is: ', partialContext);
-		}
-
-		const stats = Object.assign({}, this.defaultContext.character.stats, partialContext.character?.stats);
-		const statSources = Object.assign({}, this.defaultContext.character.statSources, partialContext.character?.statSources);
-		const upgradeCounts = Object.assign({}, partialContext.character?.upgradeCounts);
-		const character = Object.assign({}, this.defaultContext.character, partialContext.character, { stats, statSources, upgradeCounts });
-		return Object.assign({}, this.defaultContext, partialContext, { character });
-	}
-
-	static config : Config;
-	static defaultConfig : Config = {
-		autoInitialize                : true,
-		autoCollectRuneCounts         : true,
-		autoCollectStatSources        : true,
-		autoCollectSelectedTraits     : true,
-		adjustIncorrectStatIds        : true,
-		autoInferEquipmentUpgrades    : true,
-		legacyCompatibility           : true,
-		preferCorrectnessOverExtraInfo: false,
-	}
+	static config  : Config;
 
 	static _constructor() {
 		if(window.GW2TooltipsContext instanceof Array) {
@@ -109,7 +48,7 @@ class GW2TooltipsV2 {
 			this.context.push(GW2TooltipsV2.createCompleteContext({}))
 		}
 
-		this.config = Object.assign({}, GW2TooltipsV2.defaultConfig, window.GW2TooltipsConfig)
+		this.config = Object.assign({}, GW2TooltipsV2.DEFAULT_CONFIG, window.GW2TooltipsConfig)
 		if(this.config.apiImpl) APICache.apiImpl = this.config.apiImpl();
 
 		this.tooltip = TUtilsV2.newElm('div.tooltipWrapper')
@@ -134,6 +73,7 @@ class GW2TooltipsV2 {
 			tooltips[index].classList.toggle('active', index === tooltipIndex);
 		}
 	}
+	//TODO(Rennorb) @cleanup: this seems excessively complicated
 	static cycleTooltips() {
 		if(!this.cycling) return
 		this.cycling = true
@@ -1097,6 +1037,68 @@ class GW2TooltipsV2 {
 			case 'Speargun'   : return true;
 			case 'Trident'    : return true;
 		}
+	}
+
+	static DEFAULT_CONTEXT : Context = {
+		gameMode           : 'Pve',
+		targetArmor        : 2597,
+		character: {
+			level            : 80,
+			isPlayer         : true,
+			sex              : "Male",
+			traits           : [],
+			stats: {
+				power          : 1000,
+				toughness      : 1000,
+				vitality       : 1000,
+				precision      : 1000,
+				ferocity       : 1000,
+				conditionDmg   : 0,
+				expertise      : 0,
+				concentration  : 0,
+				healing        : 0,
+				critDamage     : 0,
+				agonyResistance: 0,
+			},
+			statSources: {
+				power          : [],
+				toughness      : [],
+				vitality       : [],
+				precision      : [],
+				ferocity       : [],
+				conditionDmg   : [],
+				expertise      : [],
+				concentration  : [],
+				healing        : [],
+				critDamage     : [],
+				agonyResistance: [],
+				damage         : [],
+				lifeForce      : [],
+			},
+			upgradeCounts: {},
+		},
+	}
+	static createCompleteContext(partialContext : PartialContext) : Context {
+		if(partialContext.gameMode == "Pvp" && partialContext.character?.level && partialContext.character?.level != 80) {
+			console.error('[gw2-tooltips] [init] supplied (partial) context has its gamemode set to pvp, but has a character level specified thats other than 80. In pvp you are always level 80. This will lead to unexpected results; Remove the explicit level or change the gamemode. The (partial) context in question is: ', partialContext);
+		}
+
+		const stats = Object.assign({}, this.DEFAULT_CONTEXT.character.stats, partialContext.character?.stats);
+		const statSources = Object.assign({}, this.DEFAULT_CONTEXT.character.statSources, partialContext.character?.statSources);
+		const upgradeCounts = Object.assign({}, partialContext.character?.upgradeCounts);
+		const character = Object.assign({}, this.DEFAULT_CONTEXT.character, partialContext.character, { stats, statSources, upgradeCounts });
+		return Object.assign({}, this.DEFAULT_CONTEXT, partialContext, { character });
+	}
+
+	static DEFAULT_CONFIG : Config = {
+		autoInitialize                : true,
+		autoCollectRuneCounts         : true,
+		autoCollectStatSources        : true,
+		autoCollectSelectedTraits     : true,
+		adjustIncorrectStatIds        : true,
+		autoInferEquipmentUpgrades    : true,
+		legacyCompatibility           : true,
+		preferCorrectnessOverExtraInfo: false,
 	}
 
 	static LUT_DEFENSE = [

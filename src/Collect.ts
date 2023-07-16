@@ -214,13 +214,13 @@ class Collect {
 		{
 			let baseStats;
 			if(window.GW2TooltipsContext instanceof Array) {
-				baseStats = Object.assign({}, window.GW2TooltipsContext[contextIndex].character?.stats, GW2TooltipsV2.defaultContext.character.stats);
+				baseStats = Object.assign({}, window.GW2TooltipsContext[contextIndex].character?.stats, GW2TooltipsV2.DEFAULT_CONTEXT.character.stats);
 			}
 			else if(window.GW2TooltipsContext) {
-				baseStats = Object.assign({}, window.GW2TooltipsContext.character?.stats, GW2TooltipsV2.defaultContext.character.stats);
+				baseStats = Object.assign({}, window.GW2TooltipsContext.character?.stats, GW2TooltipsV2.DEFAULT_CONTEXT.character.stats);
 			}
 			else {
-				baseStats = Object.assign({}, GW2TooltipsV2.defaultContext.character.stats);
+				baseStats = Object.assign({}, GW2TooltipsV2.DEFAULT_CONTEXT.character.stats);
 			}
 
 			targetContext.character.stats = baseStats;
