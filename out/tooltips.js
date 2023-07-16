@@ -757,7 +757,7 @@ class FactsProcessor {
                 const lines = [];
                 if (!GW2TooltipsV2.config.preferCorrectnessOverExtraInfo) {
                     if (context.character.statSources.lifeForce.length) {
-                        lines.push(`${percent * 0.01 * hpPool * 0.69} from ${percent}% * (${hpPool} HP * 0.69) base pool`);
+                        lines.push(`${TUtilsV2.withUpToNDigits(percent * 0.01 * hpPool * 0.69, 3)} from ${percent}% * (${hpPool} HP * 0.69) base pool`);
                         let percentMod = 100;
                         for (const { source, modifier, count } of context.character.statSources.lifeForce) {
                             const mod = this.calculateModifier(modifier, context.character);
