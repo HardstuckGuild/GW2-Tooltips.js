@@ -336,6 +336,7 @@ class GW2TooltipsV2 {
 		if(currentContextInformation.resource_cost) {
 			headerElements.push(TUtilsV2.newElm('ter',
 				String(currentContextInformation.resource_cost),
+				//TODO(Rennorb) @correctness: see reaper shroud
 				TUtilsV2.newImg(context.character.profession == 'Revenant' ? this.ICONS.RESOURCE_REV : this.ICONS.RESOURCE_THIEF, 'iconsmall')
 			));
 		}
@@ -443,7 +444,6 @@ class GW2TooltipsV2 {
 
 		const tooltip = TUtilsV2.newElm('div.tooltip', ...parts)
 		tooltip.dataset.id = String(apiObject.id)
-		tooltip.style.marginTop = '5px' //TODO(Rennorb) @cleanup
 
 		return tooltip;
 	}

@@ -1348,7 +1348,6 @@ class GW2TooltipsV2 {
         }
         const tooltip = TUtilsV2.newElm('div.tooltip', ...parts);
         tooltip.dataset.id = String(apiObject.id);
-        tooltip.style.marginTop = '5px';
         return tooltip;
     }
     static resolveTraitsAndOverrides(apiObject, context) {
