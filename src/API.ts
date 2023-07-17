@@ -3,7 +3,7 @@
 // This can be done by specifying the apiImpl config option.
 //TODO(Rennorb): readme
 
-class FakeAPI implements APIImplementation {
+export class FakeAPI implements APIImplementation {
 	async bulkRequest<T extends keyof APIResponseTypeMap>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]> {
 		if(['specializations', 'pvp/amulets'].includes(endpoint)) {
 			const response = await fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
@@ -76,7 +76,7 @@ class FakeAPI implements APIImplementation {
 	}
 }
 
-class HSAPI implements APIImplementation {
+export class HSAPI implements APIImplementation {
 	bulkRequest<T extends keyof APIResponseTypeMap>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]> {
 		throw new Error("Method not implemented.")
 	}

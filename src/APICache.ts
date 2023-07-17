@@ -1,4 +1,4 @@
-class APICache {
+export default class APICache {
 	static storage : ObjectDataStorage = {
 		skills         : new Map<number, API.Skill>(),
 		items          : new Map<number, API.Item>(),
@@ -139,3 +139,5 @@ type ConnectedIdDatum = {
 	endpoint : 'itemstats'
 	datum    : APIResponseTypeMap['itemstats']
 }
+
+import { HSAPI } from './API';

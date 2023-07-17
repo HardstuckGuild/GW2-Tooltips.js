@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html class="no-js" style="scroll-behavior: smooth;" lang="en-US">
-<script src="../out/tooltips.js" defer></script>
+<script src="../out/tooltips.min.js" defer></script>
 
 <script src="./output.skills.js"></script>
 <script src="./output.traits.js"></script>
@@ -8,7 +8,7 @@
 <script src="./output.itemstats.js"></script>
 <script>
 	var GW2TooltipsConfig = {
-		apiImpl: () => new FakeAPI(),
+		apiImpl: (APIs) => new APIs.FakeAPI(),
 	}
 	var GW2TooltipsContext = {
 		gameMode: 'Pve',

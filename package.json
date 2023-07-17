@@ -1,0 +1,41 @@
+{
+	"name": "tooltips.js",
+	"version": "2.0.0-pre",
+	"description": "Clientside library for inflating HS GW2 tags (`<gw2obj />`) and rendering above game quality tooltips for items, skills, traits, buffs and more. Also includes skeleton css with the bare minimum for everything to look decent.",
+	"keywords": [
+		"Hardstuck",
+		"HS",
+		"GuildWars 2",
+		"GW2",
+		"tooltip"
+	],
+	"author": "Rennorb <rennorb@hardstuck.gg>",
+	"license": "UNLICENSED",
+	"main": "out/tooltips.js",
+	"mainMin": "out/tooltips.min.js",
+	"files": [
+		"out"
+	],
+	"directories": {
+		"test": "test"
+	},
+	"scripts": {
+		"build": "rollup -c",
+		"watch": "rollup -cw"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/HardstuckGuild/Tooltips.js.git"
+	},
+	"bugs": {
+		"url": "https://github.com/HardstuckGuild/Tooltips.js/issues"
+	},
+	"homepage": "https://github.com/HardstuckGuild/Tooltips.js#readme",
+	"devDependencies": {
+		"@rollup/plugin-terser": "^0.4.3",
+		"@rollup/plugin-typescript": "^11.1.2",
+		"rollup": "^3.26.3",
+		"tslib": "^2.6.0",
+		"typescript": "^5.1.6"
+	}
+}

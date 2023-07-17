@@ -69,5 +69,5 @@ interface Config {
 	 legacyCompatibility            : bool
 	 preferCorrectnessOverExtraInfo : bool
 
-	 apiImpl?                       : () => APIImplementation
+	 apiImpl?                       : (apis : any) => APIImplementation
 }

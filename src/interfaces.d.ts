@@ -1,3 +1,8 @@
+type TypeBridge<T, K extends keyof T> = [K extends number ? string : K, T[K]]
+declare interface ObjectConstructor {
+	entries<T>(obj : T) : TypeBridge<T, keyof T>[]
+}
+
 namespace LegacyCompat {
 	type ObjectType = 'skill' | 'trait' | 'item' | 'specialization' | 'pet' | 'pvp/amulet' | 'specialization' | 'effect';
 }

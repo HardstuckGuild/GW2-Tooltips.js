@@ -2,7 +2,7 @@
 <html class="no-js" lang="en-US">
 <head>
 <meta charset="utf-8">
-<script src="../out/tooltips.js" defer></script>
+<script src="../out/tooltips.min.js" defer></script>
 
 <script src="./output.skills.js"></script>
 <script src="./output.traits.js"></script>
@@ -10,7 +10,7 @@
 <script src="./output.itemstats.js"></script>
 <script>
 	var GW2TooltipsConfig = {
-		apiImpl: () => new FakeAPI(),
+		apiImpl: (APIs) => new APIs.FakeAPI(),
 		autoCollectRuneCounts: false,
 	}
 	var GW2TooltipsContext = [{

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="../out/tooltips.js" defer></script>
+<script src="../out/tooltips.min.js" defer></script>
 
 <script src="./output.skills.js"></script>
 <script src="./output.traits.js"></script>
@@ -12,7 +12,7 @@
 <script src="./output.itemstats.js"></script>
 <script>
 	var GW2TooltipsConfig = {
-		apiImpl: () => new FakeAPI(),
+		apiImpl: (APIs) => new APIs.FakeAPI(),
 	}
 </script>
 <link rel="stylesheet" href="../out/tooltips.css" />
