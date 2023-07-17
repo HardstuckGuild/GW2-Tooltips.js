@@ -279,6 +279,8 @@ class Collect {
             agonyResistance: [],
             damage: [],
             lifeForce: [],
+            health: [],
+            healEffectiveness: [],
         };
         let upgrades = {};
         for (const element of elements) {
@@ -339,12 +341,19 @@ class Collect {
             if (tiersToProcess)
                 for (const tier of tiersToProcess) {
                     if (tier.modifiers)
-                        for (const modifier of tier.modifiers) {
-                            if (!modifier.target_attribute_or_buff)
+                        for (const mod of tier.modifiers) {
+                            if (!mod.target_attribute_or_buff || (mod.mode && mod.mode !== targetContext.gameMode) || (mod.trait_req && !targetContext.character.traits.includes(mod.trait_req)))
                                 continue;
-                            (typeof modifier.target_attribute_or_buff !== 'number'
-                                ? sources[TUtilsV2.Uncapitalize(modifier.target_attribute_or_buff)]
-                                : (sources[modifier.target_attribute_or_buff] || (sources[modifier.target_attribute_or_buff] = []))).push({ modifier, source: item.name, count: amountToAdd });
+                            (typeof mod.target_attribute_or_buff !== 'number'
+                                ? sources[TUtilsV2.Uncapitalize(mod.target_attribute_or_buff)]
+                                : (sources[mod.target_attribute_or_buff] || (sources[mod.target_attribute_or_buff] = []))).push({ modifier: mod, source: item.name, count: amountToAdd });
+                            if (typeof mod.target_attribute_or_buff === 'number') {
+                                const buff = APICache.storage.skills.get(mod.target_attribute_or_buff);
+                                if (mod.flags.includes('FormatPercent'))
+                                    console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] [@unstable] ${item.name}: Percent ${buff === null || buff === void 0 ? void 0 : buff.name} ${mod.base_amount > 0 ? '+' : ''}${mod.base_amount}%`);
+                                else
+                                    console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] [@unstable] ${item.name}: Flat ${buff === null || buff === void 0 ? void 0 : buff.name} ${mod.base_amount > 0 ? '+' : ''}${mod.base_amount}`);
+                            }
                         }
                 }
         }
@@ -403,13 +412,10 @@ class Collect {
                     console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] ${source}${count > 1 ? (' x ' + count) : ''}: Flat ${attrib} ${mod > 0 ? '+' : ''}${mod} => ${targetContext.character.stats[attrib]}`);
                 }
                 for (const { modifier, source, count } of sources.filter(s => s.modifier.flags.includes('FormatPercent'))) {
-                    const value = FactsProcessor.calculateModifier(modifier, targetContext.character);
-                    const mod = (modifier.formula == 'NoScaling'
-                        ? targetContext.character.stats[attrib] * value
-                        : value)
-                        * count;
-                    targetContext.character.stats[attrib] += mod;
-                    console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] ${source}${count > 1 ? (' x ' + count) : ''}: Percent ${attrib} ${mod > 0 ? '+' : ''}${mod}% => ${targetContext.character.stats[attrib]}`);
+                    const mod = FactsProcessor.calculateModifier(modifier, targetContext.character);
+                    const value = targetContext.character.stats[attrib] * mod / 100 * count;
+                    targetContext.character.stats[attrib] += value;
+                    console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] ${source}${count > 1 ? (' x ' + count) : ''}: Percent ${attrib} ${mod > 0 ? '+' : ''}${mod}% (${value}) => ${targetContext.character.stats[attrib]}`);
                 }
             }
         }
@@ -513,7 +519,7 @@ class Collect {
                 }
                 const addModifiers = (modifiers) => {
                     for (const mod of modifiers) {
-                        if (!mod.target_attribute_or_buff)
+                        if (!mod.target_attribute_or_buff || (mod.mode && mod.mode !== context.gameMode) || (mod.trait_req && !context.character.traits.includes(mod.trait_req)))
                             continue;
                         (typeof mod.target_attribute_or_buff === 'number'
                             ? (context.character.statSources[mod.target_attribute_or_buff] || (context.character.statSources[mod.target_attribute_or_buff] = []))
@@ -656,7 +662,7 @@ class FactsProcessor {
                 let percentMod = 0;
                 for (const { source, modifier, count } of durModStack) {
                     const mod = this.calculateModifier(modifier, context.character);
-                    detailStack.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+                    detailStack.push(`${mod > 0 ? '+' : ''}${mod}% from ${source} ${count > 1 ? `(x ${count})` : ''}`);
                     percentMod += mod;
                 }
                 durMod += percentMod / 100;
@@ -666,18 +672,30 @@ class FactsProcessor {
         };
         const factInflators = {
             AdjustByAttributeAndLevelHealing: ({ fact }) => {
-                const attribute = context.character.stats[TUtilsV2.Uncapitalize(fact.target)] || 0;
-                const value = Math.round((fact.value + attribute * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count);
-                const lines = [`${TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(attribute)}: ${value}`];
+                var _a;
+                const attributeVal = context.character.stats[TUtilsV2.Uncapitalize(fact.target)] || 0;
+                let value = (fact.value + attributeVal * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count;
+                const lines = [];
                 if (!GW2TooltipsV2.config.preferCorrectnessOverExtraInfo) {
                     lines.push(`${fact.value} base value`);
                     if (fact.level_multiplier)
                         lines.push(`+ ${TUtilsV2.withUpToNDigits(context.character.level ** fact.level_exponent * fact.level_multiplier, 2)} from lvl ${context.character.level} ^ ${fact.level_exponent} level exp. * ${fact.level_multiplier} level mul.`);
-                    if (attribute)
-                        lines.push(`+ ${fact.value + attribute} from ${attribute} ${TUtilsV2.mapLocale(fact.target)} * ${fact.attribute_multiplier} attrib mod.`);
+                    if (attributeVal)
+                        lines.push(`+ ${TUtilsV2.withUpToNDigits(attributeVal * fact.attribute_multiplier, 2)} from ${attributeVal} ${TUtilsV2.mapLocale(fact.target)} * ${fact.attribute_multiplier} attrib mod.`);
                     if (fact.hit_count != 1)
                         lines.push(` * ${fact.hit_count} hits`);
                 }
+                if (!((_a = fact.text) === null || _a === void 0 ? void 0 : _a.includes('Barrier'))) {
+                    let percentMod = 100;
+                    for (const { source, modifier, count } of context.character.statSources.healEffectiveness) {
+                        const mod = this.calculateModifier(modifier, context.character);
+                        if (!GW2TooltipsV2.config.preferCorrectnessOverExtraInfo)
+                            lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
+                        percentMod += mod;
+                    }
+                    value *= percentMod / 100;
+                }
+                lines.unshift(`${TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(fact.target)}: ${Math.round(value)}`);
                 return lines;
             },
             AttributeAdjust: ({ fact }) => {
@@ -738,7 +756,7 @@ class FactsProcessor {
                         let percentMod = 100;
                         for (const { source, modifier, count } of context.character.statSources.lifeForce) {
                             const mod = this.calculateModifier(modifier, context.character);
-                            lines.push(`${source}${count > 1 ? ` (x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+                            lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
                             percentMod += mod;
                         }
                         percent *= percentMod / 100;
@@ -761,7 +779,7 @@ class FactsProcessor {
                         let percentMod = 100;
                         for (const { source, modifier, count } of context.character.statSources.lifeForce) {
                             const mod = this.calculateModifier(modifier, context.character);
-                            lines.push(`${source}${count > 1 ? ` (x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+                            lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
                             percentMod += mod;
                         }
                         percent *= percentMod / 100;
@@ -784,7 +802,7 @@ class FactsProcessor {
                         let percentMod = 100;
                         for (const { source, modifier, count } of context.character.statSources.damage) {
                             const mod = this.calculateModifier(modifier, context.character);
-                            lines.push(`${source}${count > 1 ? ` (x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+                            lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
                             percentMod += mod;
                         }
                         damage *= percentMod / 100;
@@ -1915,6 +1933,8 @@ GW2TooltipsV2.DEFAULT_CONTEXT = {
             agonyResistance: [],
             damage: [],
             lifeForce: [],
+            health: [],
+            healEffectiveness: [],
         },
         upgradeCounts: {},
     },

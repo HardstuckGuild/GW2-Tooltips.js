@@ -111,6 +111,8 @@ class Collect {
 			agonyResistance: [],
 			damage         : [],
 			lifeForce      : [],
+			health         : [],
+			healEffectiveness: [],
 		};
 
 		//NOTE(Rennorb): Cant really use the existing upgrade counts since we want to add tiers individually.
@@ -188,13 +190,22 @@ class Collect {
 			}
 
 			if(tiersToProcess) for(const tier of tiersToProcess) {
-				if(tier.modifiers) for(const modifier of tier.modifiers!) {
-					if(!modifier.target_attribute_or_buff) continue;
+				if(tier.modifiers) for(const mod of tier.modifiers!) {
+					if(!mod.target_attribute_or_buff || (mod.mode && mod.mode !== targetContext.gameMode) || (mod.trait_req && !targetContext.character.traits.includes(mod.trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
 
-					(typeof modifier.target_attribute_or_buff !== 'number'
-						? sources[TUtilsV2.Uncapitalize(modifier.target_attribute_or_buff)] //TODO(Rennorb) @cleanup: another reason to fix naming
-						: (sources[modifier.target_attribute_or_buff] || (sources[modifier.target_attribute_or_buff] = []))
-					).push({ modifier, source: item!.name, count: amountToAdd })
+					(typeof mod.target_attribute_or_buff !== 'number'
+						? sources[TUtilsV2.Uncapitalize(mod.target_attribute_or_buff)] //TODO(Rennorb) @cleanup: another reason to fix naming
+						: (sources[mod.target_attribute_or_buff] || (sources[mod.target_attribute_or_buff] = []))
+					).push({ modifier: mod, source: item!.name, count: amountToAdd }) //TODO(Rennorb): item name resolution
+
+					//@debug
+					if(typeof mod.target_attribute_or_buff === 'number') {
+						const buff = APICache.storage.skills.get(mod.target_attribute_or_buff);
+						if(mod.flags.includes('FormatPercent'))
+							console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] [@unstable] ${item!.name}: Percent ${buff?.name} ${mod.base_amount > 0 ? '+' : ''}${mod.base_amount}%`);
+						else
+							console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] [@unstable] ${item!.name}: Flat ${buff?.name} ${mod.base_amount > 0 ? '+' : ''}${mod.base_amount}`);
+					}
 				}
 			}
 		}
@@ -256,13 +267,10 @@ class Collect {
 					console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] ${source}${count > 1 ? (' x '+count) : ''}: Flat ${attrib} ${mod > 0 ? '+' : ''}${mod} => ${targetContext.character.stats[attrib]}`)
 				}
 				for(const { modifier, source, count } of sources.filter(s => s.modifier.flags.includes('FormatPercent'))) {
-					const value = FactsProcessor.calculateModifier(modifier, targetContext.character);
-					const mod =  (modifier.formula == 'NoScaling'
-						? targetContext.character.stats[attrib] * value
-						: value)
-							* count; //TODO(Rennorb) @correctness
-					targetContext.character.stats[attrib] += mod;
-					console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] ${source}${count > 1 ? (' x '+count) : ''}: Percent ${attrib} ${mod > 0 ? '+' : ''}${mod}% => ${targetContext.character.stats[attrib]}`)
+					const mod = FactsProcessor.calculateModifier(modifier, targetContext.character); //TODO(Rennorb) @correctness: fractional percent
+					const value = targetContext.character.stats[attrib] * mod / 100 * count; //TODO(Rennorb) @correctness
+					targetContext.character.stats[attrib] += value;
+					console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] ${source}${count > 1 ? (' x '+count) : ''}: Percent ${attrib} ${mod > 0 ? '+' : ''}${mod}% (${value}) => ${targetContext.character.stats[attrib]}`)
 				}
 			}
 		}
@@ -388,7 +396,7 @@ class Collect {
 
 				const addModifiers = (modifiers : API.Modifier[]) => {
 					for(const mod of modifiers) {
-						if(!mod.target_attribute_or_buff) continue;
+						if(!mod.target_attribute_or_buff || (mod.mode && mod.mode !== context.gameMode) || (mod.trait_req && !context.character.traits.includes(mod.trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
 
 						(typeof mod.target_attribute_or_buff === 'number'
 							? (context.character.statSources[mod.target_attribute_or_buff] || (context.character.statSources[mod.target_attribute_or_buff] = []))

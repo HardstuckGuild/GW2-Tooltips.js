@@ -13,6 +13,7 @@ class FactsProcessor {
 		{ level, stats: { power, conditionDmg, healing: healing_power }} : Character,
 	) {
 		//TODO(Rennorb): this is **screaming** tabledrive me
+		//TODO(Rennorb) @correctness: attribute conversion e.g. Bountiful Maintenance Oil
 		switch (formula) {
 			case 'BuffLevelLinear':
 				return         level * level_scaling + base_amount
@@ -161,7 +162,7 @@ class FactsProcessor {
 				let percentMod = 0;
 				for(const { source, modifier, count } of durModStack) {
 					const mod = this.calculateModifier(modifier, context.character);
-					detailStack.push(`${source} ${count > 1 ? `(x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+					detailStack.push(`${mod > 0 ? '+' : ''}${mod}% from ${source} ${count > 1 ? `(x ${count})` : ''}`);
 					percentMod += mod;
 				}
 				durMod += percentMod / 100;
@@ -173,17 +174,30 @@ class FactsProcessor {
 
 		const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => (string|HTMLElement)[] } = {
 			AdjustByAttributeAndLevelHealing : ({fact}) =>  {
-				const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0; //TODO(Rennorb) @cleanup
-				const value = Math.round((fact.value + attribute * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count);
+				const attributeVal = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.target)] || 0; //TODO(Rennorb) @cleanup
+				let value = (fact.value + attributeVal * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count;
 
-				const lines = [`${TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(attribute)}: ${value}`];
+				const lines = [];
 
 				if(!GW2TooltipsV2.config.preferCorrectnessOverExtraInfo) {
 					lines.push(`${fact.value} base value`);
 					if(fact.level_multiplier) lines.push(`+ ${TUtilsV2.withUpToNDigits(context.character.level ** fact.level_exponent * fact.level_multiplier, 2)} from lvl ${context.character.level} ^ ${fact.level_exponent} level exp. * ${fact.level_multiplier} level mul.`);
-					if(attribute) lines.push(`+ ${fact.value + attribute} from ${attribute} ${TUtilsV2.mapLocale(fact.target)} * ${fact.attribute_multiplier} attrib mod.`);
+					if(attributeVal) lines.push(`+ ${TUtilsV2.withUpToNDigits(attributeVal * fact.attribute_multiplier, 2)} from ${attributeVal} ${TUtilsV2.mapLocale(fact.target)} * ${fact.attribute_multiplier} attrib mod.`);
 					if(fact.hit_count != 1) lines.push(` * ${fact.hit_count} hits`);
 				}
+
+				if(!fact.text?.includes('Barrier')) { //TODO(Rennorb) @cleanup @correctness
+					let percentMod = 100;
+					for(const { source, modifier, count } of context.character.statSources.healEffectiveness) {
+						const mod = this.calculateModifier(modifier, context.character);
+						if(!GW2TooltipsV2.config.preferCorrectnessOverExtraInfo)
+							lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
+						percentMod += mod;
+					}
+					value *= percentMod / 100;
+				}
+
+				lines.unshift(`${TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(fact.target)}: ${Math.round(value)}`);
 
 				return lines;
 			},
@@ -225,7 +239,7 @@ class FactsProcessor {
 				return [`${TUtilsV2.GW2Text2HTML(fact.text)}: ${Math.round(fact.distance)}`];
 			},
 			HealthAdjustHealing: ({ fact }) => {
-				//TODO(Rennorb) @cleanup
+				//TODO(Rennorb) @cleanup @scaling
 				const attribute = (context.character.stats as any)[TUtilsV2.Uncapitalize(fact.attribute)] || 0;
 				const value = Math.round((fact.value + attribute * fact.multiplier) * fact.hit_count);
 				const text = TUtilsV2.GW2Text2HTML(fact.text) || TUtilsV2.mapLocale(fact.attribute);
@@ -254,7 +268,7 @@ class FactsProcessor {
 						let percentMod = 100;
 						for(const { source, modifier, count } of context.character.statSources.lifeForce) {
 							const mod = this.calculateModifier(modifier, context.character);
-							lines.push(`${source}${count > 1 ? ` (x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+							lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
 							percentMod += mod;
 						}
 						percent *= percentMod / 100;
@@ -283,7 +297,7 @@ class FactsProcessor {
 						let percentMod = 100;
 						for(const { source, modifier, count } of context.character.statSources.lifeForce) {
 							const mod = this.calculateModifier(modifier, context.character);
-							lines.push(`${source}${count > 1 ? ` (x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+							lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
 							percentMod += mod;
 						}
 						percent *= percentMod / 100;
@@ -310,7 +324,7 @@ class FactsProcessor {
 						let percentMod = 100;
 						for(const { source, modifier, count } of context.character.statSources.damage) {
 							const mod = this.calculateModifier(modifier, context.character);
-							lines.push(`${source}${count > 1 ? ` (x ${count})` : ''}: ${mod > 0 ? '+' : ''}${mod}%`);
+							lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
 							percentMod += mod;
 						}
 						damage *= percentMod / 100;

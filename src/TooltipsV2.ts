@@ -1,7 +1,6 @@
 //TODO(Rennorb) @issues:
 //TODO(Rennorb): Provide a clean way to construct custom tooltips. Currently with the old version we manipulate the cache before the hook function gets called, which really isn't the the best.
 //TODO(Rennorb): Think about bundling everything with something like rollup. That way we can also easily produce minified versions, although we will have to introduce node-modules for that which i strongly dislike.
-//TODO(Rennorb): Multi skill tooltips (multiple boxes) (kindof works nit not complete)
 //TODO(Rennorb): Option to show whole skill-chain (maybe on button hold)?
 //TODO(Rennorb): Stop using these jank custom tags. There is no reason to do so and its technically not legal per html spec.
 //TODO(Rennorb) @fixme: impale: the impale buff doesn't have a name, only shows duration
@@ -1086,6 +1085,8 @@ class GW2TooltipsV2 {
 				agonyResistance: [],
 				damage         : [],
 				lifeForce      : [],
+				health         : [],
+				healEffectiveness: [],
 			},
 			upgradeCounts: {},
 		},
