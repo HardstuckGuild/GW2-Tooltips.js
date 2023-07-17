@@ -73,7 +73,7 @@ class FactsProcessor {
 		let buffStackSize = 1;
 		let buffDuration = (fact as API.BuffFact).duration;
 
-		const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact) => {
+		const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact, duration : Milliseconds, valueMod : number  /* TODO(Rennorb): kindof a weird hack for now. maybe merge the two functions? */) => {
 			let modsArray: string[] = []
 			if(buff.modifiers) {
 				//TODO(Rennorb) @consistency: gamemode splitting for mods (?)
@@ -106,11 +106,11 @@ class FactsProcessor {
 					}
 
 					if(modifier.flags.includes('MulByDuration')) {
-						let duration = fact.duration / 1000;
-						if(modifier.flags.includes('DivDurationBy3')) {
+						duration /= 1000;
+						if(modifier.flags.includes('DivDurationBy3')) { //TODO(Rennorb): move to api side and remove this
 							duration /= 3;
 						}
-						if(modifier.flags.includes('DivDurationBy10')) {
+						if(modifier.flags.includes('DivDurationBy10')) { //TODO(Rennorb): move to api side and remove this
 							duration /= 10;
 						}
 
@@ -121,12 +121,12 @@ class FactsProcessor {
 						value *= fact.apply_count;
 					}
 
-					let strValue = '';
-					if(modifier.flags.includes('FormatFraction')) {
-						strValue = TUtilsV2.drawFractional(value);
-					}else{
-						strValue = Math.floor(value).toString();
-					}
+					if(modifier.formula.includes('Regeneration'))
+						value *= valueMod;
+
+					let strValue = modifier.flags.includes('FormatFraction')
+					 ? TUtilsV2.drawFractional(value)
+					 : Math.floor(value).toString();
 
 					if(modifier.flags.includes('FormatPercent')) {
 						if(value > 0 ) {
@@ -143,22 +143,25 @@ class FactsProcessor {
 			return TUtilsV2.GW2Text2HTML(buff.description_brief || modsArray.join(', ') || buff.description)
 		}
 
-		const calculateBuffDuration = (duration : Milliseconds, buff : API.Skill, detailStack : string[]) : number => {
-			detailStack.push(`base duration: ${TUtilsV2.drawFractional(duration / 1000)}s`);
-			let durMod = 1;
+		const applyMods = (duration : Milliseconds, buff : API.Skill, detailStack : string[]) : [Milliseconds, number] => {
+			let durMod = 1, valueMod = 1;
 
-			const relevantStat : keyof Stats | false = (buff.buff_type == 'Boon' && 'concentration') || (buff.buff_type == 'Condition' && 'expertise');
-			if(relevantStat) {
-				const rawValue = context.character.stats[relevantStat];
+			const durationAttr : keyof Stats | false = (buff.buff_type == 'Boon' && 'concentration') || (buff.buff_type == 'Condition' && 'expertise');
+			if(durationAttr) {
+				const attribVal = context.character.stats[durationAttr];
 				// every 15 points add 1%
-				durMod += rawValue / 15 * 0.01;
-				if(rawValue > 0)
-					detailStack.push(`+${TUtilsV2.withUpToNDigits(rawValue / 15, 2)}% from ${rawValue} ${relevantStat}`);
+				durMod += attribVal / 15 * 0.01;
+				if(attribVal > 0) {
+					detailStack.push(`base duration: ${TUtilsV2.drawFractional(duration / 1000)}s`);
+					detailStack.push(`+${TUtilsV2.withUpToNDigits(attribVal / 15, 2)}% from ${attribVal} ${durationAttr}`);
+				}
 			}
 
 			//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
 			let durModStack = context.character.statSources[buff.id];
 			if(durModStack) {
+				//NOTE(Rennorb): Just in case we didn't have a stat duration increase. Im aware that this is jank, but i cant think of a better way rn.
+				if(durMod === 1) detailStack.push(`base duration: ${TUtilsV2.drawFractional(duration / 1000)}s`);
 				let percentMod = 0;
 				for(const { source, modifier, count } of durModStack) {
 					const mod = this.calculateModifier(modifier, context.character);
@@ -169,7 +172,23 @@ class FactsProcessor {
 			}
 			duration *= durMod;
 
-			return duration;
+			if(buff.name.includes('Regeneration')) {
+				let valueModStack = context.character.statSources.healEffectiveness;
+				if(valueModStack.length) {
+					//TODO(Rennorb)
+					detailStack.push('regeneration value mods:');
+					let percentMod = 0;
+					for(const { source, modifier, count } of valueModStack) {
+						const mod = this.calculateModifier(modifier, context.character);
+						detailStack.push(`${mod > 0 ? '+' : ''}${mod}% from ${source} ${count > 1 ? `(x ${count})` : ''}`);
+						percentMod += mod;
+					}
+					valueMod += percentMod / 100;
+				}
+			}
+
+
+			return [duration, valueMod];
 		}
 
 		const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => (string|HTMLElement)[] } = {
@@ -212,18 +231,17 @@ class FactsProcessor {
 				buff = buff || this.MissingBuff; // in case we didn't get the buff we wanted from the api
 				iconSlug = buff.icon || iconSlug;
 
-				const details : string[] = [];
-				buffDuration = calculateBuffDuration(fact.duration, buff, details);
+				const lines : string[] = [];
+				let valueMod;
+				[buffDuration, valueMod] = applyMods(fact.duration, buff, lines);
 
-				let buffDescription = generateBuffDescription(buff, fact);
+				let buffDescription = generateBuffDescription(buff, fact, buffDuration, valueMod);
 				if(buffDescription) {
 					buffDescription = `: ${buffDescription}`;
 				}
 
 				const seconds = buffDuration > 0 ? `(${TUtilsV2.drawFractional(buffDuration / 1000)}s)`: '';
-				const lines = [`${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`];
-				// only push if we have more than a base value
-				if(details.length > 1) lines.push(...details);
+				lines.unshift(`${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
 
 				buffStackSize = fact.apply_count;
 				return lines;
@@ -363,9 +381,10 @@ class FactsProcessor {
 				let {duration, apply_count, text} = fact;
 
 				const details : string[] = [];
-				buffDuration = calculateBuffDuration(duration, buff, details);
+				let valueMod;
+				[buffDuration, valueMod] = applyMods(duration, buff, details);
 
-				let buffDescription = generateBuffDescription(buff, fact);
+				let buffDescription = generateBuffDescription(buff, fact, buffDuration, valueMod);
 				if(buffDescription) {
 					buffDescription = `: ${buffDescription}`;
 				}
@@ -376,8 +395,7 @@ class FactsProcessor {
 					this.generateBuffIcon(buff.icon, apply_count),
 					TUtilsV2.newElm('span', `${TUtilsV2.GW2Text2HTML(text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`)
 				)];
-				// only push if we have more than a base value
-				if(details.length > 1) list.push(...details);
+				list.push(...details);
 
 				return list;
 			},

@@ -593,7 +593,7 @@ class FactsProcessor {
         let iconSlug = fact.icon;
         let buffStackSize = 1;
         let buffDuration = fact.duration;
-        const generateBuffDescription = (buff, fact) => {
+        const generateBuffDescription = (buff, fact, duration, valueMod) => {
             let modsArray = [];
             if (buff.modifiers) {
                 const relevantModifiers = buff.modifiers.filter(modifier => ((!modifier.trait_req || context.character.traits.includes(modifier.trait_req))
@@ -616,7 +616,7 @@ class FactsProcessor {
                         value -= 100;
                     }
                     if (modifier.flags.includes('MulByDuration')) {
-                        let duration = fact.duration / 1000;
+                        duration /= 1000;
                         if (modifier.flags.includes('DivDurationBy3')) {
                             duration /= 3;
                         }
@@ -628,13 +628,11 @@ class FactsProcessor {
                     if (!modifier.flags.includes('NonStacking')) {
                         value *= fact.apply_count;
                     }
-                    let strValue = '';
-                    if (modifier.flags.includes('FormatFraction')) {
-                        strValue = TUtilsV2.drawFractional(value);
-                    }
-                    else {
-                        strValue = Math.floor(value).toString();
-                    }
+                    if (modifier.formula.includes('Regeneration'))
+                        value *= valueMod;
+                    let strValue = modifier.flags.includes('FormatFraction')
+                        ? TUtilsV2.drawFractional(value)
+                        : Math.floor(value).toString();
                     if (modifier.flags.includes('FormatPercent')) {
                         if (value > 0) {
                             strValue = '+' + strValue;
@@ -647,18 +645,21 @@ class FactsProcessor {
             }
             return TUtilsV2.GW2Text2HTML(buff.description_brief || modsArray.join(', ') || buff.description);
         };
-        const calculateBuffDuration = (duration, buff, detailStack) => {
-            detailStack.push(`base duration: ${TUtilsV2.drawFractional(duration / 1000)}s`);
-            let durMod = 1;
-            const relevantStat = (buff.buff_type == 'Boon' && 'concentration') || (buff.buff_type == 'Condition' && 'expertise');
-            if (relevantStat) {
-                const rawValue = context.character.stats[relevantStat];
-                durMod += rawValue / 15 * 0.01;
-                if (rawValue > 0)
-                    detailStack.push(`+${TUtilsV2.withUpToNDigits(rawValue / 15, 2)}% from ${rawValue} ${relevantStat}`);
+        const applyMods = (duration, buff, detailStack) => {
+            let durMod = 1, valueMod = 1;
+            const durationAttr = (buff.buff_type == 'Boon' && 'concentration') || (buff.buff_type == 'Condition' && 'expertise');
+            if (durationAttr) {
+                const attribVal = context.character.stats[durationAttr];
+                durMod += attribVal / 15 * 0.01;
+                if (attribVal > 0) {
+                    detailStack.push(`base duration: ${TUtilsV2.drawFractional(duration / 1000)}s`);
+                    detailStack.push(`+${TUtilsV2.withUpToNDigits(attribVal / 15, 2)}% from ${attribVal} ${durationAttr}`);
+                }
             }
             let durModStack = context.character.statSources[buff.id];
             if (durModStack) {
+                if (durMod === 1)
+                    detailStack.push(`base duration: ${TUtilsV2.drawFractional(duration / 1000)}s`);
                 let percentMod = 0;
                 for (const { source, modifier, count } of durModStack) {
                     const mod = this.calculateModifier(modifier, context.character);
@@ -668,7 +669,20 @@ class FactsProcessor {
                 durMod += percentMod / 100;
             }
             duration *= durMod;
-            return duration;
+            if (buff.name.includes('Regeneration')) {
+                let valueModStack = context.character.statSources.healEffectiveness;
+                if (valueModStack.length) {
+                    detailStack.push('regeneration value mods:');
+                    let percentMod = 0;
+                    for (const { source, modifier, count } of valueModStack) {
+                        const mod = this.calculateModifier(modifier, context.character);
+                        detailStack.push(`${mod > 0 ? '+' : ''}${mod}% from ${source} ${count > 1 ? `(x ${count})` : ''}`);
+                        percentMod += mod;
+                    }
+                    valueMod += percentMod / 100;
+                }
+            }
+            return [duration, valueMod];
         };
         const factInflators = {
             AdjustByAttributeAndLevelHealing: ({ fact }) => {
@@ -709,16 +723,15 @@ class FactsProcessor {
                     console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
                 buff = buff || this.MissingBuff;
                 iconSlug = buff.icon || iconSlug;
-                const details = [];
-                buffDuration = calculateBuffDuration(fact.duration, buff, details);
-                let buffDescription = generateBuffDescription(buff, fact);
+                const lines = [];
+                let valueMod;
+                [buffDuration, valueMod] = applyMods(fact.duration, buff, lines);
+                let buffDescription = generateBuffDescription(buff, fact, buffDuration, valueMod);
                 if (buffDescription) {
                     buffDescription = `: ${buffDescription}`;
                 }
                 const seconds = buffDuration > 0 ? `(${TUtilsV2.drawFractional(buffDuration / 1000)}s)` : '';
-                const lines = [`${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`];
-                if (details.length > 1)
-                    lines.push(...details);
+                lines.unshift(`${TUtilsV2.GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
                 buffStackSize = fact.apply_count;
                 return lines;
             },
@@ -838,15 +851,15 @@ class FactsProcessor {
                 buff = buff || this.MissingBuff;
                 let { duration, apply_count, text } = fact;
                 const details = [];
-                buffDuration = calculateBuffDuration(duration, buff, details);
-                let buffDescription = generateBuffDescription(buff, fact);
+                let valueMod;
+                [buffDuration, valueMod] = applyMods(duration, buff, details);
+                let buffDescription = generateBuffDescription(buff, fact, buffDuration, valueMod);
                 if (buffDescription) {
                     buffDescription = `: ${buffDescription}`;
                 }
                 const seconds = buffDuration > 0 ? `(${TUtilsV2.drawFractional(buffDuration / 1000)}s)` : '';
                 const list = [TUtilsV2.newElm('div', this.generateBuffIcon(buff.icon, apply_count), TUtilsV2.newElm('span', `${TUtilsV2.GW2Text2HTML(text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`))];
-                if (details.length > 1)
-                    list.push(...details);
+                list.push(...details);
                 return list;
             },
             PrefixedBuffBrief: ({ fact, buff }) => {
