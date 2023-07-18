@@ -74,7 +74,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 	const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact, duration : Milliseconds, valueMod : number  /* TODO(Rennorb): kindof a weird hack for now. maybe merge the two export functions? */) => {
 		let modsArray: string[] = []
-		if(buff.modifiers) {
+		if(buff.modifiers && !buff.description_brief) { // early bail to not have to do the work if we use the description anyways
 			//TODO(Rennorb) @consistency: gamemode splitting for mods (?)
 			const relevantModifiers = buff.modifiers.filter(modifier => (
 						(!modifier.trait_req || context.character.traits.includes(modifier.trait_req))
@@ -434,7 +434,10 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	}
 
 	let defianceBreak = 0;
-	if(fact.defiance_break) {
+	//NOTE(Rennorb): if we have a text we aren't going to show the data. Therefore it is reasonable to assume that this is a special case like `https://wiki.guildwars2.com/wiki/Debilitating_Arc` wich removes a condition instead of applying it.
+	// In those cases we want to ignore the defiance info and also not return it.
+	//TODO(Rennorb): do this on the api side
+	if(fact.defiance_break && !('text' in fact)) {
 		defianceBreak = fact.defiance_break * (buffDuration || 1000) / 1000;
 		const breakDetail = (buffDuration != undefined && buffDuration != 1000) ? ` (${fact.defiance_break}/s)` : '';
 		remainingDetail.push(newElm('span.detail.color-defiance-fact', `Defiance Break: ${defianceBreak}${breakDetail}`))
