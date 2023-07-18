@@ -14,10 +14,9 @@
 
 let tooltip : HTMLElement
 
-let cycleTooltipsHandler : VoidFunction | undefined;
 let cycling = false
-let cyclePos    : number
-let baseTooltip : number
+let cyclePos    : number = 0
+let baseTooltip : number = 0
 let lastMouseX  : number
 let lastMouseY  : number
 
@@ -44,36 +43,63 @@ function _constructor() {
 	tooltip.style.display = 'none';
 	document.body.appendChild(tooltip)
 
+	const isMobile = /android|webos|iphone|ipad|ipod|blackberry|bb|playbook|mobile|windows phone|kindle|silk|opera mini/.test(navigator.userAgent.toLowerCase())
 	document.addEventListener('mousemove', event => {
+		if(isMobile && (Math.abs(event.pageX - lastMouseX) + Math.abs(event.pageY - lastMouseY) > 20)) {
+			tooltip.style.display = 'none';
+		}
+
 		lastMouseX = event.pageX
 		lastMouseY = event.pageY
+
 		if(tooltip.style.display != 'none')
 			positionTooltip()
 	})
 	document.addEventListener('contextmenu', event => {
-		if(!cycleTooltipsHandler) return;
-		event.preventDefault()
-		cycleTooltipsHandler();
+		const node = findSelfOrParent(event.target as Element, 'gw2object') as HTMLElement;
+		if(!node) return;
+
+		//NOTE(Rennorb): the style check is to prevent an initial cycle on mobile
+		console.log(tooltip.style.display);
+		if(node.classList.contains('cycler') && tooltip.style.display != 'none') {
+			event.preventDefault()
+
+			cyclePos = (cyclePos + 1) % tooltip.childElementCount
+			displayCorrectChainTooltip(Array.from(tooltip.children as HTMLCollectionOf<HTMLElement>), cyclePos)
+			positionTooltip()
+		}
+		if(isMobile && tooltip.style.display == 'none') {
+			event.preventDefault()
+			showTooltipFor(node);
+			positionTooltip()
+		}
 	})
+
+	//TODO(Rennorb): this sint very clean,  would like a better solution tbh
+	let touch : Touch;
+	const scrollHandler = (event : WheelEvent | TouchEvent | { detail : number, preventDefault: VoidFunction }) => {
+		if(tooltip.style.display == 'none') return;
+		const activeTT = tooltip.children[cyclePos];
+		if(activeTT.scrollHeight == activeTT.clientHeight) return;
+
+		event.preventDefault()
+		const deltaY = (event as WheelEvent).deltaY || event.detail || (event as TouchEvent).touches[0].clientY - touch.clientY;
+		activeTT.scrollBy(0, deltaY);
+	}
+	const passive = 'onwheel' in window ? { passive: false } : false;
+	
+	window.addEventListener('DOMMouseScroll', scrollHandler as any, false); // older FF
+	window.addEventListener('wheel', scrollHandler, passive)
+	window.addEventListener('touchstart', event => {
+		touch = event.touches[0];
+	})
+	window.addEventListener('touchmove', scrollHandler, passive)
 }
 
 function displayCorrectChainTooltip(tooltips: HTMLElement[], tooltipIndex: number) {
 	for(let index = 0; index < tooltips.length; index++) {
 		tooltips[index].classList.toggle('active', index === tooltipIndex);
 	}
-}
-//TODO(Rennorb) @cleanup: this seems excessively complicated
-function cycleTooltips() {
-	if(!cycling) return
-	cycling = true
-
-	const chainTooltips = Array.from(tooltip.children) as HTMLElement[]
-	cyclePos = chainTooltips.length - baseTooltip
-	const totalTooltips = chainTooltips.length - baseTooltip
-	cyclePos = (cyclePos - 1 + totalTooltips) % totalTooltips
-	displayCorrectChainTooltip(chainTooltips, cyclePos);
-
-	positionTooltip()
 }
 
 function positionTooltip() {
@@ -135,31 +161,8 @@ function hookDocument(scope : ScopeElement, _unused? : any) : Promise<void[]> {
 		if(elementsWithThisId) elementsWithThisId.push(gw2Object)
 		else objectsToGet[type as keyof typeof objectsToGet].set(objId, [gw2Object])
 
-		gw2Object.addEventListener('mouseenter', (e) => {
-			const gw2Object = e.target as HTMLElement;
-			const type = ((gw2Object.getAttribute('type') || 'skill') + 's') as `${LegacyCompat.ObjectType}s`;
-			const objId = +String(gw2Object.getAttribute('objId'))
-			const context_ = context[+String(gw2Object.getAttribute('contextSet')) || 0];
-			const stackSize = +String(gw2Object.getAttribute('count')) || undefined;
-
-			if(type == 'specializations' || type == 'effects') return; //TODO(Rennorb) @completeness: inline objs
-			if(type == 'pets') return; //TODO(Rennorb) @completeness
-
-			const data = APICache.storage[type].get(objId);
-			if(data) {
-				if(type == 'items' || type == "pvp/amulets") {
-					const statId = +String(gw2Object.getAttribute('stats')) || undefined;
-					tooltip.replaceChildren(generateItemTooltip(data as API.Item, context_, gw2Object, statId, stackSize));
-				}
-				else
-					tooltip.replaceChildren(...generateToolTipList(data as Exclude<typeof data, API.Item>, gw2Object, context_));
-				tooltip.style.display = ''; //empty value resets actual value to use stylesheet
-			}
-		})
-		gw2Object.addEventListener('mouseleave', () => {
-			tooltip.style.display = 'none';
-			cycleTooltipsHandler = undefined;
-		})
+		gw2Object.addEventListener('mouseenter', (e) => showTooltipFor(e.target as HTMLElement));
+		gw2Object.addEventListener('mouseleave', () => tooltip.style.display = 'none');
 	}
 
 	if(_legacy_effectErrorStore.size) {
@@ -189,6 +192,29 @@ function hookDocument(scope : ScopeElement, _unused? : any) : Promise<void[]> {
 				inflator(gw2Object, data as any);
 		}
 	}))
+}
+
+function showTooltipFor(gw2Object : HTMLElement) {
+	const type = ((gw2Object.getAttribute('type') || 'skill') + 's') as `${LegacyCompat.ObjectType}s`;
+	const objId = +String(gw2Object.getAttribute('objId'))
+	const context_ = context[+String(gw2Object.getAttribute('contextSet')) || 0];
+	const stackSize = +String(gw2Object.getAttribute('count')) || undefined;
+
+	if(type == 'specializations' || type == 'effects') return; //TODO(Rennorb) @completeness: inline objs
+	if(type == 'pets') return; //TODO(Rennorb) @completeness
+
+	const data = APICache.storage[type].get(objId);
+	if(data) {
+		cyclePos = 0;
+		if(type == 'items' || type == "pvp/amulets") {
+			const statId = +String(gw2Object.getAttribute('stats')) || undefined;
+			tooltip.replaceChildren(generateItemTooltip(data as API.Item, context_, gw2Object, statId, stackSize));
+		}
+		else {
+			tooltip.replaceChildren(...generateToolTipList(data as Exclude<typeof data, API.Item>, gw2Object, context_));
+		}
+		tooltip.style.display = ''; //empty value resets actual value to use stylesheet
+	}
 }
 
 function inflateGenericIcon(gw2Object : HTMLElement, data : { name : string, icon? : string }) {
@@ -586,15 +612,9 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 		gw2Object.classList.add('cycler')
 		gw2Object.title = 'Right-click to cycle through tooltips'
 
-		let currentTooltipIndex = 0
-		displayCorrectChainTooltip(tooltipChain, currentTooltipIndex)
-
-		cycleTooltipsHandler = () => {
-			cycleTooltips() //TODO(Rennorb) @cleanup: why are there two functions with basically the same name
-			currentTooltipIndex = (currentTooltipIndex + 1) % tooltipChain.length
-			displayCorrectChainTooltip(tooltipChain, currentTooltipIndex)
-			positionTooltip()
-		};
+		// is already set to 0 if this is a new one
+		//TODO(Rennorb): should we actually reset this every time?
+		displayCorrectChainTooltip(tooltipChain, cyclePos)
 	}
 	else {
 		tooltipChain[0].classList.add('active'); // single tooltip is always expanded
@@ -1203,7 +1223,7 @@ if(config.autoInitialize) {
 		})
 }
 
-import { newElm, newImg, GW2Text2HTML, mapLocale, drawFractional, fromHTML } from './TUtilsV2';
+import { newElm, newImg, GW2Text2HTML, mapLocale, drawFractional, fromHTML, findSelfOrParent } from './TUtilsV2';
 import * as APIs from './API';
 import APICache from './APICache';
 import { calculateModifier, generateFact, generateFacts } from './FactsProcessor';

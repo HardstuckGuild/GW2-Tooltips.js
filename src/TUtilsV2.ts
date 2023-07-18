@@ -100,3 +100,10 @@ export function mapLocale(type : API.Attributes | API.ComboFinisherType | API.Co
 		default: return type;
 	}
 }
+
+export function findSelfOrParent(self : Element, selector : string, depth = 10) : Element | null {
+	let current : Element | null = self;
+	while(current && depth-- > 0 && !current.matches(selector)) current = current.parentElement;
+	if(depth == 0) return null;
+	return current;
+}

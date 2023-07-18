@@ -78,6 +78,7 @@
 	padding: 4px;
 	max-width: 100%;
 	max-height: 80vh;
+	overflow-y: auto;
 
 	background-color: #373f46;
 	background-image: url(../out/tooltip-bg.jpg);
@@ -212,6 +213,9 @@ gw2object[count]::before {
 	position: absolute;
 	top: 2px;
 	right: 2px;
+}
+gw2object:not(.gw2objectembed) {
+	user-select: none;
 }
 gw2object.gw2objectembed[count]::before {
 	position: relative;
