@@ -194,6 +194,7 @@ gw2object {
 	position: relative;
 	display: inline-block;
 	background-color: var(--gw2-tt-color-shadow);
+	vertical-align: bottom;
 }
 gw2object img {
 	display: inline-block;
