@@ -352,9 +352,24 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 			return lines;
 		},
-		Time : ({fact}) => {
-			const time = fact.duration != 1000 ? 'seconds' : 'second';
-			return [`${GW2Text2HTML(fact.text)}: ${drawFractional(fact.duration / 1000)} ${time}`];
+		Time : ({fact: { duration, text }}) => {
+			const lines = [];
+			//TODO(Rennorb) @cleanup
+			if(text && (text.includes('Stun') || text.includes('Daze'))) {
+				if(context.character.statSources.stun.length) {
+					lines.push(`${duration / 1000}s base duration`);
+					let percentMod = 100;
+					for(const { source, modifier, count } of context.character.statSources.stun) {
+						const mod = calculateModifier(modifier, context.character);
+						lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
+						percentMod += mod;
+					}
+					duration *= percentMod / 100;
+				}
+			}
+			const time = duration != 1000 ? 'seconds' : 'second';
+			lines.unshift(`${GW2Text2HTML(text)}: ${drawFractional(duration / 1000)} ${time}`);
+			return lines;
 		},
 		ComboField : ({fact}) =>  {
 			return [`${GW2Text2HTML(fact.text)}: ${mapLocale(fact.field_type)}`];

@@ -29,7 +29,7 @@ interface Character {
 	profession?   : Profession
 	traits        : number[] //TODO(Rennorb): add a collect function that can take them from existing specialization objects
 	stats         : Stats
-	statSources   : { [k in keyof Stats | number | 'damage' | 'lifeForce' | 'health' | 'healEffectiveness']: StatSource[] } //TODO(Rennorb): think about moving this into a single (or two) values per stat. just to reduce computations
+	statSources   : { [k in keyof Stats | number | 'damage' | 'lifeForce' | 'health' | 'healEffectiveness' | 'stun']: StatSource[] } //TODO(Rennorb): think about moving this into a single (or two) values per stat. just to reduce computations
 	upgradeCounts : { [k : number]: number }
 }
 

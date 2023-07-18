@@ -91,12 +91,10 @@ export default class APICache {
 			}
 		}
 
-		if('sub_skills' in datum) {
-			if(datum.sub_skills) {
-				for(const subSkill of datum.sub_skills)
-					if(!this.storage.skills.has(subSkill))
-						connectedIdsStorage.skills.add(subSkill);
-			}
+		if('related_skills' in datum && datum.related_skills) {
+			for(const subSkill of datum.related_skills)
+				if(!this.storage.skills.has(subSkill))
+					connectedIdsStorage.skills.add(subSkill);
 		}
 
 		if('facts' in datum && datum.facts) {
@@ -139,5 +137,7 @@ type ConnectedIdDatum = {
 	endpoint : 'itemstats'
 	datum    : APIResponseTypeMap['itemstats']
 }
+
+(window as any).APICache = APICache; //@debug
 
 import { HSAPI } from './API';

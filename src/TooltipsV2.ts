@@ -20,8 +20,8 @@ let baseTooltip : number = 0
 let lastMouseX  : number
 let lastMouseY  : number
 
-const context : Context[] = [];
-export let config  : Config = null!;
+export const context : Context[] = []; //@debug
+export let config    : Config = null!;
 
 //TODO(Rennorb) @cleanup: get rid of this
 function _constructor() {
@@ -101,6 +101,8 @@ function displayCorrectChainTooltip(tooltips: HTMLElement[], tooltipIndex: numbe
 	}
 }
 
+//TODO(Rennorb); If the tooltip doesn't fit on screen its probably because we have may and they don't fit even if collapsed.
+// In that case we want to fit the currently active one on screen instead of the whole list.
 function positionTooltip() {
 	const wpadminbar = document.getElementById('wpadminbar'); //TODO(Rennorb) @hardcoded: this accounts for the wordpress bar that might exist.
 	const topBarHeight = wpadminbar ? wpadminbar.offsetHeight : 0;
@@ -1096,6 +1098,7 @@ export const DEFAULT_CONTEXT : Context = {
 			lifeForce      : [],
 			health         : [],
 			healEffectiveness: [],
+			stun           : [],
 		},
 		upgradeCounts: {},
 	},

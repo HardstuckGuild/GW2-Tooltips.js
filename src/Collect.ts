@@ -110,6 +110,7 @@ function _statSources(contextIndex : number, targetContext : Context, elements :
 		lifeForce      : [],
 		health         : [],
 		healEffectiveness: [],
+		stun           : [],
 	};
 
 	//NOTE(Rennorb): Cant really use the existing upgrade counts since we want to add tiers individually.
