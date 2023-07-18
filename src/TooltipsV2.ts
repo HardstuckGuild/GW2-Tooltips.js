@@ -490,40 +490,39 @@ export function getHealth(character : Character) : number {
 }
 
 function getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) : number {
-	let weaponStrength = {
-		None       : 0,
-		BundleLarge: 0,
-		Standard   : 690.5,
-		Focus      : 900,
-		Shield     : 900,
-		Torch      : 900,
-		Warhorn    : 900,
-		Greatsword : 1100,
-		Hammer     : 1100,
-		Staff      : 1100,
-		BowLong    : 1050,
-		Rifle      : 1150,
-		BowShort   : 1000,
-		Axe        : 1000,
-		Sword      : 1000,
-		Dagger     : 1000,
-		Pistol     : 1000,
-		Scepter    : 1000,
-		Mace       : 1000,
-		Spear      : 1000,
-		Speargun   : 1000,
-		Trident    : 1000,
-	}[weapon_type]
-
 	if(weapon_type === 'None') {
-		if(palette_type === 'Standard' || palette_type === 'Toolbelt') {
-			weaponStrength = 690.5
-		} else if(palette_type === 'Bundle') {
-			weaponStrength = 922.5
+		if(palette_type === 'Bundle') {
+			return 922.5
 		}
-	}
 
-	return weaponStrength
+		//NOTE(Rennorb): The default value. Im not 100% sure if this is correct in all cases.
+		return 690.5
+	}
+	else {
+		return {
+			BundleLarge: 0,
+			Standard   : 690.5,
+			Focus      : 900,
+			Shield     : 900,
+			Torch      : 900,
+			Warhorn    : 900,
+			Greatsword : 1100,
+			Hammer     : 1100,
+			Staff      : 1100,
+			BowLong    : 1050,
+			Rifle      : 1150,
+			BowShort   : 1000,
+			Axe        : 1000,
+			Sword      : 1000,
+			Dagger     : 1000,
+			Pistol     : 1000,
+			Scepter    : 1000,
+			Mace       : 1000,
+			Spear      : 1000,
+			Speargun   : 1000,
+			Trident    : 1000,
+		}[weapon_type];
+	}
 }
 
 function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTMLElement, context : Context) : HTMLElement[] {
