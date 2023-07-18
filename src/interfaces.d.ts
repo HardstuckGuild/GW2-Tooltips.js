@@ -27,7 +27,7 @@ namespace API {
 		icon?              : string | number // TODO: move to using numbers
 		categories         : any[]
 		palettes           : Palette[]
-		sub_skills?        : number[]
+		related_skills?    : number[]
 		modifiers?         : Modifier[]
 		buff_type?         : 'Boon' | 'Buff' | 'Condition' | 'BuffType4' | 'Food' | 'Guild' | 'Item' | 'Persistent' | 'Purchased' | 'Species' | 'Training' | 'Trait' | 'Transformation' | 'Utility' | 'Wvw' | 'BuffType16' | 'BuffType17' | 'MapShared'
 	}
@@ -259,6 +259,7 @@ namespace API {
 		slot               : 'Minor' | 'Major' | 'MadLib' | 'Automatic'; //TODO(Rennorb): fix this on the api side lol
 		provides_weapon_access? : WeaponAccess []
 		modifiers?         : Modifier[]
+		related_skills?    : number[]
 	}
 
 	type ContextInformation = ContextGroup & {

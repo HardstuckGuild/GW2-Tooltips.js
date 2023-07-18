@@ -60,7 +60,6 @@ function _constructor() {
 		if(!node) return;
 
 		//NOTE(Rennorb): the style check is to prevent an initial cycle on mobile
-		console.log(tooltip.style.display);
 		if(node.classList.contains('cycler') && tooltip.style.display != 'none') {
 			event.preventDefault()
 
@@ -553,14 +552,14 @@ function getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) :
 
 function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTMLElement, context : Context) : HTMLElement[] {
 	const objectChain : SupportedTTTypes[] = []
-	const validPaletteTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard']
+	const validPaletteTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard', 'Equipment']
 
-	const addObjectsToChain = (currentSkill : SupportedTTTypes) => {
-		objectChain.push(currentSkill)
+	const addObjectsToChain = (currentObj : SupportedTTTypes) => {
+		objectChain.push(currentObj)
 
-		if('palettes' in currentSkill) {
-			let hasChain = false;
-			for(const palette of currentSkill.palettes) {
+		let hasChain = false;
+		if('palettes' in currentObj) {
+			for(const palette of currentObj.palettes) {
 				for(const slot of palette.slots) {
 					if(slot.next_chain && slot.profession !== 'None') {
 						const nextSkillInChain = APICache.storage.skills.get(slot.next_chain);
@@ -571,16 +570,17 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 					}
 				}
 			}
+		}
 
-			//TODO(Rennorb): Apparently sub_skills is of very questionable correctness and seems to only be used internally.
-			// Using it in this way might produce unexpected results.
-			//NOTE(Rennorb): Checking for the skill chain here since it usually produces duplicated entries if one is present and the skill chain is more authoritative.
-			if(!hasChain && currentSkill.sub_skills) {
-				for(const subSkillId of currentSkill.sub_skills) {
-					const subSkillInChain = APICache.storage.skills.get(subSkillId);
-					if(subSkillInChain && subSkillInChain.palettes.some(palette => validPaletteTypes.includes(palette.type))) {
-						addObjectsToChain(subSkillInChain)
-					}
+		//TODO(Rennorb): Apparently sub_skills is of very questionable correctness and seems to only be used internally.
+		// Using it in this way might produce unexpected results.
+		//NOTE(Rennorb): Checking for the skill chain here since it usually produces duplicated entries if one is present and the skill chain is more authoritative.
+		if(!hasChain && 'related_skills' in currentObj) {
+			for(const subSkillId of currentObj.related_skills!) {
+				const subSkillInChain = APICache.storage.skills.get(subSkillId);
+				const type = gw2Object.getAttribute('type') || 'skill';
+				if(subSkillInChain && ((type == 'trait') || subSkillInChain.palettes.some(palette => validPaletteTypes.includes(palette.type)))) {
+					objectChain.push(subSkillInChain)
 				}
 			}
 		}
