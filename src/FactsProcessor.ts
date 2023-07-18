@@ -144,7 +144,6 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 	const applyMods = (duration : Milliseconds, buff : API.Skill, detailStack : string[]) : [Milliseconds, number] => {
 		let durMod = 1, valueMod = 1;
-
 		const durationAttr : keyof Stats | false = (buff.buff_type == 'Boon' && 'concentration') || (buff.buff_type == 'Condition' && 'expertise');
 		if(durationAttr) {
 			const attribVal = context.character.stats[durationAttr];
@@ -456,6 +455,11 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		defianceBreak = fact.defiance_break * (buffDuration || 1000) / 1000;
 		const breakDetail = (buffDuration != undefined && buffDuration != 1000) ? ` (${fact.defiance_break}/s)` : '';
 		remainingDetail.push(newElm('span.detail.color-defiance-fact', `Defiance Break: ${defianceBreak}${breakDetail}`))
+	}
+
+	if(fact.requires_trait) {
+		const trait_names = fact.requires_trait.map(id => APICache.storage.traits.get(id)?.name).join(',') //TODO(Rennorb): improve join
+		remainingDetail.unshift(`${fact.skip_next ? 'overridden' : 'exists'} because of trait${fact.requires_trait.length == 1 ? '' : 's'} ${trait_names}`);
 	}
 
 	wrapper.append(generateBuffIcon(iconSlug, buffStackSize))
