@@ -327,26 +327,36 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			return lines;
 		},
 		Damage : ({fact: {dmg_multiplier, hit_count, text}, weaponStrength}) => {
-			const times = hit_count > 1 ? `(${hit_count}x)` : '';
-			let damage = dmg_multiplier * hit_count * weaponStrength * context.character.stats.power / context.targetArmor;
-
 			const lines = [];
+			
+			let damage = dmg_multiplier * hit_count * weaponStrength * context.character.stats.power / context.targetArmor;
 			if(!config.preferCorrectnessOverExtraInfo) {
-				lines.push(`${context.character.stats.power} power * ${weaponStrength} avg. weapon str. / ${context.targetArmor} target armor`);
-				lines.push(`* ${withUpToNDigits(dmg_multiplier, 4)} internal mod.`);
+				lines.push(`${withUpToNDigits(damage, 2)} from ${withUpToNDigits(dmg_multiplier, 2)} internal mod. * ${context.character.stats.power} power * ${weaponStrength} avg. weapon str. / ${context.targetArmor} target armor`);
 				if(hit_count != 1) lines.push(`* ${hit_count} hits`);
-
-				if(context.character.statSources.damage.length) {
-					let percentMod = 100;
-					for(const { source, modifier, count } of context.character.statSources.damage) {
-						const mod = calculateModifier(modifier, context.character);
-						lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
-						percentMod += mod;
-					}
-					damage *= percentMod / 100;
-				}
 			}
 
+			//TODO(Rennorb): level scaling attributes. these are for lvl 80
+			const critChance = Math.min(0.05 + (context.character.stats.precision - 1000) / 21 * 0.01, 1);
+			//TODO(Rennorb): crit damage mods
+			const critDamage = 1.5 + context.character.stats.ferocity / 15 * 0.01;
+			const moreDmgFromCrit = damage * critChance * (critDamage - 1);
+			damage += moreDmgFromCrit;
+			if(!config.preferCorrectnessOverExtraInfo) {
+				lines.push(`+${withUpToNDigits(moreDmgFromCrit, 2)} (${withUpToNDigits(critChance * (critDamage - 1) * 100, 2)}%) from ${withUpToNDigits(critChance * 100, 2)}% crit chance and ${withUpToNDigits(critDamage * 100, 2)}% damage on crit (${withUpToNDigits(context.character.stats.precision, 2)} precision and ${withUpToNDigits(context.character.stats.ferocity, 2)} ferocity)`);
+			}
+
+			if(context.character.statSources.damage.length) {
+				let percentMod = 100;
+				for(const { source, modifier, count } of context.character.statSources.damage) {
+					const mod = calculateModifier(modifier, context.character);
+					if(!config.preferCorrectnessOverExtraInfo)
+						lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
+					percentMod += mod;
+				}
+				damage *= percentMod / 100;
+			}
+
+			const times = hit_count > 1 ? `(${hit_count}x)` : '';
 			lines.unshift(`${GW2Text2HTML(text)}${times}: ${Math.round(damage)}`);
 
 			return lines;

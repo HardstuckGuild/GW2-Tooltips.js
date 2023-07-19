@@ -1074,12 +1074,12 @@ export const DEFAULT_CONTEXT : Context = {
 			toughness      : 1000,
 			vitality       : 1000,
 			precision      : 1000,
-			ferocity       : 1000,
+			ferocity       : 0,
 			conditionDmg   : 0,
 			expertise      : 0,
 			concentration  : 0,
 			healing        : 0,
-			critDamage     : 0,
+			critDamage     : 0, //TODO(Rennorb) ? ferocity and crit damage?
 			agonyResistance: 0,
 		},
 		statSources: {
