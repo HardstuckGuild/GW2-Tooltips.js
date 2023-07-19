@@ -107,3 +107,14 @@ export function findSelfOrParent(self : Element, selector : string, depth = 10) 
 	if(depth == 0) return null;
 	return current;
 }
+
+export function joinWordList(words : string[], quoteWords = false) {
+	if(quoteWords) words = words.map(w => `'${w}'`);
+	switch(words.length) {
+		case 0: return '';
+		case 1: return words[0];
+		default:
+			const last = words[words.length - 1];
+			return words.slice(0, -1).join(', ') + last;
+	}
+}

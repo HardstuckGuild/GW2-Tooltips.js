@@ -6,11 +6,12 @@
 //TODO(Rennorb): Figure out how to handle boon descriptions. Have a toggle between 'realistic as in game' and 'full information'
 //TODO(Rennorb): Link minion skills to minion summon skill.
 //TODO(Rennorb): specs, pets, and amulets endpoints.
-//TODO(Rennorb): Something with the traits is funky, the facts are clearly incomplete for some of them. The linked/trigger skills are missing afaict.
 //TODO(Rennorb): Defiance break on single effect tooltips.
 //TODO(Rennorb): Change anything percent related to use fractions instead of integers (0.2 instead of 20).
 // The only thing this is good for is to make drawing the facts easier. Since we do quite a few calculations this swap would reduce conversions quite a bit.
 //TODO(Rennorb): Note the specialization a trait belongs to on the trait tooltip (probably instead of the slot).
+//TODO(Rennorb) @correctness: Split up incoming / outgoing effects. Mostly relevant for healing.
+//TODO(Rennorb): Gamemode splits aren't correctly processed on the api side. (script params most likely)
 
 let tooltip : HTMLElement
 

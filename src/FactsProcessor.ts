@@ -142,7 +142,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		return GW2Text2HTML(buff.description_brief || modsArray.join(', ') || buff.description)
 	}
 
-	const applyMods = (duration : Milliseconds, buff : API.Skill, detailStack : string[]) : [Milliseconds, number] => {
+	const applyMods = (duration : Milliseconds, buff : API.Skill, detailStack : (string | Node)[]) : [Milliseconds, number] => {
 		let durMod = 1, valueMod = 1;
 		const durationAttr : keyof Stats | false = (buff.buff_type == 'Boon' && 'concentration') || (buff.buff_type == 'Condition' && 'expertise');
 		if(durationAttr) {
@@ -163,7 +163,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			let percentMod = 0;
 			for(const { source, modifier, count } of durModStack) {
 				const mod = calculateModifier(modifier, context.character);
-				detailStack.push(`${mod > 0 ? '+' : ''}${mod}% from ${source} ${count > 1 ? `(x ${count})` : ''}`);
+				detailStack.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${mod}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : '')); //TODO(Rennorb) @cleanup: im not really happy with how this works right now. Storing html in the text is not what i like to do but it works for now. Multiple of this.
 				percentMod += mod;
 			}
 			durMod += percentMod / 100;
@@ -178,7 +178,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				let percentMod = 0;
 				for(const { source, modifier, count } of valueModStack) {
 					const mod = calculateModifier(modifier, context.character);
-					detailStack.push(`${mod > 0 ? '+' : ''}${mod}% from ${source} ${count > 1 ? `(x ${count})` : ''}`);
+					detailStack.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${mod}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
 					percentMod += mod;
 				}
 				valueMod += percentMod / 100;
@@ -189,7 +189,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		return [duration, valueMod];
 	}
 
-	const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => (string|HTMLElement)[] } = {
+	const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => (string|Node)[] } = {
 		AdjustByAttributeAndLevelHealing : ({fact}) =>  {
 			const attributeVal = (context.character.stats as any)[Uncapitalize(fact.target)] || 0; //TODO(Rennorb) @cleanup
 			let value = (fact.value + attributeVal * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count;
@@ -208,7 +208,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				for(const { source, modifier, count } of context.character.statSources.healEffectiveness) {
 					const mod = calculateModifier(modifier, context.character);
 					if(!config.preferCorrectnessOverExtraInfo)
-						lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
+						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${mod}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
 					percentMod += mod;
 				}
 				value *= percentMod / 100;
@@ -284,7 +284,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 					let percentMod = 100;
 					for(const { source, modifier, count } of context.character.statSources.lifeForce) {
 						const mod = calculateModifier(modifier, context.character);
-						lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
+						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${mod}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
 						percentMod += mod;
 					}
 					percent *= percentMod / 100;
@@ -313,7 +313,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 					let percentMod = 100;
 					for(const { source, modifier, count } of context.character.statSources.lifeForce) {
 						const mod = calculateModifier(modifier, context.character);
-						lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
+						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${mod}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
 						percentMod += mod;
 					}
 					percent *= percentMod / 100;
@@ -350,7 +350,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				for(const { source, modifier, count } of context.character.statSources.damage) {
 					const mod = calculateModifier(modifier, context.character);
 					if(!config.preferCorrectnessOverExtraInfo)
-						lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
+					lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${mod}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
 					percentMod += mod;
 				}
 				damage *= percentMod / 100;
@@ -370,7 +370,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 					let percentMod = 100;
 					for(const { source, modifier, count } of context.character.statSources.stun) {
 						const mod = calculateModifier(modifier, context.character);
-						lines.push(`${mod > 0 ? '+' : ''}${mod}% from ${source}${count > 1 ? ` (x ${count})` : ''}`);
+						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${mod}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
 						percentMod += mod;
 					}
 					duration *= percentMod / 100;
@@ -468,8 +468,8 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	}
 
 	if(fact.requires_trait) {
-		const trait_names = fact.requires_trait.map(id => APICache.storage.traits.get(id)?.name).join(',') //TODO(Rennorb): improve join
-		remainingDetail.unshift(`${fact.skip_next ? 'overridden' : 'exists'} because of trait${fact.requires_trait.length == 1 ? '' : 's'} ${trait_names}`);
+		const trait_names = joinWordList(fact.requires_trait.map(id => `'<span class="color-traited-fact">${APICache.storage.traits.get(id)?.name}</span>'`))
+		remainingDetail.unshift(fromHTML(`<span class="detail">${fact.skip_next ? 'overridden' : 'exists'} because of trait${fact.requires_trait.length == 1 ? '' : 's'} ${trait_names}</span>`));
 	}
 
 	wrapper.append(generateBuffIcon(iconSlug, buffStackSize))
@@ -490,6 +490,6 @@ export function generateBuffIcon(icon : Parameters<typeof newImg>[0], stackSize 
 	}
 }
 
-import { newElm, newImg, drawFractional, GW2Text2HTML, withUpToNDigits, mapLocale, Uncapitalize } from './TUtilsV2';
+import { newElm, newImg, drawFractional, GW2Text2HTML, withUpToNDigits, mapLocale, Uncapitalize, joinWordList, fromHTML } from './TUtilsV2';
 import APICache from './APICache';
 import { ICONS, config, getHealth } from './TooltipsV2';
