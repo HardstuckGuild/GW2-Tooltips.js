@@ -82,6 +82,7 @@ namespace API {
 	interface BasicFact<Type extends keyof FactMap> {
 		type            : Type
 		icon            : string
+		text?           : string
 		order           : number
 		requires_trait? : number[]
 		defiance_break? : number
@@ -90,7 +91,6 @@ namespace API {
 	}
 
 	interface AdjustByAttributeAndLevelHealingFact extends BasicFact<'AdjustByAttributeAndLevelHealing'> {
-		text?                : string
 		value                : number
 		target               : Attributes,
 		attribute_multiplier : number
@@ -100,30 +100,25 @@ namespace API {
 	}
 
 	interface AttributeAdjustFact extends BasicFact<'AttributeAdjust'> {
-		text?  : string
 		range  : number[]
 		target : Attributes
 	}
 
 	interface BuffFact extends BasicFact<'Buff'> {
-		text?       : string
 		buff        : number
 		apply_count : number
 		duration    : Milliseconds
 	}
 
 	interface BuffBriefFact extends BasicFact<'BuffBrief'> {
-		text? : string
 		buff  : number
 	}
 
 	interface DistanceFact extends BasicFact<'Distance'> {
-		text?    : string
 		distance : number
 	}
 
 	interface HealthAdjustHealingFact extends BasicFact<'HealthAdjustHealing'> {
-		text?      : string
 		value      : number
 		attribute  : Attributes
 		multiplier : number
@@ -131,43 +126,35 @@ namespace API {
 	}
 
 	interface NumberFact extends BasicFact<'Number'> {
-		text? : string
 		value : number
 	}
 
 	interface PercentFact extends BasicFact<'Percent'> {
-		text?   : string
 		percent : number
 	}
 
 	interface PercentDamageFact extends BasicFact<'PercentDamage'> {
-		text?   : string
 		percent : number
 	}
 
 	interface PercentLifeForceAdjustFact extends BasicFact<'PercentLifeForceAdjust'> {
-		text?   : string
 		percent : number
 	}
 
 	interface PercentHealthFact extends BasicFact<'PercentHealth'> {
-		text?   : string
 		percent : number
 	}
 
 	interface LifeForceAdjustFact extends BasicFact<'LifeForceAdjust'> {
-		text?   : string
 		percent : number
 	}
 
 	interface DamageFact extends BasicFact<'Damage'> {
-		text?          : string
 		hit_count      : number
 		dmg_multiplier : number
 	}
 
 	interface TimeFact extends BasicFact<'Time'> {
-		text?    : string
 		duration : Milliseconds;
 	}
 
@@ -176,30 +163,26 @@ namespace API {
 		'Lightning' | 'Poison' | 'Smoke' | 'Ethereal' | 'Water'
 
 	interface ComboFieldFact extends BasicFact<'ComboField'> {
-		text?      : string
 		field_type : ComboFieldType
 	}
 
 	type ComboFinisherType = 'Blast' | 'Leap'  | 'Projectile' | 'Projectile20' | 'Whirl'
 
 	interface ComboFinisherFact extends BasicFact<'ComboFinisher'> {
-		text?         : string
 		finisher_type : ComboFinisherType
 	}
 
 	interface BuffConversionFact extends BasicFact<'BuffConversion'> {
-		text?   : string
 		source  : Attributes
 		target  : Attributes
 		percent : number
 	}
 
 	interface NoDataFact extends BasicFact<'NoData'> {
-		text?: string
+		text : never
 	}
 
 	interface PrefixedBuffFact extends BasicFact<'PrefixedBuff'>{
-		text?       : string
 		apply_count : number
 		buff        : number
 		prefix      : number
@@ -207,19 +190,19 @@ namespace API {
 	}
 
 	interface PrefixedBuffBriefFact extends BasicFact<'PrefixedBuffBrief'>{
-		text?  : string
 		buff   : number
 		prefix : number
 	}
 
 	// Custom facts
 	interface RangeFact extends BasicFact<'Range'> {
-		text? : string
 		min?  : number
 		max   : number
 	}
 
-	interface StunBreakFact extends BasicFact<'StunBreak'> {}
+	interface StunBreakFact extends BasicFact<'StunBreak'> {
+		text : never
+	}
 
 	type FactMap = {
 		AdjustByAttributeAndLevelHealing : AdjustByAttributeAndLevelHealingFact

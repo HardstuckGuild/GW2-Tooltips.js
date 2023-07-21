@@ -58,7 +58,7 @@ export function generateFacts(facts : API.Fact[], weaponStrength : number, conte
 	if(totalDefianceBreak > 0) {
 		const defianceWrap = newElm('div.fact',
 			newImg(ICONS.DEFIANCE_BREAK, 'iconmed'),
-			newElm('div.color-defiance-fact', `Defiance Break: ${totalDefianceBreak}`)
+			newElm('div.color-defiance-fact', `Defiance Break: ${withUpToNDigits(totalDefianceBreak, 2)}`)
 		)
 		factWraps.push(defianceWrap)
 	}
@@ -458,10 +458,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	}
 
 	let defianceBreak = 0;
-	//NOTE(Rennorb): if we have a text we aren't going to show the data. Therefore it is reasonable to assume that this is a special case like `https://wiki.guildwars2.com/wiki/Debilitating_Arc` wich removes a condition instead of applying it.
-	// In those cases we want to ignore the defiance info and also not return it.
-	//TODO(Rennorb): do this on the api side
-	if(fact.defiance_break && !('text' in fact)) {
+	if(fact.defiance_break) {
 		defianceBreak = fact.defiance_break * (buffDuration || 1000) / 1000;
 		const breakDetail = (buffDuration != undefined && buffDuration != 1000) ? ` (${fact.defiance_break}/s)` : '';
 		remainingDetail.push(newElm('span.detail.color-defiance-fact', `Defiance Break: ${defianceBreak}${breakDetail}`))
