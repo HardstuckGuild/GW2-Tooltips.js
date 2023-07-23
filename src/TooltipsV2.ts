@@ -11,7 +11,7 @@
 // The only thing this is good for is to make drawing the facts easier. Since we do quite a few calculations this swap would reduce conversions quite a bit.
 //TODO(Rennorb): Note the specialization a trait belongs to on the trait tooltip (probably instead of the slot).
 //TODO(Rennorb) @correctness: Split up incoming / outgoing effects. Mostly relevant for healing.
-//TODO(Rennorb): Gamemode splits aren't correctly processed on the api side. (script params most likely)
+//TODO(Rennorb) @correctness: Replace skills with their improved versions if traited (e.g. necro scepter 3)
 
 let tooltip : HTMLElement
 
@@ -407,28 +407,28 @@ function generateToolTip(apiObject : SupportedTTTypes, context : Context) : HTML
 			}
 		}
 
-		const splits : string[] = [];
-		let pushedBase = false;
-		for(const mode of ['Pve', 'Pvp', 'Wvw'] as GameMode[]) { //loop to keep sorting vaguely correct
-			if(baseContext.has(mode)) {
-				if(pushedBase) continue;
+		const splits = [Array.from(baseContext), ...apiObject.override_groups.map(o => o.context)]
 
-				const text = Array.from(baseContext).join('/');
-				if(baseContext.has(context.gameMode))
-					splits.push(`<span style="color: var(--gw2-tt-color-text-accent) !important;">${text}</span>`);
-				else
-					splits.push(text);
-				pushedBase = true;
+		const splits_html : string[] = [];
+		for(const mode of ['Pve', 'Pvp', 'Wvw'] as GameMode[]) { //loop to keep sorting vaguely correct
+			let split;
+			for(let i = 0; i < splits.length; i++) {
+				if(splits[i].includes(mode)) {
+					split = splits.splice(i, 1)[0];
+					break;
+				}
 			}
-			else {
-				if(mode == context.gameMode)
-					splits.push(`<span style="color: var(--gw2-tt-color-text-accent) !important;">${mode}</span>`);
-				else
-					splits.push(mode);
-			}
+
+			if(!split) continue;
+
+			const text = split.join('/');
+			if(split.includes(context.gameMode))
+				splits_html.push(`<span style="color: var(--gw2-tt-color-text-accent) !important;">${text}</span>`);
+			else
+				splits_html.push(text);
 		}
 
-		secondHeaderRow.push(newElm('tes', '( ', fromHTML(splits.join(' | ')), ' )'));
+		secondHeaderRow.push(newElm('tes', '( ', fromHTML(splits_html.join(' | ')), ' )'));
 	}
 
 	const parts : HTMLElement[] = [newElm('tet', ...headerElements)];
