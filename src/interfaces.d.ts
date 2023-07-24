@@ -56,7 +56,7 @@ namespace API {
 			| 'Pet' | `Transformation${1|2|3|4|5}`
 		prev_chain?           : number
 		next_chain?           : number
-		traited_alternatives? : { [traitId : number] : number }
+		traited_alternatives? : [number, number][]
 	}
 
 	interface ModifierDescriptionOverride {

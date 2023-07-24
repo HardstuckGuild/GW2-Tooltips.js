@@ -11,7 +11,8 @@
 // The only thing this is good for is to make drawing the facts easier. Since we do quite a few calculations this swap would reduce conversions quite a bit.
 //TODO(Rennorb): Note the specialization a trait belongs to on the trait tooltip (probably instead of the slot).
 //TODO(Rennorb) @correctness: Split up incoming / outgoing effects. Mostly relevant for healing.
-//TODO(Rennorb) @correctness: Replace skills with their improved versions if traited (e.g. necro scepter 3)
+//TODO(Rennorb) @correctness: Change the lookup to first try to figure out the palette and then go from there. this is the way to move forward as this is the future-proof way to list skills.
+//TODO(Rennorb) @correctness: implement processing for trait / skill buffs to properly show certain flip skills and chains aswell as properly do trait overrides for skills
 
 let tooltip : HTMLElement
 
@@ -570,8 +571,11 @@ export function findTraitedOverride(skill : API.Skill, context : Context) : API.
 		for(const slot of palette.slots) {
 			if(slot.traited_alternatives) {
 				for(const traitId of context.character.traits) {
-					const altId = slot.traited_alternatives[traitId];
+					//TODO(Rennorb): use buffs here
+					const altId = slot.traited_alternatives.find(([a, _]) => a == traitId)?.[1];
 					if(altId) {
+						if(altId == skill.id) return;
+
 						const replacementSkill = APICache.storage.skills.get(altId);
 						if(!replacementSkill) {
 							console.error(`[gw2-tooltips] Corrected skill #${altId} is missing in the cache.`);
