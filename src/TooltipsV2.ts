@@ -219,63 +219,6 @@ function showTooltipFor(gw2Object : HTMLElement) {
 	}
 }
 
-function inflateGenericIcon(gw2Object : HTMLElement, data : { name : string, icon? : string }) {
-	const wikiLink = newElm('a', newImg(data.icon, undefined, data.name));
-	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + GW2Text2HTML(data.name.replaceAll(/%str\d%/g, ''))
-	.replaceAll(/\[.*?\]/g, '');
-	wikiLink.target = '_blank';
-	if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(data.name);
-	gw2Object.append(wikiLink);
-}
-function inflateItem(gw2Object : HTMLElement, item : API.Item) {
-	const stackSize = +String(gw2Object.getAttribute('count')) || 1;
-	const context_ = context[+String(gw2Object.getAttribute('contextSet')) || 0];
-
-	const wikiLink = newElm('a', newImg(item.icon, undefined, item.name));
-	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + GW2Text2HTML(item.name.replaceAll(/%str\d%/g, ''))
-	.replaceAll(/\[.*?\]/g, '');
-	wikiLink.target = '_blank';
-	if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(formatItemName(item, context_, undefined, undefined, stackSize));
-	gw2Object.append(wikiLink);
-}
-function inflateSpecialization(gw2Object : HTMLElement, spec: API.Specialization) {
-	if(gw2Object.classList.contains('gw2objectembed')) {
-		//TODO(Rennorb): inlines
-	}
-	else {
-		gw2Object.style.backgroundImage = `url(${spec.background})`;
-		gw2Object.dataset.label = spec.name;
-
-		const selectedPositions = String(gw2Object.getAttribute('selected_traits')).split(',').map(i => +i).filter(i => !isNaN(i) && 0 <= i && i <= 2);
-		if(selectedPositions.length != 3) {
-			console.warn("[gw2-tooltips] [inflator] Specialization object ", gw2Object, " does not have its 'selected_traits' (properly) set. Add the attribute as `selected_traits=\"0,2,1\"` where the numbers are 0-2 indicating top, middle or bottom selection.");
-			return;
-		}
-
-		for(const [x, y] of selectedPositions.entries()) {
-			// The expected structure is:
-			// <spec>
-			//  <minor />
-			//  <wrapper><major /><major /><major /></>
-			//  <minor />
-			//  <wrapper><major /><major /><major /></>
-			//  <minor />
-			//  <wrapper><major /><major /><major /></>
-			// </>
-			const column = gw2Object.children[1 + x * 2];
-			if(!column) {
-				console.warn("[gw2-tooltips] [inflator] Cannot mark selected trait object in column #", x, " for specialization object ", gw2Object,  " because the column doesn't seem to exist. Either mark the specialization object as inline or add the missing column.");
-				continue;
-			}
-
-			for(const [i, traitEl] of Array.prototype.entries.call(column.children)) {
-				traitEl.classList.toggle('trait_unselected', i !== y);
-			}
-			//TODO(Rennorb): can probably merge trait collection into here since its basically the same code
-		}
-	}
-}
-
 //TODO(Rennorb): this is neither complete, nor reliable
 function getSlotName(skill: API.Skill) : string | undefined {
 	let skillSlot
@@ -838,173 +781,6 @@ function generateUpgradeItemGroup(item : API.ItemBase & (API.UpgradeComponentDet
 	return group;
 }
 
-//TODO(Rennorb) @cleanup: probably move this
-function inferItemUpgrades(wrappers : Iterable<Element>) {
-	const remainingInfusionsByContext = context.map(ctx => {
-		const counts : Character['upgradeCounts'] = {};
-		for(const [id, c] of Object.entries(ctx.character.upgradeCounts)) {
-			let item;
-			if((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Infusion')
-				counts[+id] = c;
-		}
-		return counts;
-	});
-	const enrichmentByContext = context.map(ctx => {
-		for(const [id, c] of Object.entries(ctx.character.upgradeCounts)) {
-			let item;
-			if((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Enrichment')
-				return id;
-		}
-	})
-
-	for(const wrapper of wrappers) {
-	if(wrapper.childElementCount < 2) return;
-		const [itemEl, ...upgradeEls] = wrapper.children;
-		if(itemEl.getAttribute('type') !== 'item') return;
-
-		const itemCtx = +String(itemEl.getAttribute('contextSet')) || 0 ;
-
-		const upgradeIds = upgradeEls.filter(u =>
-				u.getAttribute('type') === 'item' && u.getAttribute('objid')
-				&& (+String(itemEl.getAttribute('contextSet')) || 0) === itemCtx
-			)
-			.map(u => u.getAttribute('objid'));
-
-		{
-			let id, item;
-			if((id = +String(itemEl.getAttribute('objid'))) && (item = APICache.storage.items.get(id)) && 'slots' in item) {
-				for(const slot of item.slots) {
-					if(slot == 'Infusion') {
-						const remainingInfusions = remainingInfusionsByContext[itemCtx] as { [k : string] : number };
-						for(const infusionId of Object.keys(remainingInfusions)) {
-							upgradeIds.push(infusionId);
-							if(--remainingInfusions[infusionId] < 1) {
-								delete remainingInfusions[infusionId];
-							}
-							break;
-						}
-					}
-					else if(slot == 'Enrichment') {
-						const enrichment = enrichmentByContext[itemCtx];
-						if(enrichment) upgradeIds.push(enrichment);
-					}
-				}
-			}
-		}
-
-		const attrString = upgradeIds.join(',');
-		if(attrString) itemEl.setAttribute('slotted', attrString);
-	}
-}
-
-//TODO(Rennorb) @cleanup: move
-function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, error_store : Set<string>) : number {
-	const name = String(gw2Object.getAttribute('objId'));
-	let id = ({
-		blight                  : 62653,
-		bloodstone_blessed      : 34917,
-		blue_pylon_power        : 31317, //maybe wrong (vale guardian)
-		chill                   : 722,
-		quickness               : 1187,
-		chilled                 : 722,
-		fear                    : 896,
-		alacrity                : 30328,
-		protection              : 717,
-		vigor                   : 726,
-		barrier                 : 0, //TODO
-		fury                    : 725,
-		stability               : 1122,
-		stunbreak               : 0, //TODO
-		aegis                   : 743,
-		might                   : 740,
-		champion_of_the_legions : 20845, //maybe wrong (rock fest thing?)
-		compromised             : 35096,
-		crowd_favor             : 36173, //maybe wrong (marionette)
-		curse_of_frailty        : 53723, //maybe wrong (pirate fractal)
-		dark_aura               : 39978,
-		debilitated             : 0, //TODO ko
-		debilitating_void       : 0, //TODO ankah
-		defense_up              : 28482,
-		derangement             : 34965,
-		elemental_empowerment   : 62733,
-		empowering_auras        : 62939,
-		equalization_matrix     : 66586, //maybe wrong (ko)
-		exposed                 : 28778, //maybe wrong
-		expose_weakness         : 26660, //maybe wrong
-		extreme_vulnerability   : 65662,
-		fixated                 : 47434, //maybe wrong
-		//gems_big                : ,
-		//gold_gold_big           : ,
-		growing_rage_ashym      : 3362, //maybe wrong (urban battleground)
-		//h                       : ,
-		ignite                  : 16259,
-		intervention            : 35061,
-		invulnerability         : 56227,
-		necrosis                : 47414,
-		not_sticking_together   : 54378,
-		nova                    : 39193, //there is also the upgraded version with aegis
-		ooze_pheromone          : 21538,
-		photon_saturation       : 0, //TODO ah cm
-		positive_flow           : 66665,
-		power_of_the_void       : 0, //TODO xjj
-		//q                       : ,
-		reinforced_armor        : 9283,
-		relentless_fire         : 62805,
-		retaliation_ashym       : 24646, //maybe wrong
-		sentinel_retribution    : 16350,
-		shattering_ice          : 62909,
-		shell_shocked           : 33361,
-		spectral_darkness       : 31498,
-		sticking_together       : 54604,
-		synchronized_vitality   : 63840, //maybe wrong(ko)
-		unnatural_signet        : 38224,
-		use_soul_binder         : 55630,
-		void_empowerment        : 68083,
-		xeras_embrace           : 34979,
-	} as any)[name]
-
-	if(!id) {
-		//NOTE(Rennorb): these don't actually exist and need to be synthesized.
-		const hardCoded = ({
-			barrier: {
-				id: 1,
-				name: 'Barrier',
-				icon: ICONS.BARRIER,
-				description: "Creates a health barrier that takes damage prior to the health bar. Barrier disappears 5s after being applied. Applying a barrier while one is already active will add to it, but the previously-existing barrier will still disappear 5s after it was originally applied. The amount of barrier generated is based on the source's healing power, and is capped at 50% of the recipient's maximum health.",
-				description_brief: "Creates a health barrier that takes damage prior to the health bar.",
-				categories: [], palettes: [],
-			},
-			stunbreak: {
-				id: 2,
-				name: 'Stun Break',
-				description: 'Cancel control effects such as stuns.',
-				icon: ICONS.STUN_BREAK,
-				categories: [], palettes: [],
-			}
-		} as {[k : string] : API.Skill})[name];
-
-		if(hardCoded) {
-			id = hardCoded.id;
-			//TODO(Rennorb) @cleanup: could probably move this out
-			APICache.storage.skills.set(id, hardCoded);
-		}
-	}
-
-	if(id) {
-		gw2Object.setAttribute('type', 'skill');
-		gw2Object.setAttribute('objId', String(id));
-		return id;
-	}
-	else {
-		gw2Object.innerText = name;
-		gw2Object.title = `Failed to translate effect '${name}'.`;
-		gw2Object.style.cursor = "help";
-		gw2Object.classList.add('error');
-		error_store.add(name);
-		return 0;
-	}
-}
-
 function calculateConditionDuration(level : number, expertise : number) {
 	return expertise / (LUT_CRITICAL_DEFENSE[level] * (15 / LUT_CRITICAL_DEFENSE[80]));
 }
@@ -1014,7 +790,7 @@ function calculateBoonDuration(level : number, concentration : number) {
 }
 
 //TODO(Rennorb): have another look at the suffix. might still be missing in the export
-function formatItemName(item : API.Item, context : Context, statSet? : API.AttributeSet, upgradeComponent? : any, stackSize = 1) : string {
+export function formatItemName(item : API.Item, context : Context, statSet? : API.AttributeSet, upgradeComponent? : any, stackSize = 1) : string {
 	let name;
 	if(item.type == 'TraitGuide') {
 		name = item.trait;
@@ -1260,3 +1036,5 @@ import * as APIs from './API';
 import APICache from './APICache';
 import { calculateModifier, generateFact, generateFacts } from './FactsProcessor';
 import * as Collect from './Collect'; //TODO(Rennorb) @cleanup
+import { _legacy_transformEffectToSkillObject, inferItemUpgrades, inflateGenericIcon, inflateItem, inflateSpecialization } from './Inflators'
+
