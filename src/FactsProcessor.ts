@@ -461,7 +461,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	if(fact.defiance_break) {
 		defianceBreak = fact.defiance_break * (buffDuration || 1000) / 1000;
 		const breakDetail = (buffDuration != undefined && buffDuration != 1000) ? ` (${fact.defiance_break}/s)` : '';
-		remainingDetail.push(newElm('span.detail.color-defiance-fact', `Defiance Break: ${defianceBreak}${breakDetail}`))
+		remainingDetail.push(newElm('span.detail.color-defiance-fact', `Defiance Break: ${withUpToNDigits(defianceBreak, 2)}${breakDetail}`))
 	}
 
 	if(fact.requires_trait) {
