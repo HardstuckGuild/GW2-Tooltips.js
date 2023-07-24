@@ -21,11 +21,13 @@ let baseTooltip : number = 0
 let lastMouseX  : number
 let lastMouseY  : number
 
+//TODO(Rennorb) @rename
 export const context : Context[] = []; //@debug
 export let config    : Config = null!;
 
 //TODO(Rennorb) @cleanup: get rid of this
 function _constructor() {
+	//TODO(Rennorb): Validate config. there are a few places this partially happens but its hard to keep track. Should just happen in one place.
 	if(window.GW2TooltipsContext instanceof Array) {
 		for(const partialContext of window.GW2TooltipsContext)
 			context.push(createCompleteContext(partialContext))
@@ -178,6 +180,7 @@ function hookDocument(scope : ScopeElement, _unused? : any) : Promise<void[]> {
 
 		let inflator;
 		switch(key) {
+			case 'skills'         : inflator = inflateSkill;          break;
 			case 'items'          : inflator = inflateItem;           break;
 			case 'specializations': inflator = inflateSpecialization; break;
 			default               : inflator = inflateGenericIcon;    break;
@@ -199,7 +202,7 @@ function hookDocument(scope : ScopeElement, _unused? : any) : Promise<void[]> {
 function showTooltipFor(gw2Object : HTMLElement) {
 	const type = ((gw2Object.getAttribute('type') || 'skill') + 's') as `${LegacyCompat.ObjectType}s`;
 	const objId = +String(gw2Object.getAttribute('objId'))
-	const context_ = context[+String(gw2Object.getAttribute('contextSet')) || 0];
+	let   context_ = context[+String(gw2Object.getAttribute('contextSet')) || 0];
 	const stackSize = +String(gw2Object.getAttribute('count')) || undefined;
 
 	if(type == 'specializations' || type == 'effects') return; //TODO(Rennorb) @completeness: inline objs
@@ -213,6 +216,7 @@ function showTooltipFor(gw2Object : HTMLElement) {
 			tooltip.replaceChildren(generateItemTooltip(data as API.Item, context_, gw2Object, statId, stackSize));
 		}
 		else {
+			context_ = specializeContextFromInlineAttribs(context_, gw2Object);
 			tooltip.replaceChildren(...generateToolTipList(data as Exclude<typeof data, API.Item>, gw2Object, context_));
 		}
 		tooltip.style.display = ''; //empty value resets actual value to use stylesheet
@@ -500,48 +504,13 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 	const objectChain : SupportedTTTypes[] = []
 	const validPaletteTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard', 'Equipment']
 
-	// Inline overrides. Might get expanded in the future.
-	//TODO(Rennorb): @docs
-	{
-		let traitOverrides;
-		if(gw2Object.getAttribute('type') === 'skill' && (traitOverrides = gw2Object.getAttribute('with-traits'))) {
-			context = structuredClone(context);
-			const invalid : string[] = [];
-			context.character.traits = traitOverrides.split(',').map(t => {
-				const v = +t;
-				if(!v) invalid.push(t);
-				return v;
-			}).filter(t => t);
-			if(invalid.length) console.warn("[gw2-tooltips] [tooltip engine] Inline trait-override for element ", gw2Object, " has misformed overrides: ", invalid)
-		}
-	}
-
 	const addObjectsToChain = (currentObj : SupportedTTTypes) => {
 		let hasChain = false;
 		if('palettes' in currentObj) {
-			let goto_ = false;
-			for(const palette of currentObj.palettes) {
-				for(const slot of palette.slots) {
-					if(slot.traited_alternatives) {
-						for(const traitId of context.character.traits) {
-							const altId = slot.traited_alternatives[traitId];
-							if(altId) {
-								const replacementSkill = APICache.storage.skills.get(altId);
-								if(!replacementSkill) {
-									console.error(`[gw2-tooltips] [tooltip engine] Corrected skill #${altId} is missing in the cache.`);
-								}
-								else {
-									console.info(`[gw2-tooltips] [tooltip engine] Corrected skill #${currentObj.id} (${currentObj.name}) to #${replacementSkill.id} (${replacementSkill.name}) because the trait #${traitId} is active.`);
-									//TODO(Rennorb): Add indicator on the skill that its been replaced by a trait.
-									currentObj = replacementSkill;
-								}
-								goto_ = true; break;
-							}
-						}
-						if(goto_) break;
-					}
-					if(goto_) break;
-				}
+			//TODO(Rennorb): cleanup is this neccesary? Since the root element already gets replaced automatically, It would be if we have skills where some skill in the chain needs to be replaced. 
+			if(config.adjustTraitedSkillIds) {
+				const replacementSkill = findTraitedOverride(currentObj, context);
+				if(replacementSkill) currentObj = replacementSkill;
 			}
 			objectChain.push(currentObj);
 
@@ -594,6 +563,30 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 	}
 
 	return tooltipChain
+}
+
+export function findTraitedOverride(skill : API.Skill, context : Context) : API.Skill | undefined {
+	for(const palette of skill.palettes) {
+		for(const slot of palette.slots) {
+			if(slot.traited_alternatives) {
+				for(const traitId of context.character.traits) {
+					const altId = slot.traited_alternatives[traitId];
+					if(altId) {
+						const replacementSkill = APICache.storage.skills.get(altId);
+						if(!replacementSkill) {
+							console.error(`[gw2-tooltips] Corrected skill #${altId} is missing in the cache.`);
+							return undefined;
+						}
+						else {
+							console.info(`[gw2-tooltips] Corrected skill #${skill.id} (${skill.name}) to #${replacementSkill.id} (${replacementSkill.name}) because the trait #${traitId} (${APICache.storage.traits.get(traitId)?.name || '<not cached>'}) is active.`);
+							//TODO(Rennorb): Add indicator on the skill that its been replaced by a trait.
+							return replacementSkill;
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 function generateItemTooltip(item : API.Item, context : Context, target : HTMLElement, statSetId? : number, stackSize = 1) : HTMLElement {
@@ -828,6 +821,22 @@ export function formatItemName(item : API.Item, context : Context, statSet? : AP
 		.replaceAll('[null]', '')
 }
 
+//TODO(Rennorb): @docs
+export function specializeContextFromInlineAttribs(context : Context, gw2Object : HTMLElement) : Context {
+	let traitOverrides;
+	if(gw2Object.getAttribute('type') === 'skill' && (traitOverrides = gw2Object.getAttribute('with-traits'))) {
+		context = structuredClone(context);
+		const invalid : string[] = [];
+		context.character.traits = traitOverrides.split(',').map(t => {
+			const v = +t;
+			if(!v) invalid.push(t);
+			return v;
+		}).filter(t => t);
+		if(invalid.length) console.warn("[gw2-tooltips] [tooltip engine] Inline trait-override for element ", gw2Object, " has misformed overrides: ", invalid)
+	}
+	return context;
+}
+
 function formatCoins(amount : number) : HTMLElement {
 	const parts = [String(Math.floor(amount % 100)), newImg(ICONS.COIN_COPPER, 'iconsmall', '')];
 	if(amount > 99) parts.unshift(String(Math.floor((amount / 100) % 100)), newImg(ICONS.COIN_SILVER, 'iconsmall', ''));
@@ -1036,5 +1045,5 @@ import * as APIs from './API';
 import APICache from './APICache';
 import { calculateModifier, generateFact, generateFacts } from './FactsProcessor';
 import * as Collect from './Collect'; //TODO(Rennorb) @cleanup
-import { _legacy_transformEffectToSkillObject, inferItemUpgrades, inflateGenericIcon, inflateItem, inflateSpecialization } from './Inflators'
+import { _legacy_transformEffectToSkillObject, inferItemUpgrades, inflateGenericIcon, inflateItem, inflateSkill, inflateSpecialization } from './Inflators'
 

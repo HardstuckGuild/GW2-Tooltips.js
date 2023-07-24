@@ -1,10 +1,29 @@
-export function inflateGenericIcon(gw2Object : HTMLElement, data : { name : string, icon? : string }) {
+export function inflateGenericIcon(gw2Object : HTMLElement, data : { name : string, icon? : Parameters<typeof newImg>[0] }) {
 	const wikiLink = newElm('a', newImg(data.icon, undefined, data.name));
 	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + GW2Text2HTML(data.name.replaceAll(/%str\d%/g, ''))
 	.replaceAll(/\[.*?\]/g, '');
 	wikiLink.target = '_blank';
 	if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(data.name);
 	gw2Object.append(wikiLink);
+}
+
+export function inflateSkill(gw2Object : HTMLElement, skill : API.Skill) {
+	const contextSet = +String(gw2Object.getAttribute('contextSet')) || 0;
+	const context_ = specializeContextFromInlineAttribs(context[contextSet], gw2Object);
+
+	//NOTE(Rennorb): doing this here might not be the best idea, as this wil prevent us form hot swapping traits.
+	// The issue is that this is the place where the icon gets selected and inflated, so its somewhat required to change the skill before this point.
+	// Maybe this is still the best place to do this and for cases were we need hot swapping (e.g. build editor) we just have to manually re-process skills after swapping traits.
+	// Maybe we should move the original id to another attribute for savekeeping so we can revert it later on if we need to?
+	if(config.adjustTraitedSkillIds) {
+		const replacementSkill = findTraitedOverride(skill, context_);
+		if(replacementSkill) {
+			gw2Object.setAttribute('objid', String(replacementSkill.id));
+			skill = replacementSkill;
+		}
+	}
+	
+	inflateGenericIcon(gw2Object, skill);
 }
 
 export function inflateItem(gw2Object : HTMLElement, item : API.Item) {
@@ -224,4 +243,4 @@ export function inferItemUpgrades(wrappers : Iterable<Element>) {
 
 import APICache from "./APICache";
 import { GW2Text2HTML, newElm, newImg } from "./TUtilsV2";
-import { ICONS, context, formatItemName } from "./TooltipsV2";
+import { ICONS, config, context, findTraitedOverride, formatItemName, specializeContextFromInlineAttribs } from "./TooltipsV2";
