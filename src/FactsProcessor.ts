@@ -465,7 +465,8 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	}
 
 	if(fact.requires_trait) {
-		const trait_names = joinWordList(fact.requires_trait.map(id => `'<span class="color-traited-fact">${APICache.storage.traits.get(id)?.name}</span>'`))
+		//NOTE(Rennorb): If the trait is manually set on the object then we don't have it cached, so we just use theid if we don't have a name.
+		const trait_names = joinWordList(fact.requires_trait.map(id => `'<span class="color-traited-fact">${APICache.storage.traits.get(id)?.name || id}</span>'`))
 		remainingDetail.unshift(fromHTML(`<span class="detail">${fact.skip_next ? 'overridden' : 'exists'} because of trait${fact.requires_trait.length == 1 ? '' : 's'} ${trait_names}</span>`));
 	}
 
