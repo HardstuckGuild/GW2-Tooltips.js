@@ -49,7 +49,7 @@ export function withUpToNDigits(x : number, digits : number) {
 	return str;
 }
 
-//TODO(Rennorb) @cleanup
+//TODO(Rennorb) @cleanup @rename
 export function drawFractional(value: number) {
 	if (window.GW2TooltipsConfig?.preferCorrectnessOverExtraInfo) {
 		const sign = value < 0 ? '-' : '';

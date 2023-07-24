@@ -557,11 +557,51 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 	const objectChain : SupportedTTTypes[] = []
 	const validPaletteTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard', 'Equipment']
 
-	const addObjectsToChain = (currentObj : SupportedTTTypes) => {
-		objectChain.push(currentObj)
+	// Inline overrides. Might get expanded in the future.
+	//TODO(Rennorb): @docs
+	{
+		let traitOverrides;
+		if(gw2Object.getAttribute('type') === 'skill' && (traitOverrides = gw2Object.getAttribute('with-traits'))) {
+			context = structuredClone(context);
+			const invalid : string[] = [];
+			context.character.traits = traitOverrides.split(',').map(t => {
+				const v = +t;
+				if(!v) invalid.push(t);
+				return v;
+			}).filter(t => t);
+			if(invalid.length) console.warn("[gw2-tooltips] [tooltip engine] Inline trait-override for element ", gw2Object, " has misformed overrides: ", invalid)
+		}
+	}
 
+	const addObjectsToChain = (currentObj : SupportedTTTypes) => {
 		let hasChain = false;
 		if('palettes' in currentObj) {
+			let goto_ = false;
+			for(const palette of currentObj.palettes) {
+				for(const slot of palette.slots) {
+					if(slot.traited_alternatives) {
+						for(const traitId of context.character.traits) {
+							const altId = slot.traited_alternatives[traitId];
+							if(altId) {
+								const replacementSkill = APICache.storage.skills.get(altId);
+								if(!replacementSkill) {
+									console.error(`[gw2-tooltips] [tooltip engine] Corrected skill #${altId} is missing in the cache.`);
+								}
+								else {
+									console.info(`[gw2-tooltips] [tooltip engine] Corrected skill #${currentObj.id} (${currentObj.name}) to #${replacementSkill.id} (${replacementSkill.name}) because the trait #${traitId} is active.`);
+									//TODO(Rennorb): Add indicator on the skill that its been replaced by a trait.
+									currentObj = replacementSkill;
+								}
+								goto_ = true; break;
+							}
+						}
+						if(goto_) break;
+					}
+					if(goto_) break;
+				}
+			}
+			objectChain.push(currentObj);
+
 			for(const palette of currentObj.palettes) {
 				for(const slot of palette.slots) {
 					if(slot.next_chain && slot.profession !== 'None') {
@@ -574,10 +614,14 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 				}
 			}
 		}
+		else {
+			objectChain.push(currentObj)
+		}
 
-		//TODO(Rennorb): Apparently sub_skills is of very questionable correctness and seems to only be used internally.
+		//TODO(Rennorb): Apparently sub_skills (`related_skills`) is of very questionable correctness and seems to only be used internally.
 		// Using it in this way might produce unexpected results.
 		//NOTE(Rennorb): Checking for the skill chain here since it usually produces duplicated entries if one is present and the skill chain is more authoritative.
+		//NOTE(Rennorb): `related_skills` is also used for traits.
 		if(!hasChain && 'related_skills' in currentObj) {
 			for(const subSkillId of currentObj.related_skills!) {
 				const subSkillInChain = APICache.storage.skills.get(subSkillId);
@@ -591,24 +635,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 
 	addObjectsToChain(initialAPIObject)
 
-	let context_ = context;
-	// Inline overrides. Might get expanded in the future.
-	//TODO(Rennorb): @docs
-	{
-		let traitOverrides;
-		if(gw2Object.getAttribute('type') === 'skill' && (traitOverrides = gw2Object.getAttribute('with-traits'))) {
-			context_ = structuredClone(context);
-			const invalid : string[] = [];
-			context_.character.traits = traitOverrides.split(',').map(t => {
-				const v = +t;
-				if(!v) invalid.push(t);
-				return v;
-			}).filter(t => t);
-			if(invalid.length) console.warn("[gw2-tooltips] [tooltip engine] Inline trait-override for element ", gw2Object, " has misformed overrides: ", invalid)
-		}
-	}
-
-	const tooltipChain = objectChain.map(obj => generateToolTip(obj, context_));
+	const tooltipChain = objectChain.map(obj => generateToolTip(obj, context));
 	tooltip.append(...tooltipChain)
 
 	if(tooltipChain.length > 1) {
@@ -1122,6 +1149,7 @@ const DEFAULT_CONFIG : Config = {
 	autoCollectStatSources        : true,
 	autoCollectSelectedTraits     : true,
 	adjustIncorrectStatIds        : true,
+	adjustTraitedSkillIds         : true,
 	autoInferEquipmentUpgrades    : true,
 	legacyCompatibility           : true,
 	preferCorrectnessOverExtraInfo: false,

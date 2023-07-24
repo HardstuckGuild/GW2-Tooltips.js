@@ -50,12 +50,13 @@ namespace API {
 	}
 
 	interface Slot {
-		profession  : 'None' | Profession
-		slot        : `${'Main'|'Offhand'}${1|2|3|4|5}` | `Offhand${1|2}`
+		profession            : 'None' | Profession
+		slot                  : `${'Main'|'Offhand'}${1|2|3|4|5}` | `Offhand${1|2}`
 			| 'Heal' | 'Standard' | 'Elite'
 			| 'Pet' | `Transformation${1|2|3|4|5}`
-		prev_chain? : number
-		next_chain? : number
+		prev_chain?           : number
+		next_chain?           : number
+		traited_alternatives? : { [traitId : number] : number }
 	}
 
 	interface ModifierDescriptionOverride {
