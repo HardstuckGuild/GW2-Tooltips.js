@@ -474,7 +474,7 @@ export function resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { facts
 		for(const fact of override.facts) {
 			if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
 
-			if(fact.insert_before) result.facts.splice(fact.insert_before, 0, fact);
+			if(fact.insert_before !== undefined) result.facts.splice(fact.insert_before, 0, fact);
 			else result.facts.push(fact);
 		}
 	}
