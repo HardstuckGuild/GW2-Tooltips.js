@@ -570,23 +570,22 @@ export function findTraitedOverride(skill : API.Skill, context : Context) : API.
 	for(const palette of skill.palettes) {
 		for(const slot of palette.slots) {
 			if(slot.traited_alternatives) {
-				for(const traitId of context.character.traits) {
-					//TODO(Rennorb): use buffs here
-					const altId = slot.traited_alternatives.find(([a, _]) => a == traitId)?.[1];
-					if(altId) {
-						if(altId == skill.id) return;
+				//TODO(Rennorb): use buffs here
+				const pair = slot.traited_alternatives.find(([a, _]) => context.character.traits.includes(a));
+				if(!pair) return;
+				
+				const [traitId, altId] = pair;
+				if(altId == skill.id) return;
 
-						const replacementSkill = APICache.storage.skills.get(altId);
-						if(!replacementSkill) {
-							console.error(`[gw2-tooltips] Corrected skill #${altId} is missing in the cache.`);
-							return undefined;
-						}
-						else {
-							console.info(`[gw2-tooltips] Corrected skill #${skill.id} (${skill.name}) to #${replacementSkill.id} (${replacementSkill.name}) because the trait #${traitId} (${APICache.storage.traits.get(traitId)?.name || '<not cached>'}) is active.`);
-							//TODO(Rennorb): Add indicator on the skill that its been replaced by a trait.
-							return replacementSkill;
-						}
-					}
+				const replacementSkill = APICache.storage.skills.get(altId);
+				if(!replacementSkill) {
+					console.error(`[gw2-tooltips] Corrected skill #${altId} is missing in the cache.`);
+					return undefined;
+				}
+				else {
+					console.info(`[gw2-tooltips] Corrected skill #${skill.id} (${skill.name}) to #${replacementSkill.id} (${replacementSkill.name}) because the trait #${traitId} (${APICache.storage.traits.get(traitId)?.name || '<not cached>'}) is active.`);
+					//TODO(Rennorb): Add indicator on the skill that its been replaced by a trait.
+					return replacementSkill;
 				}
 			}
 		}
