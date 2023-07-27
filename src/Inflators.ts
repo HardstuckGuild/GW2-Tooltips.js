@@ -40,12 +40,14 @@ export function inflateItem(gw2Object : HTMLElement, item : API.Item) {
 
 export function inflateSpecialization(gw2Object : HTMLElement, spec: API.Specialization) {
 	if(gw2Object.classList.contains('gw2objectembed')) {
-		//TODO(Rennorb): inlines
+		inflateGenericIcon(gw2Object, spec);
 	}
 	else {
 		gw2Object.style.backgroundImage = `url(${spec.background})`;
 		gw2Object.dataset.label = spec.name;
 
+		//TODO(Rennorb) @cleanup @compat: this is kinda dumb. we could just mark the selected traits, as we need to do that anyways for css. 
+		// Issue is backwards compat so yea, might not be able to get rid of it completely.
 		const selectedPositions = String(gw2Object.getAttribute('selected_traits')).split(',').map(i => +i).filter(i => !isNaN(i) && 0 <= i && i <= 2);
 		if(selectedPositions.length != 3) {
 			console.warn("[gw2-tooltips] [inflator] Specialization object ", gw2Object, " does not have its 'selected_traits' (properly) set. Add the attribute as `selected_traits=\"0,2,1\"` where the numbers are 0-2 indicating top, middle or bottom selection.");

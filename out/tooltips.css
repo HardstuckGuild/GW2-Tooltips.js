@@ -290,7 +290,7 @@ gw2object.gw2objectembed img {
 	height: 64px;
 }
 
-gw2object[type=specialization] {
+gw2object[type=specialization]:not(.gw2objectembed) {
 	position: relative;
 	display: flex;
 	flex-flow: row nowrap;
