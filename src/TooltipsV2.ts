@@ -371,7 +371,7 @@ function generateToolTip(apiObject : SupportedTTTypes, context : Context) : HTML
 
 			const text = split.join('/');
 			if(split.includes(context.gameMode))
-				splits_html.push(`<span style="color: var(--gw2-tt-color-text-accent) !important;">${text}</span>`);
+				splits_html.push(`<span style="color: var(--gw2-tt-gw2-color-text-accent) !important;">${text}</span>`);
 			else
 				splits_html.push(text);
 		}
@@ -573,7 +573,7 @@ export function findTraitedOverride(skill : API.Skill, context : Context) : API.
 				//TODO(Rennorb): use buffs here
 				const pair = slot.traited_alternatives.find(([a, _]) => context.character.traits.includes(a));
 				if(!pair) return;
-				
+
 				const [traitId, altId] = pair;
 				if(altId == skill.id) return;
 
@@ -625,14 +625,14 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	const countPrefix = stackSize > 1 ? stackSize + ' ' : '';
 	const upgradeNameSource = slottedItems?.find(i => !['Infusion', 'Enrichment'].includes(i.subtype)) || slottedItems?.[0];
 	const name = countPrefix + formatItemName(item, context, statSet, upgradeNameSource, stackSize);
-	const parts = [newElm('tet', newImg(item.icon),  newElm('teb.color-rarity-'+item.rarity, name), newElm('div.flexbox-fill'))];
+	const parts = [newElm('tet', newImg(item.icon),  newElm('teb.gw2-color-rarity-'+item.rarity.toLowerCase(), name), newElm('div.flexbox-fill'))];
 
 	if('defense' in item && item.defense) {
 		const defense = (typeof item.defense  == "number")
 			? item.defense
 			: LUT_DEFENSE[Math.min(100, (item.defense[0] + context.character.level))] * item.defense[1];
 
-		parts.push(newElm('te', newElm('tem', 'Defense: ', newElm('span.color-stat-green', String(defense)))));
+		parts.push(newElm('te', newElm('tem', 'Defense: ', newElm('span.gw2-color-stat-green', String(defense)))));
 	}
 
 	if('power' in item) {
@@ -661,7 +661,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 			power = item.power;
 		}
 
-		parts.push(newElm('te', newElm('tem', 'Weapon Strength: ', newElm('span.color-stat-green', `${power[0]} - ${power[1]}`))));
+		parts.push(newElm('te', newElm('tem', 'Weapon Strength: ', newElm('span.gw2-color-stat-green', `${power[0]} - ${power[1]}`))));
 	}
 
 	if('tiers' in item) {
@@ -671,7 +671,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	if(statSet && 'attribute_base' in item) {
 		parts.push(...statSet.attributes.map(({attribute, base_value, scaling}) => {
 			const computedValue = Math.round(base_value + item.attribute_base! * scaling);
-			return newElm('te', newElm('tem.color-stat-green', `+${computedValue} ${attribute}`));
+			return newElm('te', newElm('tem.gw2-color-stat-green', `+${computedValue} ${attribute}`));
 		}));
 	}
 
@@ -690,7 +690,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 				const slottedItem = slottedItems!.splice(slottedItemIdx, 1)[0];
 				const group = generateUpgradeItemGroup(slottedItem, context);
 				const name = formatItemName(slottedItem, context, statSet);
-				group.prepend(newElm('tet', newImg(slottedItem.icon, 'iconsmall'),  newElm('teb.color-rarity-'+slottedItem.rarity, name), newElm('div.flexbox-fill')));
+				group.prepend(newElm('tet', newImg(slottedItem.icon, 'iconsmall'),  newElm('teb.gw2-color-rarity-'+slottedItem.rarity, name), newElm('div.flexbox-fill')));
 				return group;
 			}
 			else {
@@ -703,10 +703,10 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 
 	const metaInfo = newElm('div.group');
 	if(item.type == "Armor" || item.type == "Weapon" || item.type == "Trinket") {
-		metaInfo.append(newElm('span.color-rarity-'+item.rarity, item.rarity));
+		metaInfo.append(newElm('span.gw2-color-rarity-'+item.rarity, item.rarity));
 		if('weight' in item) metaInfo.append(newElm('span', item.weight));
 		metaInfo.append(newElm('span', `${item.type}: ${item.subtype}`));
-		if(item.type == "Weapon" && isTwoHanded(item.subtype)) metaInfo.append(newElm('span.color-rarity-Junk', `(Two-Handed)`));
+		if(item.type == "Weapon" && isTwoHanded(item.subtype)) metaInfo.append(newElm('span.gw2-color-rarity-Junk', `(Two-Handed)`));
 		if(item.required_level) metaInfo.append(newElm('span', 'Required Level: '+item.required_level));
 		if(item.description) metaInfo.append(newElm('span', fromHTML(GW2Text2HTML(item.description))));
 	}
@@ -768,7 +768,7 @@ function generateUpgradeItemGroup(item : API.ItemBase & (API.UpgradeComponentDet
 		
 		const w = newElm('te', tier_wrap);
 		if(item.subtype == "Rune") {
-			const colorClass = i < (context.character.upgradeCounts[item.id] || 0) ? '.color-stat-green' : '';
+			const colorClass = i < (context.character.upgradeCounts[item.id] || 0) ? '.gw2-color-stat-green' : '';
 			w.prepend(newElm('span'+colorClass, `(${i + 1})`));
 		}
 		group.append(w);

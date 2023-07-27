@@ -400,7 +400,7 @@ export function traitEffects(contexts : Context[]) {
 					(typeof mod.target_attribute_or_buff === 'number'
 						? (context.character.statSources[mod.target_attribute_or_buff] || (context.character.statSources[mod.target_attribute_or_buff] = []))
 						: context.character.statSources[Uncapitalize(mod.target_attribute_or_buff)]
-					).push({source: `trait '<span class="color-traited-fact">${trait.name}</span>'`, modifier: mod, count: 1});
+					).push({source: `trait '<span class="gw2-color-traited-fact">${trait.name}</span>'`, modifier: mod, count: 1});
 				}
 			};
 			if(trait.modifiers) addModifiers(trait.modifiers);

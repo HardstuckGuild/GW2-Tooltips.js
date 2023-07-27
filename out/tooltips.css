@@ -21,28 +21,39 @@
 	--gw2-tt-font-title: 'Trebuchet MS', sans-serif;
 }
 
-.color-abilitytype { color: #FFEC8CFF }
-.color-flavor { color: #9BE8E4FF }
-.color-reminder { color: #B0B0B0FF }
-.color-quest { color: #00FF00FF }
-.color-task { color: #FFC957FF }
-.color-warning { color: #ED0002FF }
-.color-event { color: #CC6633FF }
+.gw2-color-abilitytype { color: #FFEC8CFF }
+.gw2-color-flavor { color: #9BE8E4FF }
+.gw2-color-reminder { color: #B0B0B0FF }
+.gw2-color-quest { color: #00FF00FF }
+.gw2-color-task { color: #FFC957FF }
+.gw2-color-warning { color: #ED0002FF }
+.gw2-color-event { color: #CC6633FF }
 
-.color-traited-fact { color: #6699CCFF }
-.color-defiance-fact { color: #53A698FF }
+.gw2-color-traited-fact { color: #6699CCFF }
+.gw2-color-defiance-fact { color: #53A698FF }
 
-.color-rarity-Junk { color: #A9A9A9FF }
-.color-rarity-Basic { color: #FFFFFFFF }
-.color-rarity-Common { color: #4F9DFEFF }
-.color-rarity-Uncommon { color: #2DC50EFF }
-.color-rarity-Rare { color: #FFE51FFF }
-.color-rarity-Exotic { color: #FDA500FF }
-.color-rarity-Ascended { color: #FB3E8DFF }
-.color-rarity-Legendary { color: #A02EF7FF }
+/*TODO(Rennorb): get rid of this*/
+.gw2-color-rarity-Junk { color: #A9A9A9FF }
+.gw2-color-rarity-Basic { color: #FFFFFFFF }
+.gw2-color-rarity-Common { color: #4F9DFEFF }
+.gw2-color-rarity-Uncommon { color: #2DC50EFF }
+.gw2-color-rarity-Rare { color: #FFE51FFF }
+.gw2-color-rarity-Exotic { color: #FDA500FF }
+.gw2-color-rarity-Ascended { color: #FB3E8DFF }
+.gw2-color-rarity-Legendary { color: #A02EF7FF }
+
+/* backwards compat */
+.gw2-color-rarity-junk { color: #A9A9A9FF }
+.gw2-color-rarity-basic { color: #FFFFFFFF }
+.gw2-color-rarity-common { color: #4F9DFEFF }
+.gw2-color-rarity-uncommon { color: #2DC50EFF }
+.gw2-color-rarity-rare { color: #FFE51FFF }
+.gw2-color-rarity-exotic { color: #FDA500FF }
+.gw2-color-rarity-ascended { color: #FB3E8DFF }
+.gw2-color-rarity-legendary { color: #A02EF7FF }
 
 /* probably not correct */
-.color-stat-green { color: #33e87bf5 }
+.gw2-color-stat-green { color: #33e87bf5 }
 
 
 .flexbox-fill {
@@ -221,7 +232,7 @@ gw2object.gw2objectembed[count]::before {
 	position: relative;
 }
 
-gw2object:empty,
+gw2object[type]:empty,
 gw2object[type=specialization]:not(.gw2objectembed):not([data-label]) {
 	background-image: linear-gradient(to right, transparent 40%, var(--gw2-tt-color-loading) 50%, transparent 60%);
 	background-size: 100vw 100%;
@@ -259,30 +270,32 @@ gw2object.gw2objectembed img {
 }
 
 .weapon, .armor, .trinket {
-	display: inline-block;
+	--gw2-tt-item-size: 64px;
+
+	display: inline-flex;
+	align-items: center;
 	position: relative;
-	width: 64px;
-	height: 64px;
 }
 .weapon gw2object:first-of-type,
 .armor gw2object:first-of-type {
-	width: 100%;
-	height: 100%;
+	width: var(--gw2-tt-item-size);
+	height: var(--gw2-tt-item-size);
 }
 .weapon gw2object:nth-of-type(n+2),
 .armor gw2object:nth-of-type(n+2) {
 	position: absolute;
-	width: 50%;
-	height: 50%;
+	width: calc(var(--gw2-tt-item-size) / 2);
+	height: calc(var(--gw2-tt-item-size) / 2);
+	left: calc(var(--gw2-tt-item-size) / 2);
 }
 .weapon gw2object:nth-of-type(2),
 .armor gw2object:nth-of-type(2) {
 	top: 0;
-	right: 0;
 }
-.weapon gw2object:nth-of-type(3) {
-	bottom: 0;
-	right: 0;
+.weapon gw2object:nth-of-type(3) { bottom: 0; }
+
+.gw2-build-equipment-info>* {
+	display: block;
 }
 
 .skills gw2object {
@@ -350,4 +363,16 @@ gw2object[type=specialization] .trait_unselected img {
 }
 .gw2objectembed[type="specialization"] img, .trait_minor img {
   clip-path: polygon(50% 0, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%) !important;
+}
+
+
+.weapon { display: flex; }
+.weapon-set { margin-bottom: 1rem; }
+.food>*, .infusions>* {
+	display: inline-block;
+	vertical-align: middle;
+}
+.food gw2object, .infusions gw2object {
+	width: 32px;
+	height: 32px;
 }

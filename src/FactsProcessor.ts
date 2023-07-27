@@ -58,7 +58,7 @@ export function generateFacts(facts : API.Fact[], weaponStrength : number, conte
 	if(totalDefianceBreak > 0) {
 		const defianceWrap = newElm('div.fact',
 			newImg(ICONS.DEFIANCE_BREAK, 'iconmed'),
-			newElm('div.color-defiance-fact', `Defiance Break: ${withUpToNDigits(totalDefianceBreak, 2)}`)
+			newElm('div.gw2-color-defiance-fact', `Defiance Break: ${withUpToNDigits(totalDefianceBreak, 2)}`)
 		)
 		factWraps.push(defianceWrap)
 	}
@@ -454,19 +454,19 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	const [firstLine, ...remainingDetail] = factInflators[fact.type](data as any)
 	const wrapper = newElm('div.fact')
 	if(fact.requires_trait) {
-		wrapper.classList.add('color-traited-fact')
+		wrapper.classList.add('gw2-color-traited-fact')
 	}
 
 	let defianceBreak = 0;
 	if(fact.defiance_break) {
 		defianceBreak = fact.defiance_break * (buffDuration || 1000) / 1000;
 		const breakDetail = (buffDuration != undefined && buffDuration != 1000) ? ` (${fact.defiance_break}/s)` : '';
-		remainingDetail.push(newElm('span.detail.color-defiance-fact', `Defiance Break: ${withUpToNDigits(defianceBreak, 2)}${breakDetail}`))
+		remainingDetail.push(newElm('span.detail.gw2-color-defiance-fact', `Defiance Break: ${withUpToNDigits(defianceBreak, 2)}${breakDetail}`))
 	}
 
 	if(fact.requires_trait) {
 		//NOTE(Rennorb): If the trait is manually set on the object then we don't have it cached, so we just use theid if we don't have a name.
-		const trait_names = joinWordList(fact.requires_trait.map(id => `'<span class="color-traited-fact">${APICache.storage.traits.get(id)?.name || id}</span>'`))
+		const trait_names = joinWordList(fact.requires_trait.map(id => `'<span class="gw2-color-traited-fact">${APICache.storage.traits.get(id)?.name || id}</span>'`))
 		remainingDetail.unshift(fromHTML(`<span class="detail">${fact.skip_next ? 'overridden' : 'exists'} because of trait${fact.requires_trait.length == 1 ? '' : 's'} ${trait_names}</span>`));
 	}
 
