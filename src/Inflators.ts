@@ -202,9 +202,9 @@ export function inferItemUpgrades(wrappers : Iterable<Element>) {
 	})
 
 	for(const wrapper of wrappers) {
-	if(wrapper.childElementCount < 2) return;
+	if(wrapper.childElementCount < 2) continue;
 		const [itemEl, ...upgradeEls] = wrapper.children;
-		if(itemEl.getAttribute('type') !== 'item') return;
+		if(itemEl.getAttribute('type') !== 'item') continue;
 
 		const itemCtx = +String(itemEl.getAttribute('contextSet')) || 0 ;
 
