@@ -95,6 +95,10 @@ export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, er
 		stunbreak               : 0, //TODO
 		aegis                   : 743,
 		might                   : 740,
+		regeneration            : 16538,
+		immobilize              : 22501,
+		slow                    : 26766,
+		resistance              : 26980,
 		champion_of_the_legions : 20845, //maybe wrong (rock fest thing?)
 		compromised             : 35096,
 		crowd_favor             : 36173, //maybe wrong (marionette)
