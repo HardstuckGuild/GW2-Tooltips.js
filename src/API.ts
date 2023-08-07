@@ -4,6 +4,21 @@
 //TODO(Rennorb): readme
 
 export class FakeAPI implements APIImplementation {
+	hsApi    = new HSAPI('http://127.0.0.1:3000/api');
+	fallback = new GlobalObjectAPI();
+
+	async bulkRequest<T extends keyof APIResponseTypeMap>(endpoint: T, ids: number[]): Promise<APIResponseTypeMap[T][]> {
+		try {
+			return await this.hsApi.bulkRequest(endpoint, ids);
+		}
+		catch(ex) {
+			console.warn(`[gw2-tooltips] [FakeAPI] error trying to get ep '${endpoint}' from localhost, will try to use the GLOB API.\n${ex}`);
+			return await this.fallback.bulkRequest(endpoint, ids);
+		}
+	}
+}
+
+export class GlobalObjectAPI implements APIImplementation {
 	async bulkRequest<T extends keyof APIResponseTypeMap>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]> {
 		if(['specializations', 'pvp/amulets'].includes(endpoint)) {
 			const response = await fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
@@ -59,7 +74,7 @@ export class FakeAPI implements APIImplementation {
 					resolve(apiResult);
 				}
 				else {
-					console.info(`[gw2-tooltips] [FakeAPI]'${endpoint}' doesn't exist in mock data, synthesizing`);
+					console.info(`[gw2-tooltips] [GLOBAPI] '${endpoint}' doesn't exist in mock data, synthesizing`);
 					if(endpoint == 'pets') {
 						resolve(ids.map(id => ({
 							id,
@@ -77,7 +92,46 @@ export class FakeAPI implements APIImplementation {
 }
 
 export class HSAPI implements APIImplementation {
-	bulkRequest<T extends keyof APIResponseTypeMap>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]> {
-		throw new Error("Method not implemented.")
+	baseUrl : string;
+
+	public constructor(baseUrl : string = 'https://hardstuck.gg/api/v2/gw2') {
+		this.baseUrl = baseUrl;
+	}
+
+	async bulkRequest<T extends keyof APIResponseTypeMap>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]> {
+		if(['specializations', 'pvp/amulets'].includes(endpoint)) {
+			const response = await fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
+			if (endpoint == 'pvp/amulets') {
+				const modifierTranslation = {
+					BoonDuration     : "Concentration",
+					ConditionDamage  : "ConditionDmg",
+					ConditionDuration: "Expertise", 
+				} as { [k in OfficialAPI.AmuletStats]? : Exclude<API.Attributes, 'None'> }
+
+				for(const obj of response as OfficialAPI.Amulet[]) {
+					const tier : API.UpgradeComponentDetail['tiers'][0] = { modifiers: [] }
+					//hackedy hack hack
+					for(const [attribute_, adjustment] of Object.entries(obj.attributes)) {
+						const attribute = modifierTranslation[attribute_] || attribute_ as Exclude<API.Attributes, 'None'>;
+
+						tier.modifiers!.push({
+							formula       : "NoScaling",
+							base_amount   : adjustment,
+							id            : -1, //TODO unused
+							formula_param1: 0,
+							formula_param2: 0,
+							target_attribute_or_buff: attribute,
+							description   : attribute,
+							flags         : [],
+						})
+					}
+					(obj as any).tiers = [tier];
+					(obj as any).flags = ["Pvp"];
+				}
+			}
+			return response;
+		}
+
+		return fetch(`${this.baseUrl}/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
 	}
 }

@@ -13,6 +13,7 @@
 //TODO(Rennorb) @correctness: Split up incoming / outgoing effects. Mostly relevant for healing.
 //TODO(Rennorb) @correctness: Change the lookup to first try to figure out the palette and then go from there. this is the way to move forward as this is the future-proof way to list skills.
 //TODO(Rennorb) @correctness: implement processing for trait / skill buffs to properly show certain flip skills and chains aswell as properly do trait overrides for skills
+//TODO(Rennorb) @fixme: crash on pvp amulet hover
 
 let tooltip : HTMLElement
 
@@ -717,10 +718,18 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	if(!item.flags.includes('Pvp')) { //NOTE(Rennorb): pvp items (runes / sigils) don't show these
 		if(item.flags.includes('Unique')) metaInfo.append(newElm('span', 'Unique'));
 		if(item.flags.includes('AccountBound')) metaInfo.append(newElm('span', 'Account Bound'));
-		else if(item.flags.includes('SoulbindOnAcquire')) metaInfo.append(newElm('span', 'Soulbound on Acquire'));
-		//TODO(Rennorb): soulbind on use
+		if(item.flags.includes('SoulBindOnUse')) metaInfo.append(newElm('span', 'Soulbound on Use'));
+		else if(item.flags.includes('SoulBindOnAcquire')) metaInfo.append(newElm('span', 'Soulbound on Acquire'));
 	}
-	//TODO(Rennorb): salvage
+
+	if(!item.flags.includes('NoSalvage')) {
+		const salvageOptions = [item.type == 'Consumable' && item.subtype == 'Food'
+			? 'Compost'
+			: item.rarity == 'Ascended' ? 'Ascended' : 'Standard'
+		];
+		if(item.flags_ex.includes('SalvageResearch')) salvageOptions.push('Research');
+		if(salvageOptions.length) metaInfo.append(newElm('span', 'Salvage: '+salvageOptions.join(', ')));
+	}
 
 	if(item.vendor_value) {
 		let inner = ['Vendor Value: ', formatCoins(item.vendor_value * stackSize)];
