@@ -1,4 +1,6 @@
 export function inflateGenericIcon(gw2Object : HTMLElement, data : { name : string, icon? : Parameters<typeof newImg>[0] }) {
+	if(gw2Object.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
+
 	const wikiLink = newElm('a', newImg(data.icon, undefined, data.name));
 	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + GW2Text2HTML(data.name.replaceAll(/%str\d%/g, ''))
 	.replaceAll(/\[.*?\]/g, '');
@@ -27,6 +29,8 @@ export function inflateSkill(gw2Object : HTMLElement, skill : API.Skill) {
 }
 
 export function inflateItem(gw2Object : HTMLElement, item : API.Item) {
+	if(gw2Object.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
+
 	const stackSize = +String(gw2Object.getAttribute('count')) || 1;
 	const context_ = context[+String(gw2Object.getAttribute('contextSet')) || 0];
 

@@ -186,8 +186,9 @@
 }
 .tooltipWrapper .fact img {
 	width: 32px;
+	max-width: 32px;
 	height: 32px;
-	flex: 0 0 auto
+	flex: 0 0 auto;
 }
 .tooltipWrapper .fact>:nth-child(2) {
 	align-self: center;
@@ -238,6 +239,7 @@ gw2object[type=specialization]:not(.gw2objectembed):not([data-label]) {
 	background-size: 100vw 100%;
 	animation: 4s forwards infinite cubic-bezier(.46,.03,.52,.96) glint;
 }
+
 gw2object.gw2objectembed:empty {
 	min-width: 10ch;
 	vertical-align: bottom;
@@ -318,6 +320,14 @@ gw2object[type=specialization]:not(.gw2objectembed) {
 	height: var(--gw2-tt-build-spec-height);
 	max-width: calc(var(--gw2-tt-build-spec-height) * var(--gw2-tt-build-spec-aspect-ratio));
 	overflow: hidden;
+}
+
+@media screen and (min-width: 46.0625em) {
+	gw2object[type=specialization]:not(.gw2objectembed) {
+		gap: var(--hs-gw2-build-spec-gap);
+		padding-left: var(--hs-gw2-build-spec-padding);
+		width: var(--hs-gw2-build-spec-width);
+	}
 }
 
 gw2object[type=specialization] .traitwrapper {

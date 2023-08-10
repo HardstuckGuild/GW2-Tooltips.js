@@ -15,6 +15,8 @@
 //TODO(Rennorb) @correctness: implement processing for trait / skill buffs to properly show certain flip skills and chains aswell as properly do trait overrides for skills
 //TODO(Rennorb) @fixme: crash on pvp amulet hover
 
+//TODO(Rennorb): (maybe) add specific hs output command that produces files outside of the repo to preserve them inside of the parent.
+
 let tooltip : HTMLElement
 
 let cycling = false
