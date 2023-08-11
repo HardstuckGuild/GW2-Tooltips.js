@@ -94,7 +94,7 @@ export class GlobalObjectAPI implements APIImplementation {
 export class HSAPI implements APIImplementation {
 	baseUrl : string;
 
-	public constructor(baseUrl : string = 'https://api.v0.hardstuck.gg') {
+	public constructor(baseUrl : string = 'https://api-v0.hardstuck.gg') {
 		this.baseUrl = baseUrl;
 	}
 
