@@ -674,7 +674,8 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	if(statSet && 'attribute_base' in item) {
 		parts.push(...statSet.attributes.map(({attribute, base_value, scaling}) => {
 			const computedValue = Math.round(base_value + item.attribute_base! * scaling);
-			return newElm('te', newElm('tem.gw2-color-stat-green', `+${computedValue} ${attribute}`));
+			//TODO(Rennorb) @cleanup: just return correct names from the api. 
+			return newElm('te', newElm('tem.gw2-color-stat-green', `+${computedValue} ${mapLocale(attribute)}`));
 		}));
 	}
 
