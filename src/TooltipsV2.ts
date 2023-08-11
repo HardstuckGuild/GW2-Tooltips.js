@@ -374,7 +374,7 @@ function generateToolTip(apiObject : SupportedTTTypes, context : Context) : HTML
 
 			const text = split.join('/');
 			if(split.includes(context.gameMode))
-				splits_html.push(`<span style="color: var(--gw2-tt-gw2-color-text-accent) !important;">${text}</span>`);
+				splits_html.push(`<span style="color: var(--gw2-tt-color-text-accent) !important;">${text}</span>`);
 			else
 				splits_html.push(text);
 		}
