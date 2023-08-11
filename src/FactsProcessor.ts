@@ -229,7 +229,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			buff = buff || MissingBuff; // in case we didn't get the buff we wanted from the api
 			iconSlug = buff.icon || iconSlug;
 
-			const lines : string[] = [];
+			const lines : (string | Node)[] = [];
 			let valueMod;
 			[buffDuration, valueMod] = applyMods(fact.duration, buff, lines);
 
@@ -239,7 +239,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			}
 
 			const seconds = buffDuration > 0 ? `(${drawFractional(buffDuration / 1000)}s)`: '';
-			lines.unshift(`${GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
+			lines.unshift(fromHTML(`${GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`));
 
 			buffStackSize = fact.apply_count;
 			return lines;
@@ -415,8 +415,8 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			const seconds = buffDuration > 0 ? `(${drawFractional(buffDuration / 1000)}s)`: '';
 
 			const list : (string|HTMLElement)[] = [newElm('div',
-				generateBuffIcon(buff.icon, apply_count),
-				newElm('span', `${GW2Text2HTML(text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`)
+			generateBuffIcon(buff.icon, apply_count),
+				newElm('span', fromHTML(`${GW2Text2HTML(text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`))
 			)];
 			list.push(...details);
 
