@@ -269,6 +269,8 @@ gw2object.gw2objectembed img {
 .trinket gw2object {
 	width: 64px;
 	height: 64px;
+	flex: 0 0 auto;
+	align-self: start;
 }
 
 .weapon, .armor, .trinket {
@@ -282,6 +284,8 @@ gw2object.gw2objectembed img {
 .armor gw2object:first-of-type {
 	width: var(--gw2-tt-item-size);
 	height: var(--gw2-tt-item-size);
+	flex: 0 0 auto;
+	align-self: start;
 }
 .weapon gw2object:nth-of-type(n+2),
 .armor gw2object:nth-of-type(n+2) {
