@@ -177,8 +177,7 @@
 	vertical-align: bottom;
 }
 
-.tooltipWrapper .fact,
-.tooltipWrapper .fact>:nth-child(2)>:first-child {
+.tooltipWrapper .fact {
 	display: flex;
 	flex-direction: row;
 	align-items: start;

@@ -239,7 +239,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			}
 
 			const seconds = buffDuration > 0 ? `(${drawFractional(buffDuration / 1000)}s)`: '';
-			lines.unshift(fromHTML(`${GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`));
+			lines.unshift(`${GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
 
 			buffStackSize = fact.apply_count;
 			return lines;
@@ -249,7 +249,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			buff = buff || MissingBuff;
 			iconSlug = buff.icon || iconSlug;
 
-			return [`${GW2Text2HTML(fact.text).replace("%str1%", buff.name)}`];
+			return [`${GW2Text2HTML(fact.text, buff.name)}`];
 		},
 		Distance : ({fact}) => {
 			return [`${GW2Text2HTML(fact.text)}: ${Math.round(fact.distance)}`];
@@ -414,7 +414,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 			const seconds = buffDuration > 0 ? `(${drawFractional(buffDuration / 1000)}s)`: '';
 
-			const list : (string|HTMLElement)[] = [newElm('div',
+			const list : (string|HTMLElement)[] = [newElm('div.fact', // class is just for styling
 			generateBuffIcon(buff.icon, apply_count),
 				newElm('span', fromHTML(`${GW2Text2HTML(text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`))
 			)];
@@ -431,7 +431,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
 			buff = buff || MissingBuff; // in case we didn't get the buff we wanted from the api
 
-			let node = newElm('div',
+			let node = newElm('div.fact', // class is just for styling
 				newImg(buff.icon),
 				newElm('span', `${GW2Text2HTML(fact.text) || buff.name_brief || buff.name}`)
 			);
@@ -471,7 +471,10 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	}
 
 	wrapper.append(generateBuffIcon(iconSlug, buffStackSize))
-	wrapper.append(newElm('div', firstLine, ...remainingDetail.map(d => typeof d == 'string' ? newElm('span.detail', d) : d)));
+	wrapper.append(newElm('div',
+		newElm('span', typeof firstLine == 'string' && firstLine.includes('<') ? fromHTML(firstLine) : firstLine), //parsing is expensive, don't just always do it
+		...remainingDetail.map(d => typeof d == 'string' ? newElm('span.detail', d) : d))
+		);
 
 	return { wrapper, defiance_break: defianceBreak }
 }

@@ -2,8 +2,7 @@ export function inflateGenericIcon(gw2Object : HTMLElement, data : { name : stri
 	if(gw2Object.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
 
 	const wikiLink = newElm('a', newImg(data.icon, undefined, data.name));
-	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + GW2Text2HTML(data.name.replaceAll(/%str\d%/g, ''))
-	.replaceAll(/\[.*?\]/g, '');
+	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + GW2Text2HTML(data.name).replaceAll(/\[.*?\]/g, ''); //remove plural forms ([s] and similar)
 	wikiLink.target = '_blank';
 	if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(data.name);
 	gw2Object.append(wikiLink);
@@ -35,8 +34,7 @@ export function inflateItem(gw2Object : HTMLElement, item : API.Item) {
 	const context_ = context[+String(gw2Object.getAttribute('contextSet')) || 0];
 
 	const wikiLink = newElm('a', newImg(item.icon, undefined, item.name));
-	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + GW2Text2HTML(item.name.replaceAll(/%str\d%/g, ''))
-	.replaceAll(/\[.*?\]/g, '');
+	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + GW2Text2HTML(item.name).replaceAll(/\[.*?\]/g, ''); //remove plural forms ([s] and similar)
 	wikiLink.target = '_blank';
 	if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(formatItemName(item, context_, undefined, undefined, stackSize));
 	gw2Object.append(wikiLink);

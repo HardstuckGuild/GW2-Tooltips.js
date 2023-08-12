@@ -24,19 +24,20 @@ export function newImg(src? : string | number, className? : string, alt? : strin
 	return img;
 }
 
-const dummy = document.createElement('template');
 export function fromHTML(html : string) : DocumentFragment {
+	const dummy = document.createElement('template');
 	dummy.innerHTML = html;
 	return dummy.content;
 }
 
-export const GW2Text2HTML = (text? : string, tag = 'span') => text
+export const GW2Text2HTML = (text? : string, ...formatArgs : string[]) => text
 	? text
-		.replace(/<c=@(.*?)>(.*?)<\/c>/g, `<${tag} class="gw2-color-$1">$2</${tag}>`)
+		.replace(/<c=@(.*?)>(.*?)<\/c>/g, `<span class="gw2-color-$1">$2</span>`)
 		.replace(/%%/g, '%')
 		.replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')
 		.replaceAll('[null]', '')
 		.replaceAll('\n', '<br />')
+		.replaceAll(/%str\d%/g, (_, [i]) => formatArgs[+i - 1] || '')
 	: '';
 
 //TODO(Rennorb) @cleanup: we should just use consistent names.
