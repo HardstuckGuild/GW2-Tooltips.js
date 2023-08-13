@@ -30,7 +30,7 @@ export class GlobalObjectAPI implements APIImplementation {
 				} as { [k in OfficialAPI.AmuletStats]? : Exclude<API.Attributes, 'None'> }
 
 				for(const obj of response as OfficialAPI.Amulet[]) {
-					const tier : API.UpgradeComponentDetail['tiers'][0] = { modifiers: [] }
+					const tier : API.ItemUpgradeComponent['tiers'][0] = { modifiers: [] }
 					//hackedy hack hack
 					for(const [attribute_, adjustment] of Object.entries(obj.attributes)) {
 						const attribute = modifierTranslation[attribute_] || attribute_ as Exclude<API.Attributes, 'None'>;
@@ -108,8 +108,9 @@ export class HSAPI implements APIImplementation {
 					ConditionDuration: "Expertise", 
 				} as { [k in OfficialAPI.AmuletStats]? : Exclude<API.Attributes, 'None'> }
 
+				const transformed : API.ItemAmulet[] = [];
 				for(const obj of response as OfficialAPI.Amulet[]) {
-					const tier : API.UpgradeComponentDetail['tiers'][0] = { modifiers: [] }
+					const tier : API.ItemUpgradeComponent['tiers'][0] = { modifiers: [] }
 					//hackedy hack hack
 					for(const [attribute_, adjustment] of Object.entries(obj.attributes)) {
 						const attribute = modifierTranslation[attribute_] || attribute_ as Exclude<API.Attributes, 'None'>;
@@ -125,10 +126,23 @@ export class HSAPI implements APIImplementation {
 							flags         : [],
 						})
 					}
-					(obj as any).rarity = 'Exotic';
-					(obj as any).tiers = [tier];
-					(obj as any).flags = ["Pvp"];
+
+					transformed.push({
+						id            : obj.id,
+						type          : "Trinket",
+						subtype       : "Amulet",
+						name          : obj.name,
+						icon          : obj.icon,
+						rarity        : "Ascended",
+						flags         : ['Pvp'],
+						flags_ex      : [],
+						tiers         : [tier],
+						level         : 82,
+						required_level: 2,
+						vendor_value  : 0,
+					});
 				}
+				return transformed as APIResponseTypeMap[T][];
 			}
 			return response;
 		}

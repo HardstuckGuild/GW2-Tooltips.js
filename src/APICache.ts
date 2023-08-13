@@ -4,7 +4,7 @@ export default class APICache {
 		items          : new Map<number, API.Item>(),
 		traits         : new Map<number, API.Trait>(),
 		pets           : new Map<number, API.Pet>(),
-		'pvp/amulets'  : new Map<number, API.Amulet>(),
+		'pvp/amulets'  : new Map<number, API.ItemAmulet>(),
 		specializations: new Map<number, API.Specialization>(),
 		itemstats      : new Map<number, API.AttributeSet>(),
 	}

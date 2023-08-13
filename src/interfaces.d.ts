@@ -260,7 +260,7 @@ namespace API {
 		facts?          : Fact[]
 	}
 
-	type Item = ItemDetail & ItemBase
+	type Item = (ItemBase & ItemDetail) | ItemAmulet | ItemUpgradeComponent | ItemConsumable
 
 	type ItemBase = {
 		id             : number
@@ -306,9 +306,16 @@ namespace API {
 	} | {
 		type  : 'TraitGuide'
 		trait : 'todo'
-	} | ConsumableDetail | UpgradeComponentDetail
+	}
 
-	type ConsumableDetail = {
+	type ItemAmulet = ItemBase & {
+		type    : 'Trinket'
+		subtype : 'Amulet'
+		tiers   : ItemUpgradeComponent['tiers'] //TODO(Rennorb) @cleanup: hack for now to render stats. the stats are not the usual stat sets.
+		attribute_set? : undefined //TODO(Rennorb) @cleanup
+	}
+
+	type ItemConsumable = ItemBase & {
 		type    : 'Consumable'
 		subtype : 'AppearanceChange' | 'Booze' | 'ContractNpc' | 'Food' | 'Generic' | 'Halloween' | 'Immediate' | 'Megaphone' | 'TeleportToFriend' | 'Transmutation' | 'Unlock' | 'RandomUnlock' | 'UpgradeRemoval' | 'Utility' | 'MountRandomUnlock' | 'Currency'
 		tiers   : {
@@ -318,7 +325,7 @@ namespace API {
 		}[]
 	}
 
-	type UpgradeComponentDetail = {
+	type ItemUpgradeComponent = ItemBase & {
 		type    : 'UpgradeComponent'
 		subtype : 'Rune' | 'Sigil' | 'Gem' | 'Infusion' | 'Enrichment'
 		tiers   : {
@@ -343,15 +350,6 @@ namespace API {
 		icon : string
 		name : string
 		//TODO
-	}
-
-	interface Amulet {
-		id    : number
-		icon  : string
-		name  : string
-		//TODO @cleanup
-		tiers : [UpgradeComponentDetail['tiers'][0]]
-		flags : ItemFlag[]
 	}
 
 	interface AttributeSet {
@@ -390,7 +388,7 @@ type APIResponseTypeMap = {
 	items          : API.Item;
 	specializations: API.Specialization;
 	pets           : API.Pet;
-	'pvp/amulets'  : API.Amulet;
+	'pvp/amulets'  : API.ItemAmulet;
 	itemstats      : API.AttributeSet;
 }
 

@@ -618,11 +618,11 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 		}
 	}
 
-	let slottedItems : (API.ItemBase & API.UpgradeComponentDetail)[] | undefined;
+	let slottedItems : (API.ItemBase & API.ItemUpgradeComponent)[] | undefined;
 	if('slots' in item) {
 		slottedItems = target.getAttribute('slotted')?.split(',')
 			.map(id => APICache.storage.items.get(+String(id) || 0))
-			.filter(i => i && 'subtype' in i) as (API.ItemBase & API.UpgradeComponentDetail)[];
+			.filter(i => i && 'subtype' in i) as (API.ItemBase & API.ItemUpgradeComponent)[];
 	}
 
 	const countPrefix = stackSize > 1 ? stackSize + ' ' : '';
@@ -748,7 +748,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	return tooltip;
 }
 
-function generateUpgradeItemGroup(item : API.ItemBase & (API.UpgradeComponentDetail | API.ConsumableDetail), context : Context) : HTMLElement {
+function generateUpgradeItemGroup(item : API.ItemUpgradeComponent | API.ItemConsumable | API.ItemAmulet, context : Context) : HTMLElement {
 	const group = newElm('div.group');
 	for(const [i, tier] of item.tiers.entries()) {
 		let tier_wrap = newElm('te');
@@ -1006,7 +1006,7 @@ export const ICONS = {
 	STUN_BREAK      : 156654,
 }
 
-type SupportedTTTypes = API.Skill | API.Trait | API.Amulet; //TODO(Rennorb) @cleanup: once its finished
+type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet; //TODO(Rennorb) @cleanup: once its finished
 
 
 _constructor();

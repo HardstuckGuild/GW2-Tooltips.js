@@ -122,7 +122,7 @@ function _statSources(contextIndex : number, targetContext : Context, elements :
 		if(!(id = +String(element.getAttribute('objid')))) continue;
 
 		let amountToAdd = 1;
-		let tiersToProcess, item : API.Item | API.Amulet | undefined;
+		let tiersToProcess, item : API.Item | undefined;
 		if(type == 'item') {
 			item = APICache.storage.items.get(id);
 			if(!item || !('subtype' in item)) continue;
