@@ -125,6 +125,7 @@ export class HSAPI implements APIImplementation {
 							flags         : [],
 						})
 					}
+					(obj as any).rarity = 'Exotic';
 					(obj as any).tiers = [tier];
 					(obj as any).flags = ["Pvp"];
 				}
