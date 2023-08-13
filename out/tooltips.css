@@ -30,7 +30,7 @@
 .gw2-color-event { color: #CC6633FF }
 
 .gw2-color-traited-fact { color: #6699CCFF }
-.gw2-color-defiance-fact { color: #53A698FF }
+.gw2-color-defiance-fact { color: #53A698FF !important }
 
 /*TODO(Rennorb): get rid of this*/
 .gw2-color-rarity-Junk { color: #A9A9A9FF }
