@@ -6,7 +6,7 @@
 declare interface Window {
 	GW2TooltipsContext : PartialContext[] | PartialContext | undefined;
 	GW2TooltipsConfig  : Config | undefined;
-	gw2tooltips        : GW2TooltipsV2
+	GW2TooltipsV2      : GW2TooltipsV2
 }
 
 type PartialContext = PartialR<Context>

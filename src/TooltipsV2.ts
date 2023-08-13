@@ -133,7 +133,7 @@ function positionTooltip() {
 	tooltip.style.transform = `translate(${tooltipXpos}px, ${tooltipYpos}px)`;
 }
 
-function hookDocument(scope : ScopeElement, _unused? : any) : Promise<void[]> {
+export function hookDocument(scope : ScopeElement, _unused? : any) : Promise<void[]> {
 	//NOTE(Rennorb): need to use an array since there might be multiple occurrences of the same id in a given scope
 	const objectsToGet : ObjectsToFetch = {
 		skills         : new Map<number, HTMLElement[] | undefined>(),
