@@ -18,10 +18,9 @@
 //TODO(Rennorb): (maybe) add specific hs output command that produces files outside of the repo to preserve them inside of the parent.
 
 let tooltip : HTMLElement
+let lastTooltipTarget : HTMLElement | undefined
 
-let cycling = false
 let cyclePos    : number = 0
-let baseTooltip : number = 0
 let lastMouseX  : number
 let lastMouseY  : number
 
@@ -100,6 +99,24 @@ function _constructor() {
 		touch = event.touches[0];
 	})
 	window.addEventListener('touchmove', scrollHandler, passive)
+
+	//TODO(Rennorb) @ui
+	window.addEventListener('keydown', e => {
+		if(e.ctrlKey && e.altKey) {
+			if(e.key == 'd') {
+				e.preventDefault();
+				config.showFactComputationDetail = !config.showFactComputationDetail;
+				console.log(`[gw2-tooltips] [cfg] showFactComputationDetail is now ${config.showFactComputationDetail}`);
+				if(lastTooltipTarget && tooltip.style.display != 'none') showTooltipFor(lastTooltipTarget);
+			}
+			else if(e.key == 't') {
+				e.preventDefault();
+				config.showPreciseAbilityTimings = !config.showPreciseAbilityTimings;
+				console.log(`[gw2-tooltips] [cfg] showPreciseAbilityTimings is now ${config.showPreciseAbilityTimings}`);
+				if(lastTooltipTarget && tooltip.style.display != 'none') showTooltipFor(lastTooltipTarget);
+			}
+		}
+	});
 }
 
 function displayCorrectChainTooltip(tooltips: HTMLElement[], tooltipIndex: number) {
@@ -212,6 +229,8 @@ function showTooltipFor(gw2Object : HTMLElement) {
 	if(type == 'specializations' || type == 'effects') return; //TODO(Rennorb) @completeness: inline objs
 	if(type == 'pets') return; //TODO(Rennorb) @completeness
 
+	lastTooltipTarget = gw2Object;
+
 	const data = APICache.storage[type].get(objId);
 	if(data) {
 		cyclePos = 0;
@@ -293,7 +312,7 @@ function generateToolTip(apiObject : SupportedTTTypes, context : Context) : HTML
 	}
 
 	if(currentContextInformation.activation) {
-		const value = drawFractional(currentContextInformation.activation / 1000);
+		const value = drawFractional(currentContextInformation.activation / 1000, config);
 		if (value != '0') { //in case we rounded down a fractional value just above 0
 			headerElements.push(newElm('ter',
 				value,
@@ -325,7 +344,7 @@ function generateToolTip(apiObject : SupportedTTTypes, context : Context) : HTML
 	}
 
 	if(currentContextInformation.recharge) {
-		const value = drawFractional(currentContextInformation.recharge / 1000);
+		const value = drawFractional(currentContextInformation.recharge / 1000, config);
 		if (value != '0') {
 			headerElements.push(newElm('ter',
 				value,
@@ -952,7 +971,8 @@ const DEFAULT_CONFIG : Config = {
 	adjustTraitedSkillIds         : true,
 	autoInferEquipmentUpgrades    : true,
 	legacyCompatibility           : true,
-	preferCorrectnessOverExtraInfo: false,
+	showPreciseAbilityTimings     : false,
+	showFactComputationDetail     : false,
 }
 
 const LUT_DEFENSE = [

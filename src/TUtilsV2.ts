@@ -51,8 +51,8 @@ export function withUpToNDigits(x : number, digits : number) {
 }
 
 //TODO(Rennorb) @cleanup @rename
-export function drawFractional(value: number) {
-	if (window.GW2TooltipsConfig?.preferCorrectnessOverExtraInfo) {
+export function drawFractional(value : number, config : Config) {
+	if (!config.showPreciseAbilityTimings) {
 		const sign = value < 0 ? '-' : '';
 		value = Math.abs(value);
 		const index = (Math.min(Math.round((value % 1) * 4), 4));

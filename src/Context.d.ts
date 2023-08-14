@@ -68,7 +68,8 @@ interface Config {
 	adjustIncorrectStatIds         : bool
 	adjustTraitedSkillIds          : bool
 	legacyCompatibility            : bool
-	preferCorrectnessOverExtraInfo : bool
+	showPreciseAbilityTimings      : bool
+	showFactComputationDetail      : bool
 
 	apiImpl?                       : (apis : any) => APIImplementation
 }
