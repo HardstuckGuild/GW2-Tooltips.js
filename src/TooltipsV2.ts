@@ -107,13 +107,19 @@ function _constructor() {
 				e.preventDefault();
 				config.showFactComputationDetail = !config.showFactComputationDetail;
 				console.log(`[gw2-tooltips] [cfg] showFactComputationDetail is now ${config.showFactComputationDetail}`);
-				if(lastTooltipTarget && tooltip.style.display != 'none') showTooltipFor(lastTooltipTarget);
+				if(lastTooltipTarget && tooltip.style.display != 'none') {
+					showTooltipFor(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
+					positionTooltip();
+				}
 			}
 			else if(e.key == 't') {
 				e.preventDefault();
 				config.showPreciseAbilityTimings = !config.showPreciseAbilityTimings;
 				console.log(`[gw2-tooltips] [cfg] showPreciseAbilityTimings is now ${config.showPreciseAbilityTimings}`);
-				if(lastTooltipTarget && tooltip.style.display != 'none') showTooltipFor(lastTooltipTarget);
+				if(lastTooltipTarget && tooltip.style.display != 'none') {
+					showTooltipFor(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
+					positionTooltip();
+				}
 			}
 		}
 	});
@@ -220,7 +226,7 @@ export function hookDocument(scope : ScopeElement, _unused? : any) : Promise<voi
 	}))
 }
 
-function showTooltipFor(gw2Object : HTMLElement) {
+function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 	const type = ((gw2Object.getAttribute('type') || 'skill') + 's') as `${LegacyCompat.ObjectType}s`;
 	const objId = +String(gw2Object.getAttribute('objId'))
 	let   context_ = context[+String(gw2Object.getAttribute('contextSet')) || 0];
@@ -233,7 +239,7 @@ function showTooltipFor(gw2Object : HTMLElement) {
 
 	const data = APICache.storage[type].get(objId);
 	if(data) {
-		cyclePos = 0;
+		cyclePos = visibleIndex;
 		if(type == 'items' || type == "pvp/amulets") {
 			const statId = +String(gw2Object.getAttribute('stats')) || undefined;
 			tooltip.replaceChildren(generateItemTooltip(data as API.Item, context_, gw2Object, statId, stackSize));
