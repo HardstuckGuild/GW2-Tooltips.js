@@ -133,12 +133,12 @@ export class HSAPI implements APIImplementation {
 						subtype       : "Amulet",
 						name          : obj.name,
 						icon          : obj.icon,
-						rarity        : "Ascended",
-						flags         : ['Pvp'],
+						flags         : ['Pvp', 'NoSalvage'],
 						flags_ex      : [],
 						tiers         : [tier],
+						rarity        : "Exotic",
 						level         : 82,
-						required_level: 2,
+						required_level: 0,
 						vendor_value  : 0,
 					});
 				}

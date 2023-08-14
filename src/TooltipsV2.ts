@@ -707,16 +707,16 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 
 	const metaInfo = newElm('div.group');
 	if(item.type == "Armor" || item.type == "Weapon" || item.type == "Trinket") {
-		metaInfo.append(newElm('span.gw2-color-rarity-'+item.rarity, item.rarity));
-		if('weight' in item) metaInfo.append(newElm('span', item.weight));
-		metaInfo.append(newElm('span', `${item.type}: ${item.subtype}`));
-		if(item.type == "Weapon" && isTwoHanded(item.subtype)) metaInfo.append(newElm('span.gw2-color-rarity-Junk', `(Two-Handed)`));
-		if(item.required_level) metaInfo.append(newElm('span', 'Required Level: '+item.required_level));
-		if(item.description) metaInfo.append(newElm('span', fromHTML(GW2Text2HTML(item.description))));
+		//NOTE(Rennorb): PvP amulets only show the stats, they aren't real 'items'.
+		if(item.subtype != 'Amulet' || !item.flags.includes('Pvp')) {
+			metaInfo.append(newElm('span.gw2-color-rarity-'+item.rarity, item.rarity));
+			if('weight' in item) metaInfo.append(newElm('span', item.weight));
+			metaInfo.append(newElm('span', `${item.type}: ${item.subtype}`));
+			if(item.type == "Weapon" && isTwoHanded(item.subtype)) metaInfo.append(newElm('span.gw2-color-rarity-Junk', `(Two-Handed)`));
+			if(item.required_level) metaInfo.append(newElm('span', 'Required Level: '+item.required_level));
+		}
 	}
-	else {
-		if(item.description) metaInfo.append(newElm('span', fromHTML(GW2Text2HTML(item.description))));
-	}
+	if(item.description) metaInfo.append(newElm('span', fromHTML(GW2Text2HTML(item.description))));
 
 	if(!item.flags.includes('Pvp')) { //NOTE(Rennorb): pvp items (runes / sigils) don't show these
 		if(item.flags.includes('Unique')) metaInfo.append(newElm('span', 'Unique'));
