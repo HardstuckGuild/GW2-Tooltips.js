@@ -4,7 +4,11 @@ export function inflateGenericIcon(gw2Object : HTMLElement, data : { name : stri
 	const wikiLink = newElm('a', newImg(data.icon, undefined, data.name));
 	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + GW2Text2HTML(data.name).replaceAll(/\[.*?\]/g, ''); //remove plural forms ([s] and similar)
 	wikiLink.target = '_blank';
-	if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(data.name);
+	if(gw2Object.classList.contains('gw2objectembed') && !gw2Object.classList.contains('icononly')) {
+		//TODO(Rennorb) @correctness: this should probably take into account the plural form
+		const cleanName = GW2Text2HTML(data.name).replaceAll(/\[.*?\]/g, ''); //remove plural forms ([s] and similar)
+		wikiLink.append(cleanName);
+	}
 	gw2Object.append(wikiLink);
 }
 
