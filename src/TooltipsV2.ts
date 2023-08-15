@@ -259,44 +259,40 @@ function getSlotName(skill: API.Skill) : string | undefined {
 		for(const slot of palette.slots) {
 			switch (palette.type) {
 				case 'Equipment':
+				case 'Bundle':
 					//NOTE(Rennorb): mech skills are part pet part equipment skills...
 					//TODO(Rennorb): Figure out a good way to get the actual slot name for that. Also look at actual pets.
-					if(palette.weapon_type !== 'None') {
+					if(palette.weapon_type !== 'None' || palette.type == 'Bundle') {
 						//TODO(Rennorb) @cleanup: move this to the api side
-						skillSlot = slot.slot.replace(/(Offhand|Main)(\d)/, (_, __, digit) => {
-							if(
-								['Greatsword', 'Hammer', 'BowLong', 'Rifle', 'BowShort', 'Staff'].includes(palette.weapon_type) &&
-								['Offhand1', 'Offhand2'].includes(slot.slot)
-							) {
+						skillSlot = slot.slot.replace(/(Offhand|Main)(\d)/, (_, hand, digit) => {
+							if(hand == 'Offhand') {
 								digit = digit === '1' ? '4' : '5'
 							}
 							return `${mapLocale(palette.weapon_type)} ${digit}`
 						});
 					}
 					break
+
 				case 'Standard':
 					if(slot.slot === 'Standard') {
 						skillSlot = 'Utility'
 					}
 					break
+
 				case 'Heal':
-					skillSlot = 'Heal'
-					break
-				case 'Bundle':
-					skillSlot = slot.slot.replace(/(Offhand|Main)(\d)/, (_, __, digit: string) => `Weapon ${digit}`)
-					break
 				case 'Toolbelt':
-					skillSlot = 'Toolbelt'
-					break
 				case 'Elite':
-					skillSlot = 'Elite'
+						skillSlot = palette.type;
 					break
-				case 'Pet':
+
+					case 'Pet':
 				case 'Profession':
 					skillSlot = slot.slot
 					break;
+
 				case 'Monster':
 					break;
+
 				default:
 					console.error(`[gw2-tooltips] [tooltip engine] unknown palette type '${palette.type}' for skill '${skill.name}'`)
 			}
