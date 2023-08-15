@@ -39,7 +39,6 @@ To archive all of the functionality we use our own proprietary API as opposed to
 				expertise      : 0,
 				concentration  : 0,
 				healing        : 0,
-				critDamage     : 0,
 			},
 			statSources: {
 				power         : StatSource[] = [] // StatSource : {
@@ -51,7 +50,6 @@ To archive all of the functionality we use our own proprietary API as opposed to
 				expertise     : StatSource[] = []
 				concentration : StatSource[] = []
 				healing       : StatSource[] = []
-				critDamage    : StatSource[] = []
 			},
 			runeCounts : { [item_id : number] : number } = {},
 		},

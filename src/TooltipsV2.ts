@@ -928,7 +928,6 @@ export const DEFAULT_CONTEXT : Context = {
 			expertise      : 0,
 			concentration  : 0,
 			healing        : 0,
-			critDamage     : 0, //TODO(Rennorb) ? ferocity and crit damage?
 			agonyResistance: 0,
 		},
 		statSources: {
@@ -941,7 +940,6 @@ export const DEFAULT_CONTEXT : Context = {
 			expertise      : [],
 			concentration  : [],
 			healing        : [],
-			critDamage     : [],
 			agonyResistance: [],
 			damage         : [],
 			lifeForce      : [],

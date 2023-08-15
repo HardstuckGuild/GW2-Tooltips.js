@@ -43,7 +43,6 @@ interface Stats {
 	expertise       : number
 	concentration   : number
 	healing         : number
-	critDamage      : number
 	agonyResistance : number
 }
 

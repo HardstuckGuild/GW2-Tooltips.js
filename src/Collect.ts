@@ -104,7 +104,6 @@ function _statSources(contextIndex : number, targetContext : Context, elements :
 		expertise      : [],
 		concentration  : [],
 		healing        : [],
-		critDamage     : [],
 		agonyResistance: [],
 		damage         : [],
 		lifeForce      : [],

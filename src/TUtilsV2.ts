@@ -37,7 +37,7 @@ export const GW2Text2HTML = (text? : string, ...formatArgs : string[]) => text
 		.replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')
 		.replaceAll('[null]', '')
 		.replaceAll('\n', '<br />')
-		.replaceAll(/%str\d%/g, (_, [i]) => formatArgs[+i - 1] || '')
+		.replaceAll(/%str\d%/g, (_, i) => formatArgs[+i - 1] || '')
 	: '';
 
 //TODO(Rennorb) @cleanup: we should just use consistent names.
@@ -93,7 +93,6 @@ export function drawFractional(value : number, config : Config) {
 export function mapLocale(type : API.Attributes | API.ComboFinisherType | API.ComboFieldType | API.Palette['weapon_type']) {
 	switch (type) {
 		case 'ConditionDmg': return 'Condition Damage';
-		case 'CritDamage'  : return 'Ferocity';
 		case 'Healing'     : return 'Healing Power';
 		case 'BowLong'     : return 'Longbow';
 		case 'BowShort'    : return 'Shortbow';
