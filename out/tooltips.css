@@ -389,3 +389,6 @@ gw2object[type=specialization] .trait_unselected img {
 	width: 32px;
 	height: 32px;
 }
+.infusions gw2object[count]::before {
+	content: none;
+}
