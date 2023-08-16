@@ -67,12 +67,12 @@ function _constructor() {
 		if(node.classList.contains('cycler') && tooltip.style.display != 'none') {
 			event.preventDefault()
 
-			const subTooltips = Array.from(tooltip.children as HTMLCollectionOf<HTMLElement>);
 			do {
 				cyclePos = (cyclePos + 1) % tooltip.childElementCount
-			} while(subTooltips[cyclePos].classList.contains('not-collapsable'))
-			activateSubTooltip(subTooltips, cyclePos)
-			positionTooltip()
+			} while(tooltip.children[cyclePos].classList.contains('not-collapsable'))
+			activateSubTooltip(cyclePos)
+			scrollSubTooltipIntoView(cyclePos, true)
+			positionTooltip(true)
 		}
 		if(isMobile && tooltip.style.display == 'none') {
 			event.preventDefault()
@@ -126,36 +126,52 @@ function _constructor() {
 	});
 }
 
-function activateSubTooltip(tooltips: HTMLElement[], tooltipIndex: number) {
+function activateSubTooltip(tooltipIndex : number) {
+	const tooltips = tooltip.children as HTMLCollectionOf<HTMLLegendElement>;
+
 	for(let index = 0; index < tooltips.length; index++) {
 		if(!tooltips[index].classList.contains('not-collapsable'))
 			tooltips[index].classList.toggle('active', index === tooltipIndex);
 	}
 }
 
-//TODO(Rennorb); If the tooltip doesn't fit on screen its probably because we have may and they don't fit even if collapsed.
+function scrollSubTooltipIntoView(tooltipIndex : number, animate = false) {
+	const tooltips = (tooltip.children as HTMLCollectionOf<HTMLLegendElement>)[tooltipIndex];
+	tooltip.style.transition = animate ? 'transform 0.25s' : '';
+	tooltip.style.transform = `translate(0, -${tooltips.offsetTop + tooltips.offsetHeight}px)`;
+}
+
+//TODO(Rennorb); If the tooltip doesn't fit on screen its probably because we have many and they don't fit even if collapsed.
 // In that case we want to fit the currently active one on screen instead of the whole list.
-function positionTooltip() {
+function positionTooltip(animate = false) {
 	const wpadminbar = document.getElementById('wpadminbar'); //TODO(Rennorb) @hardcoded: this accounts for the wordpress bar that might exist.
 	const topBarHeight = wpadminbar ? wpadminbar.offsetHeight : 0;
 
-	//using actual css margins in css is pain
+	//using actual css margins in js is pain
 	const marginX = 22;
 	const marginY = 13;
 	//some space form the cursor
 	const offsetX = 6;
 	const offsetY = 6;
 
+	const currentSubTooltip = tooltip.children[cyclePos] as HTMLElement;
+
 	let tooltipXpos = lastMouseX + offsetX;
-	if(tooltipXpos + tooltip.offsetWidth + marginX > document.documentElement.clientWidth) {
+	if(tooltipXpos + tooltip.offsetWidth > document.documentElement.clientWidth - marginX) {
 		tooltipXpos = document.documentElement.clientWidth - (tooltip.offsetWidth + marginX);
 	}
-	let tooltipYpos = lastMouseY - offsetY - tooltip.offsetHeight;
-	if(tooltipYpos - marginY < document.documentElement.scrollTop) {
-		tooltipYpos = topBarHeight + marginY + document.documentElement.scrollTop;
+
+	let tooltipYpos = lastMouseY - offsetY;
+	if(tooltipYpos - currentSubTooltip.offsetHeight < document.documentElement.scrollTop + topBarHeight + marginY) {
+		if(animate) {
+			tooltip.style.transition += ', top 0.25s';
+			setTimeout(() => tooltip.style.transition = '', 250);
+		}
+		tooltipYpos = document.documentElement.scrollTop + topBarHeight + marginY + currentSubTooltip.offsetHeight;
 	}
 
-	tooltip.style.transform = `translate(${tooltipXpos}px, ${tooltipYpos}px)`;
+	tooltip.style.left = `${tooltipXpos}px`;
+	tooltip.style.top  = `${tooltipYpos}px`;
 }
 
 export function hookDocument(scope : ScopeElement, _unused? : any) : Promise<void[]> {
@@ -195,7 +211,10 @@ export function hookDocument(scope : ScopeElement, _unused? : any) : Promise<voi
 		else objectsToGet[type as keyof typeof objectsToGet].set(objId, [gw2Object])
 
 		gw2Object.addEventListener('mouseenter', (e) => showTooltipFor(e.target as HTMLElement));
-		gw2Object.addEventListener('mouseleave', () => tooltip.style.display = 'none');
+		gw2Object.addEventListener('mouseleave', () => {
+			tooltip.style.display   = 'none';
+			tooltip.style.transform = '';
+		});
 	}
 
 	if(_legacy_effectErrorStore.size) {
@@ -240,6 +259,7 @@ function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 
 	const data = APICache.storage[type].get(objId);
 	if(data) {
+		//TODO(Rennorb): should we actually reset this every time?
 		cyclePos = visibleIndex;
 		if(type == 'items' || type == "pvp/amulets") {
 			const statId = +String(gw2Object.getAttribute('stats')) || undefined;
@@ -249,7 +269,18 @@ function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 			context_ = specializeContextFromInlineAttribs(context_, gw2Object);
 			tooltip.replaceChildren(...generateToolTipList(data as Exclude<typeof data, API.Item>, gw2Object, context_));
 		}
+
 		tooltip.style.display = ''; //empty value resets actual value to use stylesheet
+		if(Array.from(tooltip.children).filter(tt => !tt.classList.contains('not-collapsable')).length > 1) {
+			gw2Object.classList.add('cycler')
+			gw2Object.title = 'Right-click to cycle through tooltips'
+	
+			activateSubTooltip(cyclePos)
+		}
+		else {
+			for(const tt of tooltip.children) tt.classList.add('active');
+		}
+		scrollSubTooltipIntoView(cyclePos)
 	}
 }
 
@@ -585,20 +616,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 	addObjectsToChain(initialAPIObject)
 
 	const tooltipChain = objectChain.map(({obj, notCollapsable}) => generateToolTip(obj, notCollapsable, context));
-	tooltip.append(...tooltipChain)
-
-	if(tooltipChain.filter(tt => !tt.classList.contains('not-collapsable')).length > 1) {
-		gw2Object.classList.add('cycler')
-		gw2Object.title = 'Right-click to cycle through tooltips'
-
-		// cyclePos is already set to 0 if this is a new one
-		//TODO(Rennorb): should we actually reset this every time?
-		activateSubTooltip(tooltipChain, cyclePos)
-	}
-	else {
-		for(const tt of tooltipChain) tt.classList.add('active');
-	}
-
+	tooltip.append(...tooltipChain);
 	return tooltipChain
 }
 
