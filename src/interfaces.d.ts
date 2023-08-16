@@ -15,6 +15,21 @@ namespace OfficialAPI {
 		icon       : string
 		attributes : { [k in AmuletStats] : number }
 	}
+
+	type Specialization = {
+		id         : number
+		name       : string
+		icon       : string
+		background : string
+	}
+
+	type Pet = {
+		id          : number
+		name        : string
+		icon        : string
+		description : string
+		skills      : { id : number }[]
+	}
 }
 
 namespace API {
@@ -337,21 +352,6 @@ namespace API {
 
 	type ValueOrLutOffset = number | [number, number] //base index, mul
 
-	interface Specialization {
-		id         : number
-		name       : string
-		icon       : string
-		background : string
-		//TODO
-	}
-
-	interface Pet {
-		id : number
-		icon : string
-		name : string
-		//TODO
-	}
-
 	interface AttributeSet {
 		id         : number
 		name       : string
@@ -386,8 +386,8 @@ type APIResponseTypeMap = {
 	skills         : API.Skill;
 	traits         : API.Trait;
 	items          : API.Item;
-	specializations: API.Specialization;
-	pets           : API.Pet;
+	specializations: OfficialAPI.Specialization;
+	pets           : OfficialAPI.Pet;
 	'pvp/amulets'  : API.ItemAmulet;
 	itemstats      : API.AttributeSet;
 }

@@ -44,7 +44,7 @@ export function inflateItem(gw2Object : HTMLElement, item : API.Item) {
 	gw2Object.append(wikiLink);
 }
 
-export function inflateSpecialization(gw2Object : HTMLElement, spec: API.Specialization) {
+export function inflateSpecialization(gw2Object : HTMLElement, spec: OfficialAPI.Specialization) {
 	if(gw2Object.classList.contains('gw2objectembed')) {
 		inflateGenericIcon(gw2Object, spec);
 	}

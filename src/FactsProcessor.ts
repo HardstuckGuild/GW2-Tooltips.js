@@ -1,12 +1,3 @@
-const MissingBuff : API.Skill = {
-	id               : 0,
-	name             : 'Missing Buff',
-	description      : 'This Buff failed to load',
-	categories       : [],
-	palettes         : [],
-	modifiers        : [],
-}
-
 export function calculateModifier(
 	{ formula, base_amount, formula_param1: level_scaling, formula_param2 } : API.Modifier,
 	{ level, stats: { power, conditionDmg, healing: healing_power }} : Character,
@@ -229,7 +220,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		},
 		Buff : ({fact, buff}) =>  {
 			if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-			buff = buff || MissingBuff; // in case we didn't get the buff we wanted from the api
+			buff = buff || MISSING_BUFF; // in case we didn't get the buff we wanted from the api
 			iconSlug = buff.icon || iconSlug;
 
 			const lines : (string | Node)[] = [];
@@ -249,7 +240,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		},
 		BuffBrief : ({fact, buff}) =>  {
 			if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-			buff = buff || MissingBuff;
+			buff = buff || MISSING_BUFF;
 			iconSlug = buff.icon || iconSlug;
 
 			return [`${GW2Text2HTML(fact.text, buff.name)}`];
@@ -400,11 +391,11 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		PrefixedBuff : ({fact, buff}) => {
 			let prefix = APICache.storage.skills.get(fact.prefix);
 			if(!prefix) console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
-			prefix = prefix || MissingBuff;
+			prefix = prefix || MISSING_BUFF;
 			iconSlug = prefix.icon || iconSlug;
 
 			if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-			buff = buff || MissingBuff; // in case we didn't get the buff we wanted from the api
+			buff = buff || MISSING_BUFF; // in case we didn't get the buff we wanted from the api
 
 			let {duration, apply_count, text} = fact;
 
@@ -430,11 +421,11 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		PrefixedBuffBrief : ({fact, buff}) => {
 			let prefix = APICache.storage.skills.get(fact.prefix)
 			if(!prefix) console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
-			prefix = prefix || MissingBuff;
+			prefix = prefix || MISSING_BUFF;
 			iconSlug = prefix.icon || iconSlug
 
 			if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-			buff = buff || MissingBuff; // in case we didn't get the buff we wanted from the api
+			buff = buff || MISSING_BUFF; // in case we didn't get the buff we wanted from the api
 
 			let node = newElm('div.fact', // class is just for styling
 				newImg(buff.icon),
@@ -491,6 +482,19 @@ export function generateBuffIcon(icon : Parameters<typeof newImg>[0], stackSize 
 		wrap.setAttribute('count', String(stackSize));
 		return wrap;
 	}
+}
+
+export const MISSING_BUFF : API.Skill = {
+	id         : 0,
+	name       : 'Missing Buff',
+	description: '<c=@warning>This Buff failed to load</c>',
+	categories : [], palettes   : [], modifiers  : [],
+}
+export const MISSING_SKILL : API.Skill = {
+	id         : 0,
+	name       : 'Missing Skill',
+	description: '<c=@warning>This Skill failed to load</c>',
+	categories : [], palettes   : [], modifiers  : [],
 }
 
 import { newElm, newImg, drawFractional, GW2Text2HTML, withUpToNDigits, mapLocale, Uncapitalize, joinWordList, fromHTML } from './TUtilsV2';

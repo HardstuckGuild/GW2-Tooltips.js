@@ -3,7 +3,6 @@
 //TODO(Rennorb): Option to show whole skill-chain (maybe on button hold)?
 //TODO(Rennorb): Stop using these jank custom tags. There is no reason to do so and its technically not legal per html spec.
 //TODO(Rennorb) @fixme: impale: the impale buff doesn't have a name, only shows duration
-//TODO(Rennorb): Figure out how to handle boon descriptions. Have a toggle between 'realistic as in game' and 'full information'
 //TODO(Rennorb): Link minion skills to minion summon skill.
 //TODO(Rennorb): specs, pets, and amulets endpoints.
 //TODO(Rennorb): Defiance break on single effect tooltips.
@@ -13,7 +12,6 @@
 //TODO(Rennorb) @correctness: Split up incoming / outgoing effects. Mostly relevant for healing.
 //TODO(Rennorb) @correctness: Change the lookup to first try to figure out the palette and then go from there. this is the way to move forward as this is the future-proof way to list skills.
 //TODO(Rennorb) @correctness: implement processing for trait / skill buffs to properly show certain flip skills and chains aswell as properly do trait overrides for skills
-//TODO(Rennorb) @fixme: crash on pvp amulet hover
 
 //TODO(Rennorb): (maybe) add specific hs output command that produces files outside of the repo to preserve them inside of the parent.
 
@@ -69,8 +67,11 @@ function _constructor() {
 		if(node.classList.contains('cycler') && tooltip.style.display != 'none') {
 			event.preventDefault()
 
-			cyclePos = (cyclePos + 1) % tooltip.childElementCount
-			displayCorrectChainTooltip(Array.from(tooltip.children as HTMLCollectionOf<HTMLElement>), cyclePos)
+			const subTooltips = Array.from(tooltip.children as HTMLCollectionOf<HTMLElement>);
+			do {
+				cyclePos = (cyclePos + 1) % tooltip.childElementCount
+			} while(subTooltips[cyclePos].classList.contains('not-collapsable'))
+			activateSubTooltip(subTooltips, cyclePos)
 			positionTooltip()
 		}
 		if(isMobile && tooltip.style.display == 'none') {
@@ -125,9 +126,10 @@ function _constructor() {
 	});
 }
 
-function displayCorrectChainTooltip(tooltips: HTMLElement[], tooltipIndex: number) {
+function activateSubTooltip(tooltips: HTMLElement[], tooltipIndex: number) {
 	for(let index = 0; index < tooltips.length; index++) {
-		tooltips[index].classList.toggle('active', index === tooltipIndex);
+		if(!tooltips[index].classList.contains('not-collapsable'))
+			tooltips[index].classList.toggle('active', index === tooltipIndex);
 	}
 }
 
@@ -233,7 +235,6 @@ function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 	const stackSize = +String(gw2Object.getAttribute('count')) || undefined;
 
 	if(type == 'specializations' || type == 'effects') return; //TODO(Rennorb) @completeness: inline objs
-	if(type == 'pets') return; //TODO(Rennorb) @completeness
 
 	lastTooltipTarget = gw2Object;
 
@@ -302,7 +303,7 @@ function getSlotName(skill: API.Skill) : string | undefined {
 }
 
 // TODO(Rennorb) @cleanup: split this into the inflator system aswell. its getting to convoluted already
-function generateToolTip(apiObject : SupportedTTTypes, context : Context) : HTMLElement {
+function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean, context : Context) : HTMLElement {
 	const headerElements = [newElm('teb', GW2Text2HTML(apiObject.name))];
 	headerElements.push(newElm('div.flexbox-fill')); // split, now the right side
 
@@ -433,6 +434,7 @@ function generateToolTip(apiObject : SupportedTTTypes, context : Context) : HTML
 	}
 
 	const tooltip = newElm('div.tooltip', ...parts)
+	if(notCollapsable) tooltip.classList.add('not-collapsable')
 	tooltip.dataset.id = String(apiObject.id)
 
 	return tooltip;
@@ -526,7 +528,7 @@ function getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) :
 }
 
 function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTMLElement, context : Context) : HTMLElement[] {
-	const objectChain : SupportedTTTypes[] = []
+	const objectChain : { obj : SupportedTTTypes, notCollapsable : boolean }[] = []
 	const validPaletteTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard', 'Equipment']
 
 	const addObjectsToChain = (currentObj : SupportedTTTypes) => {
@@ -537,7 +539,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 				const replacementSkill = findTraitedOverride(currentObj, context);
 				if(replacementSkill) currentObj = replacementSkill;
 			}
-			objectChain.push(currentObj);
+			objectChain.push({ obj: currentObj, notCollapsable: false });
 
 			for(const palette of currentObj.palettes) {
 				for(const slot of palette.slots) {
@@ -552,7 +554,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 			}
 		}
 		else {
-			objectChain.push(currentObj)
+			objectChain.push({ obj: currentObj, notCollapsable: false })
 		}
 
 		//TODO(Rennorb): Apparently sub_skills (`related_skills`) is of very questionable correctness and seems to only be used internally.
@@ -560,31 +562,41 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 		//NOTE(Rennorb): Checking for the skill chain here since it usually produces duplicated entries if one is present and the skill chain is more authoritative.
 		//NOTE(Rennorb): `related_skills` is also used for traits.
 		if(!hasChain && 'related_skills' in currentObj) {
+			const type = gw2Object.getAttribute('type') || 'skill';
 			for(const subSkillId of currentObj.related_skills!) {
 				const subSkillInChain = APICache.storage.skills.get(subSkillId);
-				const type = gw2Object.getAttribute('type') || 'skill';
 				if(subSkillInChain && ((type == 'trait') || subSkillInChain.palettes.some(palette => validPaletteTypes.includes(palette.type)))) {
-					objectChain.push(subSkillInChain)
+					objectChain.push({ obj: subSkillInChain, notCollapsable: false })
 				}
 			}
+		}
+
+		//pet skills
+		if('skills' in currentObj) for(const { id: petSkillId } of currentObj.skills) {
+			let petSkill = APICache.storage.skills.get(petSkillId);
+			if(!petSkill) {
+				console.warn(`[gw2-tooltips] pet skill #${petSkillId} is missing from the cache. The query was caused by `, gw2Object);
+				petSkill = MISSING_SKILL;
+			}
+			objectChain.push({ obj: petSkill, notCollapsable: true })
 		}
 	}
 
 	addObjectsToChain(initialAPIObject)
 
-	const tooltipChain = objectChain.map(obj => generateToolTip(obj, context));
+	const tooltipChain = objectChain.map(({obj, notCollapsable}) => generateToolTip(obj, notCollapsable, context));
 	tooltip.append(...tooltipChain)
 
-	if(tooltipChain.length > 1) {
+	if(tooltipChain.filter(tt => !tt.classList.contains('not-collapsable')).length > 1) {
 		gw2Object.classList.add('cycler')
 		gw2Object.title = 'Right-click to cycle through tooltips'
 
-		// is already set to 0 if this is a new one
+		// cyclePos is already set to 0 if this is a new one
 		//TODO(Rennorb): should we actually reset this every time?
-		displayCorrectChainTooltip(tooltipChain, cyclePos)
+		activateSubTooltip(tooltipChain, cyclePos)
 	}
 	else {
-		tooltipChain[0].classList.add('active'); // single tooltip is always expanded
+		for(const tt of tooltipChain) tt.classList.add('active');
 	}
 
 	return tooltipChain
@@ -1032,7 +1044,7 @@ export const ICONS = {
 	SINK            : 2440714,
 }
 
-type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet; //TODO(Rennorb) @cleanup: once its finished
+type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet | OfficialAPI.Pet;
 
 
 _constructor();
@@ -1084,7 +1096,7 @@ if(config.autoInitialize) {
 import { newElm, newImg, GW2Text2HTML, mapLocale, drawFractional, fromHTML, findSelfOrParent } from './TUtilsV2';
 import * as APIs from './API';
 import APICache from './APICache';
-import { calculateModifier, generateFact, generateFacts } from './FactsProcessor';
+import { MISSING_SKILL, calculateModifier, generateFact, generateFacts } from './FactsProcessor';
 import * as Collect from './Collect'; //TODO(Rennorb) @cleanup
 import { _legacy_transformEffectToSkillObject, inferItemUpgrades, inflateGenericIcon, inflateItem, inflateSkill, inflateSpecialization } from './Inflators'
 
