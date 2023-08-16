@@ -1024,6 +1024,12 @@ export const ICONS = {
 	WEAPON_SWAP     : 156583,
 	BARRIER         : 1770209,
 	STUN_BREAK      : 156654,
+	KNOCKDOWN       : 2440716,
+	PULL            : 2440717,
+	KNOCKBACK       : 2440715,
+	LAUNCH          : 2440712,
+	FLOAT           : 2440713,
+	SINK            : 2440714,
 }
 
 type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet; //TODO(Rennorb) @cleanup: once its finished

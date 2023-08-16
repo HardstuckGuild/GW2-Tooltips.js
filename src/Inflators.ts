@@ -88,11 +88,15 @@ export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, er
 	const name = String(gw2Object.getAttribute('objId'));
 	let id = ({
 		blight                  : 62653,
+		bleeding                : 736,
+		burning                 : 40549,
+		blinded                 : 720,
 		bloodstone_blessed      : 34917,
 		blue_pylon_power        : 31317, //maybe wrong (vale guardian)
 		chill                   : 722,
 		quickness               : 1187,
 		chilled                 : 722,
+		crippled                : 23525,
 		fear                    : 896,
 		alacrity                : 30328,
 		protection              : 717,
@@ -111,7 +115,9 @@ export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, er
 		compromised             : 35096,
 		crowd_favor             : 36173, //maybe wrong (marionette)
 		curse_of_frailty        : 53723, //maybe wrong (pirate fractal)
+		confusion               : 861,
 		dark_aura               : 39978,
+		daze                    : 833,
 		debilitated             : 0, //TODO ko
 		debilitating_void       : 0, //TODO ankah
 		defense_up              : 28482,
@@ -137,19 +143,31 @@ export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, er
 		photon_saturation       : 0, //TODO ah cm
 		positive_flow           : 66665,
 		power_of_the_void       : 0, //TODO xjj
+		poison                  : 723,
 		//q                       : ,
 		reinforced_armor        : 9283,
 		relentless_fire         : 62805,
 		retaliation_ashym       : 24646, //maybe wrong
+		revealed                : 890,
+		resolution              : 873,
 		sentinel_retribution    : 16350,
 		shattering_ice          : 62909,
 		shell_shocked           : 33361,
 		spectral_darkness       : 31498,
 		sticking_together       : 54604,
 		synchronized_vitality   : 63840, //maybe wrong(ko)
+		stun                    : 872,
+		stealth                 : 58026, //maybe wrong
+		torment                 : 21632, //maybe wrong
+		superspeed              : 5974,
+		swiftness               : 719,
+		taunt                   : 27705,
 		unnatural_signet        : 38224,
+		unblockable             : 18843,
 		use_soul_binder         : 55630,
 		void_empowerment        : 68083,
+		vulnerability           : 738,
+		weakness                : 742,
 		xeras_embrace           : 34979,
 	} as any)[name]
 
@@ -170,7 +188,49 @@ export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, er
 				description: 'Cancel control effects such as stuns.',
 				icon: ICONS.STUN_BREAK,
 				categories: [], palettes: [],
-			}
+			},
+			knockdown: {
+				id: 3,
+				name: 'Knockdown',
+				description: 'Knocks the target on ground, preventing movement and actions for a short duration.',
+				icon: ICONS.KNOCKDOWN,
+				categories: [], palettes: [],
+			},
+			pull: {
+				id: 4,
+				name: 'Pull',
+				description: 'Pulls the caster to the target or the target to a specific location and disables them for a short duration.',
+				icon: ICONS.PULL,
+				categories: [], palettes: [],
+			},
+			knockback: {
+				id: 5,
+				name: 'Knockdown',
+				description: 'Knocks back the target away and on the ground, preventing movement and actions for a short duration.',
+				icon: ICONS.KNOCKBACK,
+				categories: [], palettes: [],
+			},
+			launch: {
+				id: 6,
+				name: 'Launch',
+				description: 'Throws the target in the air over a short distance, preventing movement and actions for a short duration. Can move Downed targets.',
+				icon: ICONS.LAUNCH,
+				categories: [], palettes: [],
+			},
+			float: {
+				id: 7,
+				name: 'Float',
+				description: 'Causes the target to float in the air, preventing movement and actions for a short duration. Causes underwater targets to move up.',
+				icon: ICONS.FLOAT,
+				categories: [], palettes: [],
+			},
+			sink: {
+				id: 8,
+				name: 'Sink',
+				description: 'Causes the underwater target to move downwards.',
+				icon: ICONS.SINK,
+				categories: [], palettes: [],
+			},
 		} as {[k : string] : API.Skill})[name];
 
 		if(hardCoded) {
