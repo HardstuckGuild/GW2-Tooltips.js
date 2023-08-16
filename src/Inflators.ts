@@ -88,13 +88,13 @@ export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, er
 	const name = String(gw2Object.getAttribute('objId'));
 	let id = ({
 		//// auras
-		chaos_aura				: 10332,
+		chaos_aura              : 10332,
 		dark_aura               : 39978,
-		fire_aura				: 5677,
-		frost_aura				: 5579,
-		light_aura				: 25518,
-		magnetic_aura			: 5684,
-		shocking_aura			: 5577,
+		fire_aura               : 5677,
+		frost_aura              : 5579,
+		light_aura              : 25518,
+		magnetic_aura           : 5684,
+		shocking_aura           : 5577,
 		//// boons
 		aegis                   : 743,
 		alacrity                : 30328,
@@ -126,12 +126,12 @@ export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, er
 		weakness                : 742,
 		//// control effects
 		daze                    : 833,
-		// float 				-> see hardCoded below
-		// knockback 			-> see hardCoded below
-		// knockdown 			-> see hardCoded below
-		// launch 				-> see hardCoded below
-		// pull 				-> see hardCoded below
-		// sink 				-> see hardCoded below
+		// float                -> see hardCoded below
+		// knockback            -> see hardCoded below
+		// knockdown            -> see hardCoded below
+		// launch               -> see hardCoded below
+		// pull                 -> see hardCoded below
+		// sink                 -> see hardCoded below
 		stun                    : 872,
 		//// misc
 		agony                   : 15773,
@@ -139,7 +139,7 @@ export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, er
 		invulnerability         : 56227,
 		revealed                : 890,
 		stealth                 : 58026, //maybe wrong
-		// stunbreak			-> see hardCoded below
+		// stunbreak            -> see hardCoded below
 		superspeed              : 5974,
 		unblockable             : 18843,
 		//// npcs
