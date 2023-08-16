@@ -87,6 +87,7 @@ export function inflateSpecialization(gw2Object : HTMLElement, spec: OfficialAPI
 export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, error_store : Set<string>) : number {
 	const name = String(gw2Object.getAttribute('objId'));
 	let id = ({
+		agony                   : 15773,
 		blight                  : 62653,
 		bleeding                : 736,
 		burning                 : 40549,
