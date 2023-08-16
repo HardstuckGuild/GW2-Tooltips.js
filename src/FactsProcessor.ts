@@ -125,7 +125,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 				let strValue = modifier.flags.includes('FormatFraction')
 					? drawFractional(value, config)
-					: Math.floor(value).toString();
+					: Math.floor(Math.fround(value)).toString();
 
 				if(modifier.flags.includes('FormatPercent')) {
 					if(value > 0 ) {
