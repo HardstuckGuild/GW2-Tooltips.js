@@ -87,88 +87,102 @@ export function inflateSpecialization(gw2Object : HTMLElement, spec: OfficialAPI
 export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, error_store : Set<string>) : number {
 	const name = String(gw2Object.getAttribute('objId'));
 	let id = ({
-		agony                   : 15773,
-		blight                  : 62653,
-		bleeding                : 736,
-		burning                 : 40549,
-		blinded                 : 720,
-		bloodstone_blessed      : 34917,
-		blue_pylon_power        : 31317, //maybe wrong (vale guardian)
-		chill                   : 722,
+		//// auras
+		chaos_aura				: 10332,
+		dark_aura               : 39978,
+		fire_aura				: 5677,
+		frost_aura				: 5579,
+		light_aura				: 25518,
+		magnetic_aura			: 5684,
+		shocking_aura			: 5577,
+		//// boons
+		aegis                   : 743,
+		alacrity                : 30328,
+		fury                    : 725,
+		might                   : 740,
+		protection              : 717,
 		quickness               : 1187,
+		regeneration            : 16538,
+		resistance              : 26980,
+		resolution              : 873,
+		stability               : 1122,
+		swiftness               : 719,
+		vigor                   : 726,
+		//// conditions
+		bleeding                : 736,
+		blinded                 : 720,
+		burning                 : 40549,
+		chill                   : 722,
 		chilled                 : 722,
+		confusion               : 861,
 		crippled                : 23525,
 		fear                    : 896,
-		alacrity                : 30328,
-		protection              : 717,
-		vigor                   : 726,
-		barrier                 : 0, //TODO
-		fury                    : 725,
-		stability               : 1122,
-		stunbreak               : 0, //TODO
-		aegis                   : 743,
-		might                   : 740,
-		regeneration            : 16538,
 		immobilize              : 22501,
+		poison                  : 723,
 		slow                    : 26766,
-		resistance              : 26980,
+		taunt                   : 27705,
+		torment                 : 19426,
+		vulnerability           : 738,
+		weakness                : 742,
+		//// control effects
+		daze                    : 833,
+		// float 				-> see hardCoded below
+		// knockback 			-> see hardCoded below
+		// knockdown 			-> see hardCoded below
+		// launch 				-> see hardCoded below
+		// pull 				-> see hardCoded below
+		// sink 				-> see hardCoded below
+		stun                    : 872,
+		//// misc
+		agony                   : 15773,
+		// barrier              -> see hardCoded below
+		invulnerability         : 56227,
+		revealed                : 890,
+		stealth                 : 58026, //maybe wrong
+		// stunbreak			-> see hardCoded below
+		superspeed              : 5974,
+		unblockable             : 18843,
+		//// npcs
+		blight                  : 62653,
+		bloodstone_blessed      : 34917,
+		blue_pylon_power        : 31413, // (vale guardian)
 		champion_of_the_legions : 20845, //maybe wrong (rock fest thing?)
 		compromised             : 35096,
 		crowd_favor             : 36173, //maybe wrong (marionette)
 		curse_of_frailty        : 53723, //maybe wrong (pirate fractal)
-		confusion               : 861,
-		dark_aura               : 39978,
-		daze                    : 833,
-		debilitated             : 0, //TODO ko
-		debilitating_void       : 0, //TODO ankah
+		debilitated             : 67972, // ko
+		debilitating_void       : 64967, //ankah
 		defense_up              : 28482,
 		derangement             : 34965,
 		elemental_empowerment   : 62733,
 		empowering_auras        : 62939,
-		equalization_matrix     : 66586, //maybe wrong (ko)
+		equalization_matrix     : 67047, // (ko)
+		expose_weakness         : 26660,
 		exposed                 : 28778, //maybe wrong
-		expose_weakness         : 26660, //maybe wrong
 		extreme_vulnerability   : 65662,
 		fixated                 : 47434, //maybe wrong
-		//gems_big                : ,
-		//gold_gold_big           : ,
 		growing_rage_ashym      : 3362, //maybe wrong (urban battleground)
-		//h                       : ,
 		ignite                  : 16259,
 		intervention            : 35061,
-		invulnerability         : 56227,
 		necrosis                : 47414,
 		not_sticking_together   : 54378,
 		nova                    : 39193, //there is also the upgraded version with aegis
 		ooze_pheromone          : 21538,
-		photon_saturation       : 0, //TODO ah cm
+		photon_saturation       : 67872, // ah cm
 		positive_flow           : 66665,
-		power_of_the_void       : 0, //TODO xjj
-		poison                  : 723,
-		//q                       : ,
+		power_of_the_void       : 65601, // xjj
 		reinforced_armor        : 9283,
 		relentless_fire         : 62805,
 		retaliation_ashym       : 24646, //maybe wrong
-		revealed                : 890,
-		resolution              : 873,
 		sentinel_retribution    : 16350,
 		shattering_ice          : 62909,
 		shell_shocked           : 33361,
 		spectral_darkness       : 31498,
 		sticking_together       : 54604,
 		synchronized_vitality   : 63840, //maybe wrong(ko)
-		stun                    : 872,
-		stealth                 : 58026, //maybe wrong
-		torment                 : 21632, //maybe wrong
-		superspeed              : 5974,
-		swiftness               : 719,
-		taunt                   : 27705,
 		unnatural_signet        : 38224,
-		unblockable             : 18843,
 		use_soul_binder         : 55630,
 		void_empowerment        : 68083,
-		vulnerability           : 738,
-		weakness                : 742,
 		xeras_embrace           : 34979,
 	} as any)[name]
 
