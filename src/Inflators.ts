@@ -205,7 +205,7 @@ export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, er
 			},
 			knockback: {
 				id: 5,
-				name: 'Knockdown',
+				name: 'Knockback',
 				description: 'Knocks back the target away and on the ground, preventing movement and actions for a short duration.',
 				icon: ICONS.KNOCKBACK,
 				categories: [], palettes: [],
