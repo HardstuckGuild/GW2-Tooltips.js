@@ -26,7 +26,7 @@ export class HSAPI implements APIImplementation {
 	}
 
 	async bulkRequest<T extends keyof APIResponseTypeMap>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]> {
-		if(['specializations', 'pvp/amulets', 'pets'].includes(endpoint)) {
+		if(['pvp/amulets', 'pets'].includes(endpoint)) {
 			const response = await fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
 			if (endpoint == 'pvp/amulets') {
 				const modifierTranslation = {

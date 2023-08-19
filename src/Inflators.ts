@@ -49,7 +49,8 @@ export function inflateSpecialization(gw2Object : HTMLElement, spec: OfficialAPI
 		inflateGenericIcon(gw2Object, spec);
 	}
 	else {
-		gw2Object.style.backgroundImage = `url(${spec.background})`;
+		//NOTE(Rennorb): Full urls specify a protocol which is delilited by a colon. Not perferct but good enough for now.  https_:_ , data_:_image
+		gw2Object.style.backgroundImage = `url(${spec.background.includes(':') ? spec.background : IMAGE_CDN + spec.background})`;
 		gw2Object.dataset.label = spec.name;
 
 		//TODO(Rennorb) @cleanup @compat: this is kinda dumb. we could just mark the selected traits, as we need to do that anyways for css. 
@@ -329,5 +330,5 @@ export function inferItemUpgrades(wrappers : Iterable<Element>) {
 }
 
 import APICache from "./APICache";
-import { GW2Text2HTML, newElm, newImg } from "./TUtilsV2";
+import { GW2Text2HTML, IMAGE_CDN, newElm, newImg } from "./TUtilsV2";
 import { ICONS, config, context, findTraitedOverride, formatItemName, specializeContextFromInlineAttribs } from "./TooltipsV2";
