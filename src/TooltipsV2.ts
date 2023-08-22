@@ -2,9 +2,8 @@
 //TODO(Rennorb): Provide a clean way to construct custom tooltips. Currently with the old version we manipulate the cache before the hook function gets called, which really isn't the the best.
 //TODO(Rennorb): Option to show whole skill-chain (maybe on button hold)?
 //TODO(Rennorb): Stop using these jank custom tags. There is no reason to do so and its technically not legal per html spec.
-//TODO(Rennorb) @fixme: impale: the impale buff doesn't have a name, only shows duration
-//TODO(Rennorb): Link minion skills to minion summon skill.
-//TODO(Rennorb): specs, pets, and amulets endpoints.
+//TODO(Rennorb): Link minion skills to minion summon skill. might be doable via the species def
+//TODO(Rennorb): amulets endpoint.
 //TODO(Rennorb): Defiance break on single effect tooltips.
 //TODO(Rennorb): Change anything percent related to use fractions instead of integers (0.2 instead of 20).
 // The only thing this is good for is to make drawing the facts easier. Since we do quite a few calculations this swap would reduce conversions quite a bit.
@@ -725,7 +724,6 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	if(statSet && 'attribute_base' in item) {
 		parts.push(...statSet.attributes.map(({attribute, base_value, scaling}) => {
 			const computedValue = Math.round(base_value + item.attribute_base! * scaling);
-			//TODO(Rennorb) @cleanup: just return correct names from the api. 
 			return newElm('te', newElm('tem.gw2-color-stat-green', `+${computedValue} ${mapLocale(attribute)}`));
 		}));
 	}
@@ -757,15 +755,13 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	}
 
 	const metaInfo = newElm('div.group');
-	if(item.type == "Armor" || item.type == "Weapon" || item.type == "Trinket") {
-		//NOTE(Rennorb): PvP amulets only show the stats, they aren't real 'items'.
-		if(item.subtype != 'Amulet' || !item.flags.includes('Pvp')) {
-			metaInfo.append(newElm('span.gw2-color-rarity-'+item.rarity, item.rarity));
-			if('weight' in item) metaInfo.append(newElm('span', item.weight));
-			metaInfo.append(newElm('span', `${item.type}: ${item.subtype}`));
-			if(item.type == "Weapon" && isTwoHanded(item.subtype)) metaInfo.append(newElm('span.gw2-color-rarity-Junk', `(Two-Handed)`));
-			if(item.required_level) metaInfo.append(newElm('span', 'Required Level: '+item.required_level));
-		}
+	//NOTE(Rennorb): PvP amulets only show the stats, they aren't real 'items'.
+	if(item.type == "Armor" || item.type == "Weapon" || (item.type == "Trinket" && !item.flags.includes('Pvp'))) {
+		metaInfo.append(newElm('span.gw2-color-rarity-'+item.rarity, item.rarity));
+		if('weight' in item) metaInfo.append(newElm('span', item.weight));
+		metaInfo.append(newElm('span', `${item.type}: ${item.subtype}`));
+		if(item.type == "Weapon" && isTwoHanded(item.subtype)) metaInfo.append(newElm('span.gw2-color-rarity-Junk', `(Two-Handed)`));
+		if(item.required_level) metaInfo.append(newElm('span', 'Required Level: '+item.required_level));
 	}
 	if(item.description) metaInfo.append(newElm('span', fromHTML(GW2Text2HTML(item.description))));
 
@@ -799,7 +795,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	return tooltip;
 }
 
-function generateUpgradeItemGroup(item : API.ItemUpgradeComponent | API.ItemConsumable | API.ItemAmulet, context : Context) : HTMLElement {
+function generateUpgradeItemGroup(item : API.ItemUpgradeComponent | API.ItemConsumable, context : Context) : HTMLElement {
 	const group = newElm('div.group');
 	for(const [i, tier] of item.tiers.entries()) {
 		let tier_wrap = newElm('te');

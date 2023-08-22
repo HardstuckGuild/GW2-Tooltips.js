@@ -182,8 +182,6 @@ function _statSources(contextIndex : number, targetContext : Context, elements :
 		else if(type == 'pvp/amulet') {
 			item = APICache.storage['pvp/amulets'].get(id);
 			if(!item) continue;
-			
-			tiersToProcess = item.tiers; //should only ever be one anyways
 		}
 
 		if(tiersToProcess) for(const tier of tiersToProcess) {

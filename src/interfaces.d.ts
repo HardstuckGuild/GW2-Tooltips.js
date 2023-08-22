@@ -324,10 +324,10 @@ namespace API {
 	}
 
 	type ItemAmulet = ItemBase & {
-		type    : 'Trinket'
-		subtype : 'Amulet'
-		tiers   : ItemUpgradeComponent['tiers'] //TODO(Rennorb) @cleanup: hack for now to render stats. the stats are not the usual stat sets.
-		attribute_set? : undefined //TODO(Rennorb) @cleanup
+		type           : 'Trinket'
+		subtype        : 'Amulet'
+		attribute_base : 1000
+		attribute_set  : number
 	}
 
 	type ItemConsumable = ItemBase & {

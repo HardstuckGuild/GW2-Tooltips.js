@@ -26,55 +26,6 @@ export class HSAPI implements APIImplementation {
 	}
 
 	async bulkRequest<T extends keyof APIResponseTypeMap>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]> {
-		if(['pvp/amulets', 'pets'].includes(endpoint)) {
-			const response = await fetch(`https://api.guildwars2.com/v2/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
-			if (endpoint == 'pvp/amulets') {
-				const modifierTranslation = {
-					BoonDuration     : "Concentration",
-					ConditionDamage  : "ConditionDmg",
-					ConditionDuration: "Expertise", 
-					CritDamage       : "Ferocity",
-				} as { [k in OfficialAPI.AmuletStats]? : Exclude<API.Attributes, 'None'> }
-
-				const transformed : API.ItemAmulet[] = [];
-				for(const obj of response as OfficialAPI.Amulet[]) {
-					const tier : API.ItemUpgradeComponent['tiers'][0] = { modifiers: [] }
-					//hackedy hack hack
-					for(const [attribute_, adjustment] of Object.entries(obj.attributes)) {
-						const attribute = modifierTranslation[attribute_] || attribute_ as Exclude<API.Attributes, 'None'>;
-
-						tier.modifiers!.push({
-							formula       : "NoScaling",
-							base_amount   : adjustment,
-							id            : -1, //TODO unused
-							formula_param1: 0,
-							formula_param2: 0,
-							target_attribute_or_buff: attribute,
-							description   : attribute,
-							flags         : [],
-						})
-					}
-
-					transformed.push({
-						id            : obj.id,
-						type          : "Trinket",
-						subtype       : "Amulet",
-						name          : obj.name,
-						icon          : obj.icon,
-						flags         : ['Pvp', 'NoSalvage'],
-						flags_ex      : [],
-						tiers         : [tier],
-						rarity        : "Exotic",
-						level         : 82,
-						required_level: 0,
-						vendor_value  : 0,
-					});
-				}
-				return transformed as APIResponseTypeMap[T][];
-			}
-			return response;
-		}
-
 		return fetch(`${this.baseUrl}/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
 	}
 }
