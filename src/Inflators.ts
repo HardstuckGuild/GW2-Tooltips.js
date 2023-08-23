@@ -20,7 +20,7 @@ export function inflateSkill(gw2Object : HTMLElement, skill : API.Skill) {
 	// The issue is that this is the place where the icon gets selected and inflated, so its somewhat required to change the skill before this point.
 	// Maybe this is still the best place to do this and for cases were we need hot swapping (e.g. build editor) we just have to manually re-process skills after swapping traits.
 	// Maybe we should move the original id to another attribute for savekeeping so we can revert it later on if we need to?
-	if(config.adjustTraitedSkillIds) {
+	if(gw2Object.classList.contains('auto-transform')) {
 		const replacementSkill = findTraitedOverride(skill, context_);
 		if(replacementSkill) {
 			gw2Object.setAttribute('objid', String(replacementSkill.id));

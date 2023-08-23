@@ -87,6 +87,11 @@ export default class APICache {
 					if(slot.profession !== 'None' && slot.next_chain && !this.storage.items.has(slot.next_chain)) {
 						connectedIdsStorage.skills.add(slot.next_chain)
 					}
+					//TODO(Rennorb) @perf: This could be improved if we knew if th corresponding class is actually set on the source object to even do the replacement that we fetch these for.
+					if(slot.traited_alternatives) for(const [_, skillId] of slot.traited_alternatives) {
+						if(!this.storage.skills.has(skillId))
+							connectedIdsStorage.skills.add(skillId);
+					}
 				}
 			}
 		}

@@ -55,20 +55,19 @@ interface StatSource {
 
 
 interface Config {
-	autoInitialize                 : bool
+	autoInitialize             : bool
 	// only works if auto initialize is turned on
-	autoCollectRuneCounts          : bool
+	autoCollectRuneCounts      : bool
 	// only works if auto initialize is turned on
-	autoCollectStatSources         : bool
+	autoCollectStatSources     : bool
 	// only works if auto initialize is turned on
-	autoCollectSelectedTraits      : bool
+	autoCollectSelectedTraits  : bool
 	// only works if auto initialize is turned on
-	autoInferEquipmentUpgrades     : bool
-	adjustIncorrectStatIds         : bool
-	adjustTraitedSkillIds          : bool
-	legacyCompatibility            : bool
-	showPreciseAbilityTimings      : bool
-	showFactComputationDetail      : bool
+	autoInferEquipmentUpgrades : bool
+	adjustIncorrectStatIds     : bool
+	legacyCompatibility        : bool
+	showPreciseAbilityTimings  : bool
+	showFactComputationDetail  : bool
 
-	apiImpl?                       : (apis : any) => APIImplementation
+	apiImpl?                   : (apis : any) => APIImplementation
 }

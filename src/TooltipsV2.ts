@@ -560,12 +560,13 @@ function getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) :
 function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTMLElement, context : Context) : HTMLElement[] {
 	const objectChain : { obj : SupportedTTTypes, notCollapsable : boolean }[] = []
 	const validPaletteTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard', 'Equipment']
+	const adjustTraitedSkillIds = gw2Object.classList.contains('auto-transform');
 
 	const addObjectsToChain = (currentObj : SupportedTTTypes) => {
 		let hasChain = false;
 		if('palettes' in currentObj) {
 			//TODO(Rennorb): cleanup is this neccesary? Since the root element already gets replaced automatically, It would be if we have skills where some skill in the chain needs to be replaced. 
-			if(config.adjustTraitedSkillIds) {
+			if(adjustTraitedSkillIds) {
 				const replacementSkill = findTraitedOverride(currentObj, context);
 				if(replacementSkill) currentObj = replacementSkill;
 			}
@@ -994,7 +995,6 @@ const DEFAULT_CONFIG : Config = {
 	autoCollectStatSources        : true,
 	autoCollectSelectedTraits     : true,
 	adjustIncorrectStatIds        : true,
-	adjustTraitedSkillIds         : true,
 	autoInferEquipmentUpgrades    : true,
 	legacyCompatibility           : true,
 	showPreciseAbilityTimings     : false,
