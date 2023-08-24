@@ -334,8 +334,7 @@ function getSlotName(skill: API.Skill) : string | undefined {
 
 // TODO(Rennorb) @cleanup: split this into the inflator system aswell. its getting to convoluted already
 function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean, context : Context) : HTMLElement {
-	const headerElements = [newElm('teb', GW2Text2HTML(apiObject.name))];
-	headerElements.push(newElm('div.flexbox-fill')); // split, now the right side
+	const headerElements = [newImg(apiObject.icon), newElm('teb', GW2Text2HTML(apiObject.name)), newElm('div.flexbox-fill')]; // split, now the right side
 
 	const currentContextInformation = resolveTraitsAndOverrides(apiObject, context);
 
@@ -434,7 +433,7 @@ function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean,
 		secondHeaderRow.push(newElm('tes', '( ', fromHTML(splits_html.join(' | ')), ' )'));
 	}
 
-	const parts : HTMLElement[] = [newElm('tet', ...headerElements)];
+	const parts : HTMLElement[] = [newElm('tet.title', ...headerElements)];
 	if(secondHeaderRow.length > 1) parts.push(newElm('tet.detail', ...secondHeaderRow));
 
 	if('description' in apiObject && apiObject.description) {
@@ -679,7 +678,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	const countPrefix = stackSize > 1 ? stackSize + ' ' : '';
 	const upgradeNameSource = slottedItems?.find(i => !['Infusion', 'Enrichment'].includes(i.subtype)) || slottedItems?.[0];
 	const name = countPrefix + formatItemName(item, context, statSet, upgradeNameSource, stackSize);
-	const parts = [newElm('tet', newImg(item.icon),  newElm('teb.gw2-color-rarity-'+item.rarity.toLowerCase(), name), newElm('div.flexbox-fill'))];
+	const parts = [newElm('tet.title', newImg(item.icon),  newElm('teb.gw2-color-rarity-'+item.rarity.toLowerCase(), name), newElm('div.flexbox-fill'))];
 
 	if('defense' in item && item.defense) {
 		const defense = (typeof item.defense  == "number")
