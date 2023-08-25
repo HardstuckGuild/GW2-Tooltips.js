@@ -275,7 +275,7 @@ namespace API {
 		facts?          : Fact[]
 	}
 
-	type Item = (ItemBase & ItemDetail) | ItemAmulet | ItemUpgradeComponent | ItemConsumable
+	type Item = (ItemBase & ItemDetail) | ItemAmulet | ItemUpgradeComponent | ItemConsumable | ItemRelic
 
 	type ItemBase = {
 		id             : number
@@ -338,6 +338,11 @@ namespace API {
 			facts?       : Fact[]
 			modifiers?   : Modifier[]
 		}[]
+	}
+
+	type ItemRelic = ItemBase & {
+		type           : 'Relic'
+		related_skills : number[]
 	}
 
 	type ItemUpgradeComponent = ItemBase & {

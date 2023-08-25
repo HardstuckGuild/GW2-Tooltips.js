@@ -3,7 +3,6 @@
 //TODO(Rennorb): Option to show whole skill-chain (maybe on button hold)?
 //TODO(Rennorb): Stop using these jank custom tags. There is no reason to do so and its technically not legal per html spec.
 //TODO(Rennorb): Link minion skills to minion summon skill. might be doable via the species def
-//TODO(Rennorb): amulets endpoint.
 //TODO(Rennorb): Defiance break on single effect tooltips.
 //TODO(Rennorb): Change anything percent related to use fractions instead of integers (0.2 instead of 20).
 // The only thing this is good for is to make drawing the facts easier. Since we do quite a few calculations this swap would reduce conversions quite a bit.
@@ -250,6 +249,7 @@ function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 	const type = ((gw2Object.getAttribute('type') || 'skill') + 's') as `${LegacyCompat.ObjectType}s`;
 	const objId = +String(gw2Object.getAttribute('objId'))
 	let   context_ = context[+String(gw2Object.getAttribute('contextSet')) || 0];
+	const statSetId = +String(gw2Object.getAttribute('stats')) || undefined;
 	const stackSize = +String(gw2Object.getAttribute('count')) || undefined;
 
 	if(type == 'specializations' || type == 'effects') return; //TODO(Rennorb) @completeness: inline objs
@@ -260,14 +260,8 @@ function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 	if(data) {
 		//TODO(Rennorb): should we actually reset this every time?
 		cyclePos = visibleIndex;
-		if(type == 'items' || type == "pvp/amulets") {
-			const statId = +String(gw2Object.getAttribute('stats')) || undefined;
-			tooltip.replaceChildren(generateItemTooltip(data as API.Item, context_, gw2Object, statId, stackSize));
-		}
-		else {
-			context_ = specializeContextFromInlineAttribs(context_, gw2Object);
-			tooltip.replaceChildren(...generateToolTipList(data as Exclude<typeof data, API.Item>, gw2Object, context_));
-		}
+		context_ = specializeContextFromInlineAttribs(context_, gw2Object);
+		tooltip.replaceChildren(...generateToolTipList(data, gw2Object, context_, statSetId, stackSize));
 
 		tooltip.style.display = ''; //empty value resets actual value to use stylesheet
 		if(Array.from(tooltip.children).filter(tt => !tt.classList.contains('not-collapsable')).length > 1) {
@@ -334,7 +328,7 @@ function getSlotName(skill: API.Skill) : string | undefined {
 
 // TODO(Rennorb) @cleanup: split this into the inflator system aswell. its getting to convoluted already
 function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean, context : Context) : HTMLElement {
-	const headerElements = [newImg(apiObject.icon), newElm('teb', GW2Text2HTML(apiObject.name)), newElm('div.flexbox-fill')]; // split, now the right side
+	const headerElements = [newImg(apiObject.icon), newElm('teb', GW2Text2HTML(apiObject.name).replaceAll('[s]', '')/* TODO(Rennorb) @cleanup: quick hack to get relics working */), newElm('div.flexbox-fill')]; // split, now the right side
 
 	const currentContextInformation = resolveTraitsAndOverrides(apiObject, context);
 
@@ -556,7 +550,7 @@ function getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) :
 	}
 }
 
-function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTMLElement, context : Context) : HTMLElement[] {
+function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTMLElement, context : Context, statSetId? : number, stackSize? : number) : HTMLElement[] {
 	const objectChain : { obj : SupportedTTTypes, notCollapsable : boolean }[] = []
 	const validPaletteTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard', 'Equipment']
 	const adjustTraitedSkillIds = gw2Object.classList.contains('auto-transform');
@@ -587,15 +581,13 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 			objectChain.push({ obj: currentObj, notCollapsable: false })
 		}
 
-		//TODO(Rennorb): Apparently sub_skills (`related_skills`) is of very questionable correctness and seems to only be used internally.
-		// Using it in this way might produce unexpected results.
 		//NOTE(Rennorb): Checking for the skill chain here since it usually produces duplicated entries if one is present and the skill chain is more authoritative.
 		//NOTE(Rennorb): `related_skills` is also used for traits.
 		if(!hasChain && 'related_skills' in currentObj) {
 			const type = gw2Object.getAttribute('type') || 'skill';
 			for(const subSkillId of currentObj.related_skills!) {
 				const subSkillInChain = APICache.storage.skills.get(subSkillId);
-				if(subSkillInChain && ((type == 'trait') || subSkillInChain.palettes.some(palette => validPaletteTypes.includes(palette.type)))) {
+				if(subSkillInChain && ((type != 'skill') || subSkillInChain.palettes.some(palette => validPaletteTypes.includes(palette.type)))) {
 					objectChain.push({ obj: subSkillInChain, notCollapsable: false })
 				}
 			}
@@ -614,7 +606,9 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 
 	addObjectsToChain(initialAPIObject)
 
-	const tooltipChain = objectChain.map(({obj, notCollapsable}) => generateToolTip(obj, notCollapsable, context));
+	const tooltipChain = objectChain.map(({obj, notCollapsable}) => (
+		('type' in obj) ? generateItemTooltip(obj, context, gw2Object, statSetId, stackSize) : generateToolTip(obj, notCollapsable, context)
+	));
 	tooltip.append(...tooltipChain);
 	return tooltipChain
 }
@@ -1057,7 +1051,7 @@ export const ICONS = {
 	SINK            : 2440714,
 }
 
-type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet | OfficialAPI.Pet;
+type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet | OfficialAPI.Pet | API.Item; //TODO(Rennorb): change pet
 
 
 _constructor();
