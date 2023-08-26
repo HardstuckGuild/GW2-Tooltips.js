@@ -32,6 +32,7 @@ export function fromHTML(html : string) : DocumentFragment {
 
 export const GW2Text2HTML = (text? : string, ...formatArgs : string[]) => text
 	? text
+		.replace(/<c=(#.*?)>(.*?)<\/c>/g, `<span style="color: $1;">$2</span>`)
 		.replace(/<c=@(.*?)>(.*?)<\/c>/g, `<span class="gw2-color-$1">$2</span>`)
 		.replace(/%%/g, '%')
 		.replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')

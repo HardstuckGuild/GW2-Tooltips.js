@@ -97,7 +97,7 @@ namespace API {
 
 	interface BasicFact<Type extends keyof FactMap> {
 		type            : Type
-		icon            : string
+		icon?           : string
 		text?           : string
 		order           : number
 		requires_trait? : number[]

@@ -463,7 +463,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		remainingDetail.unshift(fromHTML(`<span class="detail">${fact.skip_next ? 'overridden' : 'exists'} because of trait${fact.requires_trait.length == 1 ? '' : 's'} ${trait_names}</span>`));
 	}
 
-	wrapper.append(generateBuffIcon(iconSlug, buffStackSize))
+	if(iconSlug) wrapper.append(generateBuffIcon(iconSlug, buffStackSize))
 	wrapper.append(newElm('div',
 		newElm('span', typeof firstLine == 'string' && firstLine.includes('<') ? fromHTML(firstLine) : firstLine), //parsing is expensive, don't just always do it
 		...remainingDetail.map(d => typeof d == 'string' ? newElm('span.detail', d) : d))
