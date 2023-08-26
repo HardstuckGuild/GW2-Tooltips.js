@@ -146,8 +146,22 @@
 	font-size: var(--gw2-tt-font-size-m);
 }
 
-.tooltipWrapper ted {
+.tooltipWrapper p.description {
 	color: var(--gw2-tt-color-tt-desc);
+	margin: 0.5em 0;
+}
+
+.tooltipWrapper .fact-block {
+	border-width: 1px 0 1px 1px;
+	border-style: solid;
+	border-image-slice: 1;
+	border-image-source: linear-gradient(to right, currentcolor, transparent 5%);
+  padding-left: 2px;
+  margin: 0.25em 0;
+}
+
+.tooltipWrapper .fact-block>p.description {
+	margin: 0.25em 0 0.5em 0.5em;
 }
 
 .tooltipWrapper .buff-ico {

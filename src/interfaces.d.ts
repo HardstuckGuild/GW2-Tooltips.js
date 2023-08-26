@@ -97,7 +97,7 @@ namespace API {
 
 	interface BasicFact<Type extends keyof FactMap> {
 		type            : Type
-		icon?           : string
+		icon            : string
 		text?           : string
 		order           : number
 		requires_trait? : number[]
@@ -272,7 +272,13 @@ namespace API {
 		endurance_cost? : number
 		supply_cost?    : number
 		upkeep_cost?    : number
-		facts?          : Fact[]
+		blocks?         : FactBlock[]
+	}
+
+	type FactBlock = {
+		trait_requirements? : number[]
+		description?        : string
+		facts?              : Fact[]
 	}
 
 	type Item = (ItemBase & ItemDetail) | ItemAmulet | ItemUpgradeComponent | ItemConsumable | ItemRelic

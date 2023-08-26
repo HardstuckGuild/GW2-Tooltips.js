@@ -431,14 +431,10 @@ function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean,
 	if(secondHeaderRow.length > 1) parts.push(newElm('tet.detail', ...secondHeaderRow));
 
 	if('description' in apiObject && apiObject.description) {
-		const description = document.createElement('ted')
-		description.style.marginTop = '.5em'; //TODO(Rennorb) @cleanup
-		description.style.marginBottom = '.5em';
-		description.innerHTML = `<teh>${GW2Text2HTML(apiObject.description)}</teh>`
-		parts.push(description)
+		parts.push(newElm('p.description', fromHTML(GW2Text2HTML(apiObject.description))))
 	}
 
-	if(currentContextInformation.facts) {
+	if(currentContextInformation.blocks) {
 		//NOTE(Rennorb): 690.5 is the midpoint weapon strength for slot skills (except bundles).
 		//TODO(Rennorb) @hardcoded @correctness: This value is hardcoded for usage with traits as they currently don't have any pointer that would provide weapon strength information.
 		// This will probably fail in some cases where damage facts on traits reference bundle skills (e.g. kits).
@@ -453,7 +449,7 @@ function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean,
 				weaponStrength = getWeaponStrength(relevantPalette)
 			}
 		}
-		parts.push(...generateFacts(currentContextInformation.facts, weaponStrength, context))
+		parts.push(...generateFacts(currentContextInformation.blocks, weaponStrength, context))
 	}
 
 	const tooltip = newElm('div.tooltip', ...parts)
@@ -463,32 +459,63 @@ function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean,
 	return tooltip;
 }
 
-export function resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { facts? : API.Fact[], override_groups? : API.ContextInformation['override_groups'] }, context : Context) : API.ContextInformation {
+export function resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { blocks? : API.ContextGroup['blocks'], override_groups? : API.ContextInformation['override_groups'] }, context : Context) : API.ContextInformation {
 	let override = apiObject.override_groups?.find(g => g.context.includes(context.gameMode));
 	let result = Object.assign({}, apiObject, override);
-	if(apiObject.facts && override && override.facts) {
-		result.facts = apiObject.facts.slice(); //clone the array
-		for(const fact of override.facts) {
-			if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
+	result.blocks = structuredClone(apiObject.blocks); // always have to clone this because we later on manipulate the facts
 
-			if(fact.insert_before !== undefined) result.facts.splice(fact.insert_before, 0, fact);
-			else result.facts.push(fact);
+	if(result.blocks && override?.blocks) {
+		const end = Math.max(apiObject.blocks!.length, override.blocks.length);
+		for(let blockId = 0; blockId < end; blockId++) {
+			const baseBlock = apiObject.blocks![blockId];
+			const overrideBlock = override.blocks[blockId];
+			if(!baseBlock && overrideBlock) {
+				result.blocks[blockId] = structuredClone(overrideBlock);
+			}
+			else if (overrideBlock) {
+				if(!overrideBlock.facts) continue;
+				//NOTE(Rennorb): trait restrictions only exist on the base block
+
+				//TODO(Rennorb): description and trait requirements cannot be overridden. so is this the wrong structure then?
+				if(!baseBlock.facts) {
+					result.blocks[blockId].facts = overrideBlock.facts.slice(); //clone the array
+					continue;
+				}
+				
+				const facts = result.blocks[blockId].facts = baseBlock.facts.slice(); // clone the base facts so we don't override the 'definition'
+				for(const fact of overrideBlock.facts) {
+					if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
+
+					if(fact.insert_before !== undefined) facts.splice(fact.insert_before, 0, fact);
+					else facts.push(fact);
+				}
+			}
+			// else (baseBlock && !overrideBlock) -> we already have the base block in the array
 		}
 	}
 
-	if(result.facts) {
-		const finalFacts = [];
-		for(let i = 0; i < result.facts.length; i++) {
-			const fact = result.facts[i];
-
-			if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
-
-			finalFacts.push(fact);
+	if(result.blocks) {
+		const finalBlocks = [];
+		for(const block of result.blocks) {
+			if(block.trait_requirements?.some(t => !context.character.traits.includes(t))) continue;
 			
-			if(fact.skip_next) i++;
-		}
+			if(block.facts) {
+				const finalFacts = [];
+				for(let i = 0; i < block.facts.length; i++) {
+					const fact = block.facts[i];
 
-		result.facts = finalFacts;
+					if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
+
+					finalFacts.push(fact);
+					
+					if(fact.skip_next) i++;
+				}
+
+				block.facts = finalFacts;
+			}
+			finalBlocks.push(block);
+		}
+		result.blocks = finalBlocks;
 	}
 
 	return result;

@@ -96,25 +96,27 @@ export default class APICache {
 			}
 		}
 
-		if('related_skills' in datum && datum.related_skills) {
-			for(const subSkill of datum.related_skills)
+		if('related_skills' in datum) {
+			for(const subSkill of datum.related_skills!)
 				if(!this.storage.skills.has(subSkill))
 					connectedIdsStorage.skills.add(subSkill);
 		}
 
-		if('facts' in datum && datum.facts) {
-			addFacts(datum.facts);
+		if('blocks' in datum) for(const block of datum.blocks!) {
+			if(block.facts)
+				addFacts(block.facts);
 		}
 
-		if('override_groups' in datum && datum.override_groups) {
-			for(const { facts } of datum.override_groups)
-				if(facts)
-					addFacts(facts);
+		if('override_groups' in datum) {
+			for(const { blocks } of datum.override_groups!)
+				if(blocks) for(const block of blocks!)
+					if(block.facts)
+						addFacts(block.facts);
 		}
 
-		if('attribute_set' in datum && datum.attribute_set) {
-			if(!this.storage.itemstats.has(datum.attribute_set))
-				connectedIdsStorage.itemstats.add(datum.attribute_set);
+		if('attribute_set' in datum) {
+			if(!this.storage.itemstats.has(datum.attribute_set!))
+				connectedIdsStorage.itemstats.add(datum.attribute_set!);
 		}
 
 		if('skills' in datum) for(const { id: subSkillId } of datum.skills) {

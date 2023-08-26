@@ -403,12 +403,12 @@ export function traitEffects(contexts : Context[]) {
 			if(trait.modifiers) addModifiers(trait.modifiers);
 
 			const contextBoundInfo = resolveTraitsAndOverrides(trait, context);
-			if(contextBoundInfo.facts) for(const fact of contextBoundInfo.facts) {
+			if(contextBoundInfo.blocks) for(const block of contextBoundInfo.blocks) if(block.facts) for(const fact of block.facts) {
 				if(!('buff' in fact)) continue;
 				
 				const buff = APICache.storage.skills.get(fact.buff);
 				if(!buff) {
-					console.error(`[gw2-tooltips] [collect] Trait #${fact.buff} is apparently missing in the cache.`);
+					console.error(`[gw2-tooltips] [collect] Skill #${fact.buff} is apparently missing in the cache.`);
 					continue;
 				}
 

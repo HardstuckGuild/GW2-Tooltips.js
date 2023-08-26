@@ -33,10 +33,11 @@ export function calculateModifier(
 }
 
 /** @param facts should already be context resolved */
-export function generateFacts(facts : API.Fact[], weaponStrength : number, context : Context) : HTMLElement[] {
+export function generateFacts(blocks : API.FactBlock[], weaponStrength : number, context : Context) : HTMLElement[] {
+	const [looseBlock, ...remainingBlocks] = blocks;
 	let totalDefianceBreak = 0
 
-	const factWraps = facts
+	const makeFactElements = (facts : API.Fact[] | undefined) => (!facts ? [] : facts
 		.sort((a, b) => a.order - b.order)
 		.map(fact => {
 			const { wrapper, defiance_break } = generateFact(fact, weaponStrength, context);
@@ -44,17 +45,36 @@ export function generateFacts(facts : API.Fact[], weaponStrength : number, conte
 			return wrapper;
 		})
 		.filter(d => d) as HTMLElement[] // ts doesn't understand what the predicate does
+	);
+
+	const elements = [];
+	for(const block of remainingBlocks) {
+		const wrapper = newElm('div.fact-block');
+		if(block.trait_requirements) {
+			//NOTE(Rennorb): If the trait is manually set on the object then we don't have it cached, so we just use the id if we don't have a name.
+			const trait_names = joinWordList(block.trait_requirements.map(id => `'<span class="gw2-color-traited-fact">${APICache.storage.traits.get(id)?.name || id}</span>'`))
+			wrapper.append(fromHTML(`<span class="detail">Block exists because of trait${block.trait_requirements.length == 1 ? '' : 's'} ${trait_names}</span>`));
+		}
+		if(block.description) wrapper.append(newElm('p.description', fromHTML(GW2Text2HTML(block.description))));
+
+		const blockFacts = makeFactElements(block.facts);
+		wrapper.append(...blockFacts);
+
+		elements.push(wrapper);
+	}
+
+	if(looseBlock) elements.push(...makeFactElements(looseBlock.facts));
 
 	//TODO(Rennorb): This should use order 1003
 	if(totalDefianceBreak > 0) {
 		const defianceWrap = newElm('div.fact',
 			newImg(ICONS.DEFIANCE_BREAK, 'iconmed'),
 			newElm('div.gw2-color-defiance-fact', `Defiance Break: ${withUpToNDigits(totalDefianceBreak, 2)}`)
-		)
-		factWraps.push(defianceWrap)
+		);
+		elements.push(defianceWrap);
 	}
 
-	return factWraps
+	return elements
 }
 
 /** @param fact should already be context resolved */
@@ -463,7 +483,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		remainingDetail.unshift(fromHTML(`<span class="detail">${fact.skip_next ? 'overridden' : 'exists'} because of trait${fact.requires_trait.length == 1 ? '' : 's'} ${trait_names}</span>`));
 	}
 
-	if(iconSlug) wrapper.append(generateBuffIcon(iconSlug, buffStackSize))
+	wrapper.append(generateBuffIcon(iconSlug, buffStackSize))
 	wrapper.append(newElm('div',
 		newElm('span', typeof firstLine == 'string' && firstLine.includes('<') ? fromHTML(firstLine) : firstLine), //parsing is expensive, don't just always do it
 		...remainingDetail.map(d => typeof d == 'string' ? newElm('span.detail', d) : d))
