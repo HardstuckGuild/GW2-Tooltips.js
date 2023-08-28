@@ -592,14 +592,13 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 			}
 			objectChain.push({ obj: currentObj, notCollapsable: false });
 
-			for(const palette of currentObj.palettes) {
-				for(const slot of palette.slots) {
-					if(slot.next_chain && slot.profession !== 'None') {
-						const nextSkillInChain = APICache.storage.skills.get(slot.next_chain);
-						if(nextSkillInChain) {
-							hasChain = true;
-							addObjectsToChain(nextSkillInChain)
-						}
+			const palette = currentObj.palettes.find(p => validPaletteTypes.includes(p.type));
+			if(palette) for(const slot of palette.slots) {
+				if(slot.next_chain && slot.profession !== 'None') {
+					const nextSkillInChain = APICache.storage.skills.get(slot.next_chain);
+					if(nextSkillInChain) {
+						hasChain = true;
+						addObjectsToChain(nextSkillInChain)
 					}
 				}
 			}
