@@ -408,11 +408,14 @@ export function traitEffects(contexts : Context[]) {
 				
 				const buff = APICache.storage.skills.get(fact.buff);
 				if(!buff) {
-					console.error(`[gw2-tooltips] [collect] Skill #${fact.buff} is apparently missing in the cache.`);
+					console.error(`[gw2-tooltips] [collect] Buff #${fact.buff} required for trait effect collection is apparently missing in the cache.`);
 					continue;
 				}
 
-				if(buff.modifiers) addModifiers(buff.modifiers);
+				if(buff.modifiers && !['Boon', 'Condition'].includes(buff.buff_type!)) {
+					console.info(`[gw2-tooltips] [collect] [trait-effects] ${trait.name} applies ${buff.buff_type} ${buff.name}: ${buff.modifiers.length} mods`);
+					addModifiers(buff.modifiers);
+				}
 			}
 		}
 	}
