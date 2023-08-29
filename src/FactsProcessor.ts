@@ -161,8 +161,8 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			// every 15 points add 1%
 			durMod += attribVal / 15 * 0.01;
 			if(attribVal > 0 && config.showFactComputationDetail) {
-				detailStack.push(`base duration: ${drawFractional(duration / 1000, config)}s`);
-				detailStack.push(`+${withUpToNDigits(attribVal / 15, 2)}% from ${attribVal} ${durationAttr}`);
+				detailStack.push(`base duration: ${n3(duration / 1000)}s`);
+				detailStack.push(`+${n3(attribVal / 15)}% from ${attribVal} ${durationAttr}`);
 			}
 		}
 
@@ -170,12 +170,12 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		let durModStack = context.character.statSources[buff.id];
 		if(durModStack) {
 			//NOTE(Rennorb): Just in case we didn't have a stat duration increase. Im aware that this is jank, but i cant think of a better way rn.
-			if(durMod === 1 && config.showFactComputationDetail) detailStack.push(`base duration: ${drawFractional(duration / 1000, config)}s`);
+			if(durMod === 1 && config.showFactComputationDetail) detailStack.push(`base duration: ${n3(duration / 1000)}s`);
 			let percentMod = 0;
 			for(const { source, modifier, count } of durModStack) {
 				const mod = calculateModifier(modifier, context.character);
 				if(config.showFactComputationDetail)
-					detailStack.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${mod}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : '')); //TODO(Rennorb) @cleanup: im not really happy with how this works right now. Storing html in the text is not what i like to do but it works for now. Multiple of this.
+					detailStack.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : '')); //TODO(Rennorb) @cleanup: im not really happy with how this works right now. Storing html in the text is not what i like to do but it works for now. Multiple of this.
 				percentMod += mod;
 			}
 			durMod += percentMod / 100;
@@ -192,7 +192,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				for(const { source, modifier, count } of valueModStack) {
 					const mod = calculateModifier(modifier, context.character);
 					if(config.showFactComputationDetail)
-						detailStack.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${mod}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
+						detailStack.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
 					percentMod += mod;
 				}
 				valueMod += percentMod / 100;
@@ -211,9 +211,9 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			const lines = [];
 
 			if(config.showFactComputationDetail) {
-				lines.push(`${fact.value} base value`);
-				if(fact.level_multiplier) lines.push(`+ ${withUpToNDigits(context.character.level ** fact.level_exponent * fact.level_multiplier, 2)} from lvl ${context.character.level} ^ ${fact.level_exponent} lvl exp. * ${fact.level_multiplier} lvl mul.`);
-				if(attributeVal) lines.push(`+ ${withUpToNDigits(attributeVal * fact.attribute_multiplier, 2)} from ${attributeVal} ${mapLocale(fact.target)} * ${fact.attribute_multiplier} attrib mod.`);
+				lines.push(`${n3(fact.value)} base value`);
+				if(fact.level_multiplier) lines.push(`+ ${n3(context.character.level ** fact.level_exponent * fact.level_multiplier)} from lvl ${context.character.level} ^ ${n3(fact.level_exponent)} lvl exp. * ${n3(fact.level_multiplier)} lvl mul.`);
+				if(attributeVal) lines.push(`+ ${n3(attributeVal * fact.attribute_multiplier)} from ${n3(attributeVal)} ${mapLocale(fact.target)} * ${n3(fact.attribute_multiplier)} attrib mod.`);
 				if(fact.hit_count != 1) lines.push(` * ${fact.hit_count} hits`);
 			}
 
@@ -222,7 +222,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				for(const { source, modifier, count } of context.character.statSources.healEffectiveness) {
 					const mod = calculateModifier(modifier, context.character);
 					if(config.showFactComputationDetail)
-						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${mod}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
+						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
 					percentMod += mod;
 				}
 				value *= percentMod / 100;
@@ -293,13 +293,13 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			const lines = [];
 			if(context.character.statSources.lifeForce.length) {
 				if(config.showFactComputationDetail)
-					lines.push(`${percent * hpPool * 0.69} from ${percent}% * (${hpPool} HP * 0.69) base pool`);
+					lines.push(`${n3(percent * hpPool * 0.69)} from ${n3(percent)}% * (${n3(hpPool)} HP * 0.69) base pool`);
 
 				let percentMod = 100;
 				for(const { source, modifier, count } of context.character.statSources.lifeForce) {
 					const mod = calculateModifier(modifier, context.character);
 					if(config.showFactComputationDetail)
-						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${mod}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
+						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
 					percentMod += mod;
 				}
 				percent *= percentMod / 100;
@@ -322,13 +322,13 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			const lines = [];
 			if(context.character.statSources.lifeForce.length) {
 				if(config.showFactComputationDetail)
-					lines.push(`${withUpToNDigits(percent * 0.01 * hpPool * 0.69, 3)} from ${percent}% * (${hpPool} HP * 0.69) base pool`);
+					lines.push(`${n3(percent * 0.01 * hpPool * 0.69)} from ${n3(percent)}% * (${n3(hpPool)} HP * 0.69) base pool`);
 
 				let percentMod = 100;
 				for(const { source, modifier, count } of context.character.statSources.lifeForce) {
 					const mod = calculateModifier(modifier, context.character);
 					if(config.showFactComputationDetail)
-						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${mod}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
+						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
 					percentMod += mod;
 				}
 				percent *= percentMod / 100;
@@ -345,7 +345,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			
 			let damage = dmg_multiplier * hit_count * weaponStrength * context.character.stats.power / context.targetArmor;
 			if(config.showFactComputationDetail) {
-				lines.push(`${withUpToNDigits(damage, 2)} from ${withUpToNDigits(dmg_multiplier, 2)} internal mod. * ${context.character.stats.power} power * ${weaponStrength} avg. weapon str. / ${context.targetArmor} target armor`);
+				lines.push(`${n3(damage)} from ${n3(dmg_multiplier)} internal mod. * ${n3(context.character.stats.power)} power * ${weaponStrength} avg. weapon str. / ${context.targetArmor} target armor`);
 				if(hit_count != 1) lines.push(`* ${hit_count} hits`);
 			}
 
@@ -356,7 +356,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			const moreDmgFromCrit = damage * critChance * (critDamage - 1);
 			damage += moreDmgFromCrit;
 			if(config.showFactComputationDetail) {
-				lines.push(`+${withUpToNDigits(moreDmgFromCrit, 2)} (${withUpToNDigits(critChance * (critDamage - 1) * 100, 2)}%) from ${withUpToNDigits(critChance * 100, 2)}% crit chance and ${withUpToNDigits(critDamage * 100, 2)}% damage on crit (${withUpToNDigits(context.character.stats.precision, 2)} precision and ${withUpToNDigits(context.character.stats.ferocity, 2)} ferocity)`);
+				lines.push(`+${n3(moreDmgFromCrit)} (${n3(critChance * (critDamage - 1) * 100)}%) from ${n3(critChance * 100)}% crit chance and ${n3(critDamage * 100)}% damage on crit (${n3(context.character.stats.precision)} precision and ${n3(context.character.stats.ferocity)} ferocity)`);
 			}
 
 			if(context.character.statSources.damage.length) {
@@ -364,7 +364,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				for(const { source, modifier, count } of context.character.statSources.damage) {
 					const mod = calculateModifier(modifier, context.character);
 					if(config.showFactComputationDetail)
-						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${mod}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
+						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
 					percentMod += mod;
 				}
 				damage *= percentMod / 100;
@@ -381,12 +381,12 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			if(text && (text.includes('Stun') || text.includes('Daze'))) {
 				if(context.character.statSources.stun.length) {
 					if(config.showFactComputationDetail)
-						lines.push(`${duration / 1000}s base duration`);
+						lines.push(`${n3(duration / 1000)}s base duration`);
 					let percentMod = 100;
 					for(const { source, modifier, count } of context.character.statSources.stun) {
 						const mod = calculateModifier(modifier, context.character);
 						if(config.showFactComputationDetail)
-							lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${mod}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
+							lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
 						percentMod += mod;
 					}
 					duration *= percentMod / 100;
@@ -516,6 +516,8 @@ export const MISSING_SKILL : API.Skill = {
 	description: '<c=@warning>This Skill failed to load</c>',
 	categories : [], palettes   : [], modifiers  : [],
 }
+
+function n3(v : number) { return withUpToNDigits(v, 3); }
 
 import { newElm, newImg, drawFractional, GW2Text2HTML, withUpToNDigits, mapLocale, Uncapitalize, joinWordList, fromHTML } from './TUtilsV2';
 import APICache from './APICache';
