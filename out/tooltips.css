@@ -391,6 +391,21 @@ gw2object[type=specialization] .trait_unselected img {
   clip-path: polygon(50% 0, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%) !important;
 }
 
+.gw2objectembed[type=attribute] img {
+	width: 1.25em;
+}
+
+.gw2-attributes>* {
+	display: inline-flex;
+	flex-direction: column;
+	gap: 0.125rem;
+}
+
+.gw2-attributes [type=attribute] {
+	height: 1.2em;
+	min-width: 12ch;
+}
+
 
 .weapon { display: flex; }
 .weapon-set { margin-bottom: 1rem; }

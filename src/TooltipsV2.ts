@@ -172,41 +172,65 @@ function positionTooltip(animate = false) {
 	tooltip.style.top  = `${tooltipYpos}px`;
 }
 
-export function hookDocument(scope : ScopeElement, _unused? : any) : Promise<void[]> {
+type GW2ObjectMap = {
+	[k in `${Exclude<V2ObjectType, 'effect' | 'attribute'>}s`] : Map<number, HTMLElement[]>
+} & {
+	attributes : Map<string, HTMLElement[]>,
+}
+
+export async function hookDocument(scope : ScopeElement, _unused? : any) : Promise<GW2ObjectMap> {
 	//NOTE(Rennorb): need to use an array since there might be multiple occurrences of the same id in a given scope
-	const objectsToGet : ObjectsToFetch = {
-		skills         : new Map<number, HTMLElement[] | undefined>(),
-		traits         : new Map<number, HTMLElement[] | undefined>(),
-		items          : new Map<number, HTMLElement[] | undefined>(),
-		specializations: new Map<number, HTMLElement[] | undefined>(),
-		pets           : new Map<number, HTMLElement[] | undefined>(),
-		'pvp/amulets'  : new Map<number, HTMLElement[] | undefined>(),
+	const objectsToGet : GW2ObjectMap = {
+		skills         : new Map<number, HTMLElement[]>(),
+		traits         : new Map<number, HTMLElement[]>(),
+		items          : new Map<number, HTMLElement[]>(),
+		specializations: new Map<number, HTMLElement[]>(),
+		pets           : new Map<number, HTMLElement[]>(),
+		'pvp/amulets'  : new Map<number, HTMLElement[]>(),
+		attributes     : new Map<string, HTMLElement[]>(),
 	}
 	const statsToGet = new Set<number>();
 	const _legacy_effectErrorStore = new Set<string>();
 
 	for(const gw2Object of scope.getElementsByTagName('gw2object') as HTMLCollectionOf<HTMLElement>) {
-		const stats = +String(gw2Object.getAttribute('stats'))
+		const stats = +String(gw2Object.getAttribute('stats'));
 		if(!isNaN(stats)) statsToGet.add(stats);
 
-		let objId = +String(gw2Object.getAttribute('objId'))
+		let objId_raw = gw2Object.getAttribute('objId');
 		//TODO(Rennorb) @cleanup @compat: this is literally just for naming 'convenience'.
 		// Figure out if we can just get rid of the +'s' or if that poses an issue with backwards compat
-		let type = (gw2Object.getAttribute('type') || 'skill') + 's'
+		let type = (gw2Object.getAttribute('type') || 'skill') + 's' as `${V2ObjectType}s`;
 
-		if(config.legacyCompatibility) {
-			//NOTE(Rennorb): weapon swaps are completely synthesized
-			if(type === 'effects') {
-				type = 'skills';
-				objId = _legacy_transformEffectToSkillObject(gw2Object, _legacy_effectErrorStore);
+		if(type === 'attributes') {
+			if(typeof objId_raw === 'string') {
+				const elementsWithThisId = objectsToGet.attributes.get(objId_raw);
+				if(elementsWithThisId) elementsWithThisId.push(gw2Object);
+				else objectsToGet.attributes.set(objId_raw, [gw2Object]);
 			}
 		}
+		else {
+			let objId = +String(objId_raw);
 
-		if(isNaN(objId) || !(type in objectsToGet)) continue;
+			if(type === 'effects') {
+				//NOTE(Rennorb): weapon swaps are completely synthesized
+				if(config.legacyCompatibility) {
+					type = 'skills';
+					objId = _legacy_transformEffectToSkillObject(gw2Object, _legacy_effectErrorStore);
+				}
+				else {
+					continue;
+				}
+			}
 
-		const elementsWithThisId = objectsToGet[type as keyof typeof objectsToGet].get(objId);
-		if(elementsWithThisId) elementsWithThisId.push(gw2Object)
-		else objectsToGet[type as keyof typeof objectsToGet].set(objId, [gw2Object])
+			if(!isNaN(objId) && type in objectsToGet) {
+				const elementsWithThisId = objectsToGet[type].get(objId);
+				if(elementsWithThisId) elementsWithThisId.push(gw2Object);
+				else objectsToGet[type].set(objId, [gw2Object]);
+			}
+			else {
+				continue;
+			}
+		}
 
 		gw2Object.addEventListener('mouseenter', (e) => showTooltipFor(e.target as HTMLElement));
 		gw2Object.addEventListener('mouseleave', () => {
@@ -221,7 +245,10 @@ export function hookDocument(scope : ScopeElement, _unused? : any) : Promise<voi
 
 	if(statsToGet.size > 0) APICache.ensureExistence('itemstats', statsToGet.values());
 
-	return Promise.all(Object.entries(objectsToGet).map(async ([key, values]) => {
+	await Promise.all(
+		(Object.entries(objectsToGet)
+		.filter(([key, _]) => key != 'attributes') as [Exclude<keyof typeof objectsToGet, 'attributes'>, Map<number, HTMLElement[]>][])
+		.map(async ([key, values]) => {
 		if(values.size == 0) return;
 
 		let inflator;
@@ -242,12 +269,14 @@ export function hookDocument(scope : ScopeElement, _unused? : any) : Promise<voi
 			for(const gw2Object of objects)
 				inflator(gw2Object, data as any);
 		}
-	}))
+	}));
+
+	return objectsToGet;	
 }
 
 function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
-	const type = ((gw2Object.getAttribute('type') || 'skill') + 's') as `${LegacyCompat.ObjectType}s`;
-	const objId = +String(gw2Object.getAttribute('objId'))
+	const type = ((gw2Object.getAttribute('type') || 'skill') + 's') as `${V2ObjectType}s`;
+	const objId = gw2Object.getAttribute('objId')
 	let   context_ = context[+String(gw2Object.getAttribute('contextSet')) || 0];
 	const statSetId = +String(gw2Object.getAttribute('stats')) || undefined;
 	const stackSize = +String(gw2Object.getAttribute('count')) || undefined;
@@ -256,7 +285,20 @@ function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 
 	lastTooltipTarget = gw2Object;
 
-	const data = APICache.storage[type].get(objId);
+	if(type == 'attributes') {
+		if(objId) {
+			//TODO(Rennorb): should we actually reset this every time?
+			cyclePos = visibleIndex;
+			tooltip.replaceChildren(generateAttributeTooltip(objId as BaseAttribute | ComputedAttribute, gw2Object, context_));
+
+			tooltip.style.display = ''; //empty value resets actual value to use stylesheet
+			for(const tt of tooltip.children) tt.classList.add('active');
+			scrollSubTooltipIntoView(cyclePos);
+		}
+		return;
+	}
+
+	const data = APICache.storage[type].get(+String(objId));
 	if(data) {
 		//TODO(Rennorb): should we actually reset this every time?
 		cyclePos = visibleIndex;
@@ -357,9 +399,9 @@ function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean,
 
 	if(currentContextInformation.endurance_cost) {
 		headerElements.push(newElm('ter',
-		String(Math.round(currentContextInformation.endurance_cost)),
-		newImg(ICONS.ENDURANCE_COST, 'iconsmall')
-		));		
+			String(Math.round(currentContextInformation.endurance_cost)),
+			newImg(ICONS.ENDURANCE_COST, 'iconsmall')
+		));
 	}
 
 	if(currentContextInformation.upkeep_cost) {
@@ -519,26 +561,6 @@ export function resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { block
 	}
 
 	return result;
-}
-
-//TODO(Rennorb) @correctness: this does not take traits into consideration
-export function getHealth(character : Character) : number {
-	//TODO(Rennorb): level scaling
-	const baseHealth = !character.profession
-		? 1000 //TODO(Rennorb): none?
-		: ({
-				Guardian     : 1645,
-				Thief        : 1645,
-				Elementalist : 1645,
-				Engineer     : 5922,
-				Ranger       : 5922,
-				Mesmer       : 5922,
-				Revenant     : 5922,
-				Necromancer  : 9212,
-				Warrior      : 9212,
-			} as { [k in Profession] : number })[character.profession];
-
-	return baseHealth + character.stats.vitality * 10;
 }
 
 function getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) : number {
@@ -856,6 +878,123 @@ function generateUpgradeItemGroup(item : API.ItemUpgradeComponent | API.ItemCons
 	return group;
 }
 
+function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute, gw2Object : HTMLElement, context : Context) : HTMLElement {
+	const [_, parts] = computeAttributeFromMods(attribute, context, true);
+	return newElm('div.tooltip.item.active', ...parts);
+}
+
+function computeAttributeFromMods(attribute : BaseAttribute | ComputedAttribute, context : Context, generateHtml = false) : [number, HTMLElement[]] {
+	let { baseAttribute, suffix, isComputed, base, div } = getAttributeInformation(attribute, context);
+	const displayMul = suffix ? 100 : 1;
+
+	let value = base, text;
+	const parts = [];
+
+	if(!baseAttribute) {
+		if(generateHtml) parts.push(newElm('tet.title', newElm('teb', attribute)));
+	}
+	else {
+		{
+			if(generateHtml) {
+				text = `${n3(base * displayMul) + suffix} base value`;
+				if(base) { text += ' from lvl 80'; }
+				parts.push(newElm('div.detail', text));
+			}
+			if(isComputed) {
+				let stat = context.character.stats[baseAttribute];
+				//NOTE(Rennorb): precision is processed really wired, so we just hard code this case
+				//TODO(Rennorb) @scaling
+				if(attribute == 'CritChance') stat -= 1000;
+				const statBonus = stat / div;
+				value += statBonus;
+
+				if(generateHtml && statBonus) {
+					text = ` + ${n3(statBonus * displayMul) + suffix} from ${n3(context.character.stats[baseAttribute])} ${mapLocale(baseAttribute)}`
+					if(div != 1) text += ` / ${div / displayMul} (attrib. specific conv. factor)`
+					parts.push(newElm('div.detail', text!));
+				}
+			}
+		}
+		let modValue = 0;
+		if(!isComputed) for(const source of context.character.statSources[baseAttribute]) {
+			let mod = calculateModifier(source.modifier, context.character) * source.count;
+			const suffix = source.modifier.flags.includes('FormatPercent') ? '%' : '';
+			const displayMul = suffix ? 100 : 1;
+			const toAdd = suffix ? mod * value : mod;
+			modValue += toAdd;
+			
+			if(generateHtml) {
+				text = `+${n3(toAdd)}`;
+				if(suffix) text += ` (${n3(mod * displayMul)}%)`;
+				text += ' from ';
+				if(source.count > 1) text += `${source.count} `;
+				text += source.source;
+				parts.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
+			}
+		}
+		value += modValue;
+
+		if(generateHtml) {
+			parts.unshift(newElm('tet.title', newElm('teb', n3(value * displayMul) + suffix + ' ' + mapLocale(attribute))));
+		}
+	}
+
+	return [value, parts];
+}
+
+function getAttributeInformation<T_>(attribute : BaseAttribute | ComputedAttribute | T_, context : Context) {
+	const _p2 = ({
+		Power            : ['Power'          ,  66722, '' , false,   1000,    1],
+		Toughness        : ['Toughness'      , 104162, '' , false,   1000,    1],
+		Vitality         : ['Vitality'       , 104163, '' , false,   1000,    1],
+		Precision        : ['Precision'      , 156609, '' , false,   1000,    1],
+		Ferocity         : ['Ferocity'       , 156602, '' , false,      0,    1],
+		ConditionDamage  : ['ConditionDamage', 156600, '' , false,      0,    1],
+		Expertise        : ['Expertise'      , 156601, '' , false,      0,    1],
+		Concentration    : ['Concentration'  , 156599, '' , false,      0,    1],
+		HealingPower     : ['HealingPower'   , 156606, '' , false,      0,    1],
+		AgonyResistance  : ['AgonyResistance', 536049, '' , false,      0,    1],
+		Health           : ['Vitality'       , 536052, '' , true ,      0,  0.1],
+		Armor            : ['Toughness'      , 536048, '' , true ,      0,    1],
+		ConditionDuration: ['Expertise'      , 156601, '%', true ,      0, 1500],
+		BoonDuration     : ['Concentration'  , 156599, '%', true ,      0, 1500],
+		CritChance       : ['Precision'      , 536051, '%', true ,   0.05, 2100],
+		CritDamage       : ['Ferocity'       , 784327, '%', true ,    1.5, 1500],
+	} as { [k in BaseAttribute | ComputedAttribute]? : [BaseAttribute, number, string, boolean, number, number]})[attribute as Exclude<typeof attribute, T_>];
+	let baseAttribute, img, suffix = '', isComputed, base = 0, div = 1;
+	if(_p2) [baseAttribute, img, suffix, isComputed, base, div] = _p2;
+	if(attribute == 'Health') base = getBaseHealth(context.character);
+	return { baseAttribute, img, suffix, isComputed, base, div };
+}
+
+function getBaseHealth(character : Character) : number {
+	//TODO(Rennorb): level scaling
+	return !character.profession
+		? 1000 //TODO(Rennorb): none?
+		: ({
+				Guardian     : 1645,
+				Thief        : 1645,
+				Elementalist : 1645,
+				Engineer     : 5922,
+				Ranger       : 5922,
+				Mesmer       : 5922,
+				Revenant     : 5922,
+				Necromancer  : 9212,
+				Warrior      : 9212,
+			} as { [k in Profession] : number })[character.profession];
+}
+
+function recomputeCharacterAttributes(context : Context) {
+	const attributeOrder : (BaseAttribute | ComputedAttribute)[] = [
+		'Power', 'Toughness', 'Vitality', 'Precision', 'Ferocity', 'ConditionDamage', 'Expertise', 'Concentration', 'HealingPower', 'AgonyResistance',
+		'Health', 'Armor', 'ConditionDuration', 'BoonDuration', 'CritChance', 'CritDamage',
+	];
+	for(const attribute of attributeOrder) {
+		const [value, _] = computeAttributeFromMods(attribute, context);
+		context.character.stats[attribute] = value;
+	}
+}
+
 function calculateConditionDuration(level : number, expertise : number) {
 	return expertise / (LUT_CRITICAL_DEFENSE[level] * (15 / LUT_CRITICAL_DEFENSE[80]));
 }
@@ -891,16 +1030,12 @@ export function formatItemName(item : API.Item, context : Context, statSet? : AP
 		}
 	}
 
-	name = name.replace('%str1%', arg1).replace('%str2%', arg2).replace('%str3%', arg3).replace('%str4%', arg4);
+	name = resolveInflections(GW2Text2HTML(name, arg1, arg2, arg3, arg4), stackSize, context.character);
 
 	if(!item.flags.includes('Pve') && (item.flags.includes('Pvp') || item.flags.includes('PvpLobby')))
 		name += " (PvP)";
 
-	return name.replaceAll('[s]', stackSize > 1 ? 's' : '')
-		.replaceAll(/(\S+)\[pl:"(.+?)"]/g, stackSize > 1 ? '$2' : '$1')
-		.replaceAll(/(\S+)\[f:"(.+?)"]/g, context.character.sex == "Female" ? '$2' : '$1')
-		.replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')
-		.replaceAll('[null]', '')
+	return name;
 }
 
 //TODO(Rennorb): @docs
@@ -956,6 +1091,7 @@ function isTwoHanded(type : API.WeaponDetailType) {
 	}
 }
 
+//NOTE(Rennorb): stats are going to be processed separately
 export const DEFAULT_CONTEXT : Context = {
 	gameMode           : 'Pve',
 	targetArmor        : 2597,
@@ -965,33 +1101,39 @@ export const DEFAULT_CONTEXT : Context = {
 		sex              : "Male",
 		traits           : [],
 		stats: {
-			power          : 1000,
-			toughness      : 1000,
-			vitality       : 1000,
-			precision      : 1000,
-			ferocity       : 0,
-			conditionDmg   : 0,
-			expertise      : 0,
-			concentration  : 0,
-			healing        : 0,
-			agonyResistance: 0,
+			Power            : 1000,
+			Toughness        : 1000,
+			Vitality         : 1000,
+			Precision        : 1000,
+			Ferocity         : 0,
+			ConditionDamage  : 0,
+			Expertise        : 0,
+			Concentration    : 0,
+			HealingPower     : 0,
+			AgonyResistance  : 0,
+			Health           : 10000,
+			Armor            : 1000,
+			CritChance       : 0.05,
+			CritDamage       : 1.5,
+			ConditionDuration: 0,
+			BoonDuration     : 0,
 		},
 		statSources: {
-			power          : [],
-			toughness      : [],
-			vitality       : [],
-			precision      : [],
-			ferocity       : [],
-			conditionDmg   : [],
-			expertise      : [],
-			concentration  : [],
-			healing        : [],
-			agonyResistance: [],
-			damage         : [],
-			lifeForce      : [],
-			health         : [],
-			healEffectiveness: [],
-			stun           : [],
+			Power          : [],
+			Toughness      : [],
+			Vitality       : [],
+			Precision      : [],
+			Ferocity       : [],
+			ConditionDamage: [],
+			Expertise      : [],
+			Concentration  : [],
+			HealingPower   : [],
+			AgonyResistance: [],
+			Damage         : [],
+			LifeForce      : [],
+			Health         : [],
+			HealEffectiveness: [],
+			Stun           : [],
 		},
 		upgradeCounts: {},
 	},
@@ -1009,15 +1151,16 @@ function createCompleteContext(partialContext : PartialContext) : Context {
 }
 
 const DEFAULT_CONFIG : Config = {
-	autoInitialize                : true,
-	autoCollectRuneCounts         : true,
-	autoCollectStatSources        : true,
-	autoCollectSelectedTraits     : true,
-	adjustIncorrectStatIds        : true,
-	autoInferEquipmentUpgrades    : true,
-	legacyCompatibility           : true,
-	showPreciseAbilityTimings     : false,
-	showFactComputationDetail     : false,
+	autoInitialize                  : true,
+	autoCollectRuneCounts           : true,
+	autoCollectStatSources          : true,
+	autoCollectSelectedTraits       : true,
+	autoRecomputeCharacterAttributes: true,
+	adjustIncorrectStatIds          : true,
+	autoInferEquipmentUpgrades      : true,
+	legacyCompatibility             : true,
+	showPreciseAbilityTimings       : false,
+	showFactComputationDetail       : false,
 }
 
 const LUT_DEFENSE = [
@@ -1092,7 +1235,7 @@ if(config.autoInitialize) {
 	}
 
 	hookDocument(document)
-		.then(_ => {
+		.then(gw2Objects => {
 			//TODO(Rennorb) @cleanup: those routines could probably be combined into one when both options are active
 			if(config.autoCollectRuneCounts) {
 				//TODO(Rennorb) @correctness: this might not work properly with multiple builds on one page
@@ -1123,13 +1266,28 @@ if(config.autoInitialize) {
 					console.warn("[gw2-tooltips] [collect] `config.autoInferEquipmentUpgrades` is active, but no wrapper elements element with class `'weapon`, `armor` or `trinket` could be found to use as source. No elements will be updated");
 				}
 			}
+
+			if(config.autoRecomputeCharacterAttributes) {
+				for(const context_ of context) {
+					recomputeCharacterAttributes(context_);
+				}
+			}
+
+			//TODO(Rennorb) @cleanup: this will not be triggered by hook document which is technically not correct.
+			// But for this to work is has to happen after the collect logic, which is not quite as easy to do.
+			// Maybe a good approach would be to slice hook document into stages that can be enabled / disabled. This would also fix some config options only working with autoInit = true.
+			for(const [attribute, elements] of gw2Objects.attributes) {
+				for(const element of elements) {
+					inflateAttribute(element, attribute as BaseAttribute | ComputedAttribute);
+				}
+			}
 		})
 }
 
-import { newElm, newImg, GW2Text2HTML, mapLocale, drawFractional, fromHTML, findSelfOrParent } from './TUtilsV2';
+import { newElm, newImg, GW2Text2HTML, mapLocale, drawFractional, fromHTML, findSelfOrParent, n3, resolveInflections } from './TUtilsV2';
 import * as APIs from './API';
 import APICache from './APICache';
 import { MISSING_SKILL, calculateModifier, generateFact, generateFacts } from './FactsProcessor';
 import * as Collect from './Collect'; //TODO(Rennorb) @cleanup
-import { _legacy_transformEffectToSkillObject, inferItemUpgrades, inflateGenericIcon, inflateItem, inflateSkill, inflateSpecialization } from './Inflators'
+import { _legacy_transformEffectToSkillObject, inferItemUpgrades, inflateAttribute, inflateGenericIcon, inflateItem, inflateSkill, inflateSpecialization } from './Inflators'
 

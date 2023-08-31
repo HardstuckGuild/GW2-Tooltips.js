@@ -7,6 +7,8 @@ namespace LegacyCompat {
 	type ObjectType = 'skill' | 'trait' | 'item' | 'specialization' | 'pet' | 'pvp/amulet' | 'specialization' | 'effect';
 }
 
+type V2ObjectType = LegacyCompat.ObjectType | 'attribute';
+
 namespace OfficialAPI {
 	type AmuletStats = 'AgonyResistance' | 'BoonDuration' | 'ConditionDamage' | 'ConditionDuration' | 'CritDamage' | 'Healing' | 'Power' | 'Precision' | 'Toughness' | 'Vitality';
 	type Amulet = {
@@ -49,12 +51,10 @@ namespace API {
 
 	type Fact = FactMap[keyof FactMap];
 
-	//TODO(Rennorb) @cleanup: ho over the flag types and decide whether or not the 'none' entry should be included or excluded by default, then stick with one of the two.
-	type Attributes = 'None' | Capitalize<keyof Stats>;
-	type ArmorType  = 'HelmAquatic' | 'Helm' | 'Shoulders' | 'Coat' | 'Gloves' | 'Leggings' | 'Boots';
-	type TrinketType = 'Amulet' | 'Ring' | 'Accessory' | 'Backpiece';
-	type Weapons1H = 'Focus' | 'Shield' | 'Torch' | 'Warhorn' | 'BowShort' | 'Axe' | 'Sword' | 'Dagger' | 'Pistol' | 'Scepter' | 'Mace';
-	type Weapons2H = 'Greatsword' | 'Hammer' | 'Staff' | 'BowLong' | 'Rifle';
+	type ArmorType      = 'HelmAquatic' | 'Helm' | 'Shoulders' | 'Coat' | 'Gloves' | 'Leggings' | 'Boots';
+	type TrinketType    = 'Amulet' | 'Ring' | 'Accessory' | 'Backpiece';
+	type Weapons1H      = 'Focus' | 'Shield' | 'Torch' | 'Warhorn' | 'BowShort' | 'Axe' | 'Sword' | 'Dagger' | 'Pistol' | 'Scepter' | 'Mace';
+	type Weapons2H      = 'Greatsword' | 'Hammer' | 'Staff' | 'BowLong' | 'Rifle';
 	type WeaponsAquatic = 'Spear' | 'Trident' | 'Speargun';
 
 	interface Palette {
@@ -85,8 +85,8 @@ namespace API {
 		formula_param1            : number
 		formula_param2            : number
 		formula                   : 'BuffLevelLinear' | 'ConditionDamage' | 'ConditionDamageSquared' | 'CritDamage' | 'CritDamageSquared' | 'BuffFormulaType5' | 'NoScaling' | 'Regeneration' | 'RegenerationSquared' | 'SpawnScaleLinear' | 'TargetLevelLinear' | 'BuffFormulaType11' | 'InfiniteDungeonScale' | 'Power' | 'PowerSquared' | 'BuffFormulaType15' //TODO(Rennorb) @rename critdamage
-		target_attribute_or_buff? : Exclude<Attributes, 'None'> | number | 'Damage' | 'LifeForce' | 'Health' | 'HealEffectiveness'
-		attribute_conversion?     : Exclude<Attributes, 'None'>
+		target_attribute_or_buff? : BaseAttribute | number | 'Damage' | 'LifeForce' | 'Health' | 'HealEffectiveness'
+		attribute_conversion?     : BaseAttribute
 		description               : string
 		description_override?     : ModifierDescriptionOverride[]
 		flags                     : ('FormatFraction' | 'FormatPercent' | 'SkipNextEntry' | 'MulByDuration' | 'DivDurationBy3' | 'DivDurationBy10' | 'NonStacking' | 'Subtract')[]
@@ -108,7 +108,7 @@ namespace API {
 
 	interface AdjustByAttributeAndLevelHealingFact extends BasicFact<'AdjustByAttributeAndLevelHealing'> {
 		value                : number
-		target               : Attributes,
+		target               : BaseAttribute | 'None',
 		attribute_multiplier : number
 		level_exponent       : number
 		level_multiplier     : number
@@ -117,7 +117,7 @@ namespace API {
 
 	interface AttributeAdjustFact extends BasicFact<'AttributeAdjust'> {
 		range  : number[]
-		target : Attributes
+		target : BaseAttribute | 'None'
 	}
 
 	interface BuffFact extends BasicFact<'Buff'> {
@@ -136,7 +136,7 @@ namespace API {
 
 	interface HealthAdjustHealingFact extends BasicFact<'HealthAdjustHealing'> {
 		value      : number
-		attribute  : Attributes
+		attribute  : BaseAttribute | 'None'
 		multiplier : number
 		hit_count  : number
 	}
@@ -189,8 +189,8 @@ namespace API {
 	}
 
 	interface BuffConversionFact extends BasicFact<'BuffConversion'> {
-		source  : Attributes
-		target  : Attributes
+		source  : BaseAttribute | 'None'
+		target  : BaseAttribute | 'None'
 		percent : number
 	}
 
@@ -367,7 +367,7 @@ namespace API {
 		id         : number
 		name       : string
 		attributes : {
-			attribute  : Exclude<Attributes, 'None'>
+			attribute  : BaseAttribute
 			base_value : number
 			scaling    : number
 		}[]
@@ -381,10 +381,6 @@ type Milliseconds = number;
 
 type ObjectDataStorage = {
 	[k in Endpoints] : Map<number, APIResponseTypeMap[k]>
-}
-
-type ObjectsToFetch = {
-	[k in `${Exclude<LegacyCompat.ObjectType, 'effect'>}s`] : Map<number, HTMLElement[] | undefined>
 }
 
 interface HandlerParams<TFact = API.Fact> {

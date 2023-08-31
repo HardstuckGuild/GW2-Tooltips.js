@@ -32,18 +32,21 @@ export function fromHTML(html : string) : DocumentFragment {
 
 export const GW2Text2HTML = (text? : string, ...formatArgs : string[]) => text
 	? text
-		.replace(/<c=(#.*?)>(.*?)<\/c>/g, `<span style="color: $1;">$2</span>`)
-		.replace(/<c=@(.*?)>(.*?)<\/c>/g, `<span class="gw2-color-$1">$2</span>`)
-		.replace(/%%/g, '%')
+		.replaceAll(/<c=(#.*?)>(.*?)<\/c>/g, `<span style="color: $1;">$2</span>`)
+		.replaceAll(/<c=@(.*?)>(.*?)<\/c>/g, `<span class="gw2-color-$1">$2</span>`)
 		.replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')
 		.replaceAll('[null]', '')
 		.replaceAll('\n', '<br />')
 		.replaceAll(/%str\d%/g, (_, i) => formatArgs[+i - 1] || '')
+		.replaceAll('%%', '%')
 	: '';
 
-//TODO(Rennorb) @cleanup: we should just use consistent names.
-export const Uncapitalize = <T extends string>(str : T) => str.charAt(0).toLowerCase() + str.slice(1) as Uncapitalize<T>;
+export const resolveInflections = (text : string, count : number, character : Character) => text
+	.replaceAll('[s]', count > 1 ? 's' : '')
+	.replaceAll(/(\S+)\[pl:"(.+?)"]/g, count > 1 ? '$2' : '$1')
+	.replaceAll(/(\S+)\[f:"(.+?)"]/g, character.sex == "Female" ? '$2' : '$1');
 
+export function n3(v : number) { return withUpToNDigits(v, 3); }
 export function withUpToNDigits(x : number, digits : number) {
 	let str = x.toFixed(digits);
 	while(str.charAt(str.length - 1) === '0') str = str.slice(0, -1);
@@ -91,13 +94,18 @@ export function drawFractional(value : number, config : Config) {
 }
 
 //TODO(rennorb) @cleanup: rename
-export function mapLocale(type : API.Attributes | API.ComboFinisherType | API.ComboFieldType | API.Palette['weapon_type']) {
+export function mapLocale<T_ extends string>(type : BaseAttribute | ComputedAttribute | API.ComboFinisherType | API.ComboFieldType | API.Palette['weapon_type'] | T_) {
 	switch (type) {
-		case 'ConditionDmg': return 'Condition Damage';
-		case 'Healing'     : return 'Healing Power';
-		case 'BowLong'     : return 'Longbow';
-		case 'BowShort'    : return 'Shortbow';
-		case 'Projectile20': return 'Projectile (20% Chance)';
+		case 'ConditionDuration': return 'Condition Duration';
+		case 'ConditionDamage'  : return 'Condition Damage';
+		case 'HealingPower'     : return 'Healing Power';
+		case 'BowLong'          : return 'Longbow';
+		case 'BowShort'         : return 'Shortbow';
+		case 'Projectile20'     : return 'Projectile (20% Chance)';
+		case 'MagicFind'        : return 'Magic Find';
+		case 'CritChance'       : return 'Critical Chance';
+		case 'CritDamage'       : return 'Critical Damage';
+		case 'BoonDuration'     : return 'Boon Duration';
 		default: return type;
 	}
 }

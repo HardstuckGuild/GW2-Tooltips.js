@@ -1,6 +1,6 @@
 export function calculateModifier(
 	{ formula, base_amount, formula_param1: level_scaling, formula_param2 } : API.Modifier,
-	{ level, stats: { power, conditionDmg, healing: healing_power }} : Character,
+	{ level, stats: { Power, ConditionDamage, HealingPower }} : Character,
 ) {
 	//TODO(Rennorb): this is **screaming** tabledrive me
 	//TODO(Rennorb) @correctness: attribute conversion e.g. Bountiful Maintenance Oil
@@ -8,24 +8,24 @@ export function calculateModifier(
 		case 'BuffLevelLinear':
 			return         level * level_scaling + base_amount
 		case 'ConditionDamage':
-			return         level * level_scaling + base_amount + conditionDmg * formula_param2
+			return         level * level_scaling + base_amount + ConditionDamage * formula_param2
 		case 'ConditionDamageSquared':
-			return level * level * level_scaling + base_amount + conditionDmg * formula_param2
+			return level * level * level_scaling + base_amount + ConditionDamage * formula_param2
 		case 'NoScaling':
 			return                                 base_amount
 		case 'Regeneration':
-			return         level * level_scaling + base_amount + healing_power * formula_param2
+			return         level * level_scaling + base_amount + HealingPower * formula_param2
 		case 'RegenerationSquared':
-			return level * level * level_scaling + base_amount + healing_power * formula_param2
+			return level * level * level_scaling + base_amount + HealingPower * formula_param2
 		case 'SpawnScaleLinear':
 		case 'TargetLevelLinear':
 			return         level * level_scaling + base_amount
 		case 'BuffFormulaType11':
 			return         level * level_scaling + base_amount - formula_param2
 		case 'Power':
-			return         level * level_scaling + base_amount + power * formula_param2
+			return         level * level_scaling + base_amount + Power * formula_param2
 		case 'PowerSquared':
-			return level * level * level_scaling + base_amount + power * formula_param2
+			return level * level * level_scaling + base_amount + Power * formula_param2
 	}
 
 	console.warn('[gw2-tooltips] [facts processor] Could not find formula #', formula, ', using base amount for now!')
@@ -100,7 +100,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				let entry = modsMap.get(modifier.id) || modsMap.set(modifier.id, { modifier: modifier, value: 0 }).get(modifier.id);
 				let value = calculateModifier(modifier, context.character);
 				if (modifier.attribute_conversion) {
-						value *= context.character.stats[Uncapitalize(modifier.attribute_conversion)];
+						value *= context.character.stats[modifier.attribute_conversion];
 				}
 
 				entry!.value += value;
@@ -155,7 +155,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 	const applyMods = (duration : Milliseconds, buff : API.Skill, detailStack : (string | Node)[]) : [Milliseconds, number] => {
 		let durMod = 1, valueMod = 1;
-		const durationAttr : keyof Stats | false = (buff.buff_type == 'Boon' && 'concentration') || (buff.buff_type == 'Condition' && 'expertise');
+		const durationAttr : keyof Stats | false = (buff.buff_type == 'Boon' && 'Concentration') || (buff.buff_type == 'Condition' && 'Expertise');
 		if(durationAttr) {
 			const attribVal = context.character.stats[durationAttr];
 			// every 15 points add 1%
@@ -183,7 +183,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		duration *= durMod;
 
 		if(buff.name.includes('Regeneration')) {
-			let valueModStack = context.character.statSources.healEffectiveness;
+			let valueModStack = context.character.statSources.HealEffectiveness;
 			if(valueModStack.length) {
 				//TODO(Rennorb)
 				if(config.showFactComputationDetail)
@@ -205,7 +205,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 	const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => (string|Node)[] } = {
 		AdjustByAttributeAndLevelHealing : ({fact}) =>  {
-			const attributeVal = (context.character.stats as any)[Uncapitalize(fact.target)] || 0; //TODO(Rennorb) @cleanup
+			const attributeVal = (context.character.stats as any)[fact.target] || 0;
 			let value = (fact.value + attributeVal * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count;
 
 			const lines = [];
@@ -213,13 +213,13 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			if(config.showFactComputationDetail) {
 				lines.push(`${n3(fact.value)} base value`);
 				if(fact.level_multiplier) lines.push(`+ ${n3(context.character.level ** fact.level_exponent * fact.level_multiplier)} from lvl ${context.character.level} ^ ${n3(fact.level_exponent)} lvl exp. * ${n3(fact.level_multiplier)} lvl mul.`);
-				if(attributeVal) lines.push(`+ ${n3(attributeVal * fact.attribute_multiplier)} from ${n3(attributeVal)} ${mapLocale(fact.target)} * ${n3(fact.attribute_multiplier)} attrib mod.`);
+				if(attributeVal) lines.push(`+ ${n3(attributeVal * fact.attribute_multiplier)} from ${n3(attributeVal)} ${mapLocale(fact.target)} * ${n3(fact.attribute_multiplier)} attrib. mod.`);
 				if(fact.hit_count != 1) lines.push(` * ${fact.hit_count} hits`);
 			}
 
 			if(!fact.text?.includes('Barrier')) { //TODO(Rennorb) @cleanup @correctness
 				let percentMod = 100;
-				for(const { source, modifier, count } of context.character.statSources.healEffectiveness) {
+				for(const { source, modifier, count } of context.character.statSources.HealEffectiveness) {
 					const mod = calculateModifier(modifier, context.character);
 					if(config.showFactComputationDetail)
 						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
@@ -269,8 +269,8 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			return [`${GW2Text2HTML(fact.text)}: ${Math.round(fact.distance)}`];
 		},
 		HealthAdjustHealing: ({ fact }) => {
-			//TODO(Rennorb) @cleanup @scaling
-			const attribute = (context.character.stats as any)[Uncapitalize(fact.attribute)] || 0;
+			//TODO(Rennorb) @scaling
+			const attribute = (context.character.stats as any)[fact.attribute] || 0;
 			const value = Math.round((fact.value + attribute * fact.multiplier) * fact.hit_count);
 			const text = GW2Text2HTML(fact.text) || mapLocale(fact.attribute);
 
@@ -288,15 +288,15 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			return [`${GW2Text2HTML(fact.text)}: ${drawFractional(fact.percent, config)}%`];
 		},
 		PercentLifeForceAdjust : ({fact: {percent, text}}) => {
-			const hpPool = getHealth(context.character);
+			const hpPool = context.character.stats.Health;
 
 			const lines = [];
-			if(context.character.statSources.lifeForce.length) {
+			if(context.character.statSources.LifeForce.length) {
 				if(config.showFactComputationDetail)
 					lines.push(`${n3(percent * hpPool * 0.69)} from ${n3(percent)}% * (${n3(hpPool)} HP * 0.69) base pool`);
 
 				let percentMod = 100;
-				for(const { source, modifier, count } of context.character.statSources.lifeForce) {
+				for(const { source, modifier, count } of context.character.statSources.LifeForce) {
 					const mod = calculateModifier(modifier, context.character);
 					if(config.showFactComputationDetail)
 						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
@@ -312,20 +312,20 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			return lines;
 		},
 		PercentHealth : ({fact: {percent, text}}) => {
-			const raw = Math.round((getHealth(context.character) * percent) * 0.01);
+			const raw = Math.round((context.character.stats.Health * percent) * 0.01);
 			return [`${GW2Text2HTML(text)}: ${drawFractional(percent, config)}% (${raw})`];
 		},
 		//TODO(Rennorb) @correctness: this seems to be verry much percent based. Whats the difference to PercentLifeForceAdjust here?
 		LifeForceAdjust : ({fact: {percent, text}}) => {
-			const hpPool = getHealth(context.character);
+			const hpPool = context.character.stats.Health;
 
 			const lines = [];
-			if(context.character.statSources.lifeForce.length) {
+			if(context.character.statSources.LifeForce.length) {
 				if(config.showFactComputationDetail)
 					lines.push(`${n3(percent * 0.01 * hpPool * 0.69)} from ${n3(percent)}% * (${n3(hpPool)} HP * 0.69) base pool`);
 
 				let percentMod = 100;
-				for(const { source, modifier, count } of context.character.statSources.lifeForce) {
+				for(const { source, modifier, count } of context.character.statSources.LifeForce) {
 					const mod = calculateModifier(modifier, context.character);
 					if(config.showFactComputationDetail)
 						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
@@ -343,25 +343,25 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		Damage : ({fact: {dmg_multiplier, hit_count, text}, weaponStrength}) => {
 			const lines = [];
 			
-			let damage = dmg_multiplier * hit_count * weaponStrength * context.character.stats.power / context.targetArmor;
+			let damage = dmg_multiplier * hit_count * weaponStrength * context.character.stats.Power / context.targetArmor;
 			if(config.showFactComputationDetail) {
-				lines.push(`${n3(damage)} from ${n3(dmg_multiplier)} internal mod. * ${n3(context.character.stats.power)} power * ${weaponStrength} avg. weapon str. / ${context.targetArmor} target armor`);
+				lines.push(`${n3(damage)} from ${n3(dmg_multiplier)} internal mod. * ${n3(context.character.stats.Power)} power * ${weaponStrength} avg. weapon str. / ${context.targetArmor} target armor`);
 				if(hit_count != 1) lines.push(`* ${hit_count} hits`);
 			}
 
 			//TODO(Rennorb): level scaling attributes. these are for lvl 80
-			const critChance = Math.min(0.05 + (context.character.stats.precision - 1000) / 21 * 0.01, 1);
+			const critChance = Math.min(0.05 + (context.character.stats.Precision - 1000) / 21 * 0.01, 1);
 			//TODO(Rennorb): crit damage mods
-			const critDamage = 1.5 + context.character.stats.ferocity / 15 * 0.01;
+			const critDamage = 1.5 + context.character.stats.Ferocity / 15 * 0.01;
 			const moreDmgFromCrit = damage * critChance * (critDamage - 1);
 			damage += moreDmgFromCrit;
 			if(config.showFactComputationDetail) {
-				lines.push(`+${n3(moreDmgFromCrit)} (${n3(critChance * (critDamage - 1) * 100)}%) from ${n3(critChance * 100)}% crit chance and ${n3(critDamage * 100)}% damage on crit (${n3(context.character.stats.precision)} precision and ${n3(context.character.stats.ferocity)} ferocity)`);
+				lines.push(`+${n3(moreDmgFromCrit)} (${n3(critChance * (critDamage - 1) * 100)}%) from ${n3(critChance * 100)}% crit chance and ${n3(critDamage * 100)}% damage on crit (${n3(context.character.stats.Precision)} precision and ${n3(context.character.stats.Ferocity)} ferocity)`);
 			}
 
-			if(context.character.statSources.damage.length) {
+			if(context.character.statSources.Damage.length) {
 				let percentMod = 100;
-				for(const { source, modifier, count } of context.character.statSources.damage) {
+				for(const { source, modifier, count } of context.character.statSources.Damage) {
 					const mod = calculateModifier(modifier, context.character);
 					if(config.showFactComputationDetail)
 						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
@@ -379,11 +379,11 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			const lines = [];
 			//TODO(Rennorb) @cleanup
 			if(text && (text.includes('Stun') || text.includes('Daze'))) {
-				if(context.character.statSources.stun.length) {
+				if(context.character.statSources.Stun.length) {
 					if(config.showFactComputationDetail)
 						lines.push(`${n3(duration / 1000)}s base duration`);
 					let percentMod = 100;
-					for(const { source, modifier, count } of context.character.statSources.stun) {
+					for(const { source, modifier, count } of context.character.statSources.Stun) {
 						const mod = calculateModifier(modifier, context.character);
 						if(config.showFactComputationDetail)
 							lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from `, fromHTML(source), count > 1 ? ` (x ${count})` : ''));
@@ -517,8 +517,6 @@ export const MISSING_SKILL : API.Skill = {
 	categories : [], palettes   : [], modifiers  : [],
 }
 
-function n3(v : number) { return withUpToNDigits(v, 3); }
-
-import { newElm, newImg, drawFractional, GW2Text2HTML, withUpToNDigits, mapLocale, Uncapitalize, joinWordList, fromHTML } from './TUtilsV2';
+import { newElm, newImg, drawFractional, GW2Text2HTML, withUpToNDigits, mapLocale, joinWordList, fromHTML, n3 } from './TUtilsV2';
 import APICache from './APICache';
-import { ICONS, config, getHealth } from './TooltipsV2';
+import { ICONS, config } from './TooltipsV2';

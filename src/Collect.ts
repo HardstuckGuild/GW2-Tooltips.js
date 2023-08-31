@@ -95,25 +95,25 @@ export function specificStatSources(contextIndex : number, targetContext : Conte
 }
 function _statSources(contextIndex : number, targetContext : Context, elements : Iterable<Element>, mode : CollectMode = CollectMode.PrioritizeGlobal) {
 	const sources : Context['character']['statSources'] = {
-		power          : [],
-		toughness      : [],
-		vitality       : [],
-		precision      : [],
-		ferocity       : [],
-		conditionDmg   : [],
-		expertise      : [],
-		concentration  : [],
-		healing        : [],
-		agonyResistance: [],
-		damage         : [],
-		lifeForce      : [],
-		health         : [],
-		healEffectiveness: [],
-		stun           : [],
+		Power          : [],
+		Toughness      : [],
+		Vitality       : [],
+		Precision      : [],
+		Ferocity       : [],
+		ConditionDamage: [],
+		Expertise      : [],
+		Concentration  : [],
+		HealingPower   : [],
+		AgonyResistance: [],
+		Damage         : [],
+		LifeForce      : [],
+		Health         : [],
+		HealEffectiveness: [],
+		Stun           : [],
 	};
 
 	//NOTE(Rennorb): Cant really use the existing upgrade counts since we want to add tiers individually.
-	//TODO(Rennorb): MAybe we can? Maybe we should?
+	//TODO(Rennorb) @cleanup: Get rid of the count functions and just put them in here.
 	let upgrades = {} as { [k : number] : number };
 
 	for(const element of elements) {
@@ -121,7 +121,7 @@ function _statSources(contextIndex : number, targetContext : Context, elements :
 		if(!(id = +String(element.getAttribute('objid')))) continue;
 
 		let amountToAdd = 1;
-		let tiersToProcess, item : API.Item | undefined;
+		let tiersToProcess, item : API.Item | undefined, tierNumber, sourceRuneSuffix;
 		if(type == 'item') {
 			item = APICache.storage.items.get(id);
 			if(!item || !('subtype' in item)) continue;
@@ -135,9 +135,11 @@ function _statSources(contextIndex : number, targetContext : Context, elements :
 				//NOTE(Rennorb): For pvp runes we get the wrong tier number here, it doesn't matter tho because we need to treat it differently anyways.
 				// Since pvp builds only have one rune we need to add all tiers from just one item.
 				// We still want to increase the upgrade count to do the warnings if we find more than expected.
-				const tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + amountToAdd;
+				tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + amountToAdd;
 
 				if(item.subtype === 'Rune') {
+					sourceRuneSuffix = true;
+
 					if(tierNumber > 6) {
 						//NOTE(Rennorb): Only complain if we are manually counting runes.
 						//TODO(Rennorb) @correctness: Is this the right way to do it? should we just complain when runes are specified but we find one that isn't?
@@ -184,14 +186,42 @@ function _statSources(contextIndex : number, targetContext : Context, elements :
 			if(!item) continue;
 		}
 
-		if(tiersToProcess) for(const tier of tiersToProcess) {
+		let attributeSet;
+		if(item && 'attribute_set' in item && item.attribute_set) {
+			attributeSet = APICache.storage.itemstats.get(item.attribute_set);
+		}
+		else {
+			const attributeSetId = +String(element.getAttribute('stats'));
+			if(!isNaN(attributeSetId)) attributeSet = APICache.storage.itemstats.get(attributeSetId);
+		}
+
+		if(attributeSet) {
+			tiersToProcess = [{
+				modifiers: attributeSet.attributes.map(a => ({
+					target_attribute_or_buff: a.attribute,
+					base_amount             : (item as API.ItemAmulet).attribute_base * a.scaling,
+					flags                   : [],
+					formula                 : "NoScaling",
+
+					id: -1, formula_param1: 0, formula_param2: 0, description: '',
+				} as API.Modifier))
+			}];
+		}
+
+		if(tiersToProcess) for(const [i, tier] of tiersToProcess.entries()) {
 			if(tier.modifiers) for(const mod of tier.modifiers!) {
 				if(!mod.target_attribute_or_buff || (mod.mode && mod.mode !== targetContext.gameMode) || (mod.trait_req && !targetContext.character.traits.includes(mod.trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
 
+				let source = formatItemName(item!, targetContext, attributeSet);
+				if(sourceRuneSuffix) {
+					source = `${source} (Tier ${tierNumber && tierNumber < 6 ? tierNumber : i + 1} Bonus)`;
+					amountToAdd = 1; //TODO(Rennorb) @cleanup
+				}
+
 				(typeof mod.target_attribute_or_buff !== 'number'
-					? sources[Uncapitalize(mod.target_attribute_or_buff)] //TODO(Rennorb) @cleanup: another reason to fix naming
+					? sources[mod.target_attribute_or_buff]
 					: (sources[mod.target_attribute_or_buff] || (sources[mod.target_attribute_or_buff] = []))
-				).push({ modifier: mod, source: item!.name, count: amountToAdd }) //TODO(Rennorb): item name resolution
+				).push({ modifier: mod, source, count: amountToAdd })
 
 				//@debug
 				//TODO(Rennorb) @bug: see NaN @ rune of the monk
@@ -234,41 +264,6 @@ function _statSources(contextIndex : number, targetContext : Context, elements :
 				targetContext.character.statSources = sources;
 			}
 		} break
-	}
-
-
-	// now we set the new stats
-	{
-		let baseStats;
-		if(window.GW2TooltipsContext instanceof Array) {
-			baseStats = Object.assign({}, window.GW2TooltipsContext[contextIndex].character?.stats, DEFAULT_CONTEXT.character.stats);
-		}
-		else if(window.GW2TooltipsContext) {
-			baseStats = Object.assign({}, window.GW2TooltipsContext.character?.stats, DEFAULT_CONTEXT.character.stats);
-		}
-		else {
-			baseStats = Object.assign({}, DEFAULT_CONTEXT.character.stats);
-		}
-
-		targetContext.character.stats = baseStats;
-
-		//TODO(Rennorb) @correctnes: 'for every x healing power' is not treated correctly by this approach.
-		//NOTE(Rennorb): Force the key to be keyof stats. Ts dost understand the guard here
-		for(const [attrib, sources] of Object.entries(targetContext.character.statSources) as [keyof Stats, StatSource[]][]) {
-			if(!isNaN(+attrib)) continue; //discard direct boon mods
-
-			for(const { modifier, source, count } of sources.filter(s => !s.modifier.flags.includes('FormatPercent'))) {
-				const mod = calculateModifier(modifier, targetContext.character) * count
-				targetContext.character.stats[attrib] += mod;
-				console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] ${source}${count > 1 ? (' x '+count) : ''}: Flat ${attrib} ${mod > 0 ? '+' : ''}${mod} => ${targetContext.character.stats[attrib]}`)
-			}
-			for(const { modifier, source, count } of sources.filter(s => s.modifier.flags.includes('FormatPercent'))) {
-				const mod = calculateModifier(modifier, targetContext.character); //TODO(Rennorb) @correctness: fractional percent
-				const value = targetContext.character.stats[attrib] * mod / 100 * count; //TODO(Rennorb) @correctness
-				targetContext.character.stats[attrib] += value;
-				console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] ${source}${count > 1 ? (' x '+count) : ''}: Percent ${attrib} ${mod > 0 ? '+' : ''}${mod}% (${value}) => ${targetContext.character.stats[attrib]}`)
-			}
-		}
 	}
 }
 
@@ -396,7 +391,7 @@ export function traitEffects(contexts : Context[]) {
 
 					(typeof mod.target_attribute_or_buff === 'number'
 						? (context.character.statSources[mod.target_attribute_or_buff] || (context.character.statSources[mod.target_attribute_or_buff] = []))
-						: context.character.statSources[Uncapitalize(mod.target_attribute_or_buff)]
+						: context.character.statSources[mod.target_attribute_or_buff]
 					).push({source: `trait '<span class="gw2-color-traited-fact">${trait.name}</span>'`, modifier: mod, count: 1});
 				}
 			};
@@ -428,7 +423,7 @@ const enum CollectMode {
 	Append,
 }
 
-import { Uncapitalize } from "./TUtilsV2";
 import APICache from "./APICache";
-import { resolveTraitsAndOverrides, DEFAULT_CONTEXT, config } from './TooltipsV2';
-import { calculateModifier } from "./FactsProcessor";
+import { resolveTraitsAndOverrides, DEFAULT_CONTEXT, config, formatItemName } from './TooltipsV2';
+import { calculateModifier } from "./FactsProcessor";import { mapLocale } from "./TUtilsV2";
+

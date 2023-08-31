@@ -19,31 +19,25 @@ interface Context {
 	character   : Character
 }
 
-type GameMode = 'Pve' | 'Pvp' | 'Wvw';
-type Profession = 'Guardian' | 'Warrior' | 'Engineer' | 'Ranger' | 'Thief' | 'Elementalist' | 'Mesmer' | 'Necromancer' | 'Revenant'
+//TODO(Rennorb) @cleanup: move down
+type GameMode      = 'Pve' | 'Pvp' | 'Wvw';
+type Profession    = 'Guardian' | 'Warrior' | 'Engineer' | 'Ranger' | 'Thief' | 'Elementalist' | 'Mesmer' | 'Necromancer' | 'Revenant'
+type BaseAttribute = 'Power' | 'Toughness' | 'Vitality' | 'Precision' | 'Ferocity' | 'ConditionDamage' | 'Expertise' | 'Concentration' | 'HealingPower' | 'AgonyResistance'
+type ComputedAttribute = 'Health' | 'Armor' | 'ConditionDuration' | 'BoonDuration' | 'CritChance' | 'CritDamage'
 
 interface Character {
 	level         : number
 	isPlayer      : bool
 	sex           : 'Male' | 'Female'
 	profession?   : Profession
-	traits        : number[] //TODO(Rennorb): add a collect function that can take them from existing specialization objects
+	traits        : number[]
 	stats         : Stats
-	statSources   : { [k in keyof Stats | number | 'damage' | 'lifeForce' | 'health' | 'healEffectiveness' | 'stun']: StatSource[] } //TODO(Rennorb): think about moving this into a single (or two) values per stat. just to reduce computations
+	statSources   : { [k in BaseAttribute | number | 'Damage' | 'LifeForce' | 'Health' | 'HealEffectiveness' | 'Stun']: StatSource[] } //TODO(Rennorb): think about moving this into a single (or two) values per stat. just to reduce computations
 	upgradeCounts : { [k : number]: number }
 }
 
-interface Stats {
-	power           : number
-	toughness       : number
-	vitality        : number
-	precision       : number
-	ferocity        : number
-	conditionDmg    : number
-	expertise       : number
-	concentration   : number
-	healing         : number
-	agonyResistance : number
+type Stats = {
+	[k in BaseAttribute | ComputedAttribute] : number;
 }
 
 interface StatSource {
@@ -56,18 +50,20 @@ interface StatSource {
 
 interface Config {
 	autoInitialize             : bool
-	// only works if auto initialize is turned on
-	autoCollectRuneCounts      : bool
-	// only works if auto initialize is turned on
-	autoCollectStatSources     : bool
-	// only works if auto initialize is turned on
-	autoCollectSelectedTraits  : bool
-	// only works if auto initialize is turned on
-	autoInferEquipmentUpgrades : bool
+
+	// v-- these only work if auto initialize is turned on
+	autoCollectRuneCounts            : bool
+	autoCollectStatSources           : bool
+	autoCollectSelectedTraits        : bool
+	autoInferEquipmentUpgrades       : bool
+	autoRecomputeCharacterAttributes : bool
+	// ^---------------------------
+
 	adjustIncorrectStatIds     : bool
 	legacyCompatibility        : bool
 	showPreciseAbilityTimings  : bool
 	showFactComputationDetail  : bool
 
+	// for replacing the api source. Usually not relevant except for debugging
 	apiImpl?                   : (apis : any) => APIImplementation
 }
