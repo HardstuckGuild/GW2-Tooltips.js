@@ -915,7 +915,7 @@ function computeAttributeFromMods(attribute : BaseAttribute | ComputedAttribute,
 			}
 		}
 		let modValue = 0;
-		if(!isComputed) for(const source of context.character.statSources[baseAttribute]) {
+		for(const source of context.character.statSources[attribute]) {
 			let mod = calculateModifier(source.modifier, context.character) * source.count;
 			const suffix = source.modifier.flags.includes('FormatPercent') ? '%' : '';
 			const displayMul = suffix ? 100 : 1;
@@ -1121,21 +1121,26 @@ export const DEFAULT_CONTEXT : Context = {
 			BoonDuration     : 0,
 		},
 		statSources: {
-			Power          : [],
-			Toughness      : [],
-			Vitality       : [],
-			Precision      : [],
-			Ferocity       : [],
-			ConditionDamage: [],
-			Expertise      : [],
-			Concentration  : [],
-			HealingPower   : [],
-			AgonyResistance: [],
-			Damage         : [],
-			LifeForce      : [],
-			Health         : [],
+			Power            : [],
+			Toughness        : [],
+			Vitality         : [],
+			Precision        : [],
+			Ferocity         : [],
+			ConditionDamage  : [],
+			Expertise        : [],
+			Concentration    : [],
+			HealingPower     : [],
+			AgonyResistance  : [],
+			Armor            : [],
+			BoonDuration     : [],
+			ConditionDuration: [],
+			CritChance       : [],
+			CritDamage       : [],
+			Damage           : [],
+			LifeForce        : [],
+			Health           : [],
 			HealEffectiveness: [],
-			Stun           : [],
+			Stun             : [],
 		},
 		upgradeCounts: {},
 	},
@@ -1165,7 +1170,7 @@ const DEFAULT_CONFIG : Config = {
 	showFactComputationDetail       : false,
 }
 
-const LUT_DEFENSE = [
+export const LUT_DEFENSE = [
 	115, 120, 125, 129, 133, 137, 142, 146, 150, 154, 162, 168, 175, 182, 189, 196, 202, 209, 216, 223, 232, 240, 248, 257, 265, 274, 282, 290, 299, 307, 319, 330, 341, 352, 363, 374, 385, 396, 407, 418, 431, 443, 456, 469, 481, 494, 506, 519, 532, 544, 560, 575, 590, 606, 621, 636, 651, 666, 682, 697, 714, 731, 748, 764, 781, 798, 815, 832, 848, 865, 885, 905, 924, 943, 963, 982, 1002, 1021, 1040, 1060, 1081, 1102, 1123, 1144, 1165, 1186, 1207, 1228, 1249, 1270, 1291, 1312, 1333, 1354, 1375, 1396, 1417, 1438, 1459, 1480, 1501,
 ];
 

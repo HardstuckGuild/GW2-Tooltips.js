@@ -96,21 +96,26 @@ export function specificStatSources(contextIndex : number, scope : ScopeElement,
 function _statSources(contextIndex : number, contexts : Context[], elements : Iterable<Element>, mode : CollectMode) {
 	const targetContext = contexts[contextIndex];
 	const sources : Context['character']['statSources'] = {
-		Power          : [],
-		Toughness      : [],
-		Vitality       : [],
-		Precision      : [],
-		Ferocity       : [],
-		ConditionDamage: [],
-		Expertise      : [],
-		Concentration  : [],
-		HealingPower   : [],
-		AgonyResistance: [],
-		Damage         : [],
-		LifeForce      : [],
-		Health         : [],
+		Power            : [],
+		Toughness        : [],
+		Vitality         : [],
+		Precision        : [],
+		Ferocity         : [],
+		ConditionDamage  : [],
+		Expertise        : [],
+		Concentration    : [],
+		HealingPower     : [],
+		AgonyResistance  : [],
+		Armor            : [],
+		BoonDuration     : [],
+		ConditionDuration: [],
+		CritChance       : [],
+		CritDamage       : [],
+		Damage           : [],
+		LifeForce        : [],
+		Health           : [],
 		HealEffectiveness: [],
-		Stun           : [],
+		Stun             : [],
 	};
 
 	//NOTE(Rennorb): Cant really use the existing upgrade counts since we want to add tiers individually.
@@ -201,12 +206,24 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 				modifiers: attributeSet.attributes.map(a => ({
 					target_attribute_or_buff: a.attribute,
 					base_amount             : (item as API.ItemAmulet).attribute_base * a.scaling,
-					flags                   : [],
 					formula                 : "NoScaling",
-
-					id: -1, formula_param1: 0, formula_param2: 0, description: '',
+					
+					flags: [], id: -1, formula_param1: 0, formula_param2: 0, description: '',
 				} as API.Modifier))
 			}];
+		}
+		if(item && 'defense' in item) {
+			const defense = (typeof item.defense  == "number")
+				? item.defense
+				: LUT_DEFENSE[Math.min(100, (item.defense![0] + targetContext.character.level))] * item.defense![1];
+
+			tiersToProcess![0].modifiers!.push({
+				target_attribute_or_buff: 'Armor',
+				base_amount             : defense,
+				formula                 : "NoScaling",
+				
+				flags: [], id: -1, formula_param1: 0, formula_param2: 0, description: '',
+			} as API.Modifier)
 		}
 
 		if(tiersToProcess) for(const [i, tier] of tiersToProcess.entries()) {
@@ -416,4 +433,4 @@ const enum CollectMode {
 }
 
 import APICache from "./APICache";
-import { resolveTraitsAndOverrides, config, formatItemName, contexts } from './TooltipsV2';
+import { resolveTraitsAndOverrides, config, formatItemName, contexts, LUT_DEFENSE } from './TooltipsV2';

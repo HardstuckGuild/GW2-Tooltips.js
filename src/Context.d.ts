@@ -32,7 +32,7 @@ interface Character {
 	profession?   : Profession
 	traits        : number[]
 	stats         : Stats
-	statSources   : { [k in BaseAttribute | number | 'Damage' | 'LifeForce' | 'Health' | 'HealEffectiveness' | 'Stun']: StatSource[] } //TODO(Rennorb): think about moving this into a single (or two) values per stat. just to reduce computations
+	statSources   : { [k in BaseAttribute | ComputedAttribute | number | 'Damage' | 'LifeForce' | 'Health' | 'HealEffectiveness' | 'Stun']: StatSource[] } //TODO(Rennorb): think about moving this into a single (or two) values per stat. just to reduce computations
 	upgradeCounts : { [k : number]: number }
 }
 
