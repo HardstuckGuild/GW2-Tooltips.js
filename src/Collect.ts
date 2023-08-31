@@ -1,4 +1,4 @@
-export function allUpgradeCounts(contexts : Context[], scope : ScopeElement, mode : CollectMode = CollectMode.PrioritizeGlobal) {
+export function allUpgradeCounts(scope : ScopeElement, mode : CollectMode = CollectMode.Append) {
 	const elements = scope.getElementsByTagName('gw2object');
 	for(const pair of contexts.entries()) {
 		const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == pair[0]);
@@ -11,7 +11,7 @@ export function allUpgradeCounts(contexts : Context[], scope : ScopeElement, mod
 		console.warn("[gw2-tooltips] [collect] Some targets in scope ", scope, " have the wrong context: ", elsWithWrongCtx);
 	}
 }
-export function specificUpgradeCounts(contextIndex : number, targetContext : Context, scope : ScopeElement, mode : CollectMode = CollectMode.PrioritizeGlobal) {
+export function specificUpgradeCounts(contextIndex : number, targetContext : Context, scope : ScopeElement, mode : CollectMode = CollectMode.Append) {
 	_upgradeCounts(contextIndex, targetContext, scope.getElementsByTagName('gw2object'), mode);
 }
 function _upgradeCounts(contextIndex : number, targetContext : Context, elements : Iterable<Element>, mode : CollectMode) {
@@ -78,22 +78,23 @@ function _upgradeCounts(contextIndex : number, targetContext : Context, elements
 }
 
 //TODO(Rennorb) @correctness @incomplete: +x to all stats not working right now
-export function allStatSources(contexts : Context[], scope : ScopeElement, mode : CollectMode = CollectMode.PrioritizeGlobal) {
+export function allStatSources(scope : ScopeElement, mode : CollectMode = CollectMode.Append) {
 	const elements = scope.getElementsByTagName('gw2object');
-	for(const pair of contexts.entries()) {
-		const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == pair[0]);
+	for(const contextIndex of contexts.keys()) {
+		const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == contextIndex);
 		if(elsInCorrectCtx.length)
-			_statSources(...pair, elsInCorrectCtx, mode);
+			_statSources(contextIndex, contexts, elsInCorrectCtx, mode);
 	}
 	const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) >= contexts.length);
 	if(elsWithWrongCtx.length) {
 		console.warn("[gw2-tooltips] [collect] Some targets in scope ", scope, " have the wrong context: ", elsWithWrongCtx);
 	}
 }
-export function specificStatSources(contextIndex : number, targetContext : Context, scope : ScopeElement, mode : CollectMode = CollectMode.PrioritizeGlobal) {
-	_statSources(contextIndex, targetContext, scope.getElementsByTagName('gw2object'), mode);
+export function specificStatSources(contextIndex : number, scope : ScopeElement, mode : CollectMode = CollectMode.Append) {
+	_statSources(contextIndex, contexts, scope.getElementsByTagName('gw2object'), mode);
 }
-function _statSources(contextIndex : number, targetContext : Context, elements : Iterable<Element>, mode : CollectMode = CollectMode.PrioritizeGlobal) {
+function _statSources(contextIndex : number, contexts : Context[], elements : Iterable<Element>, mode : CollectMode) {
+	const targetContext = contexts[contextIndex];
 	const sources : Context['character']['statSources'] = {
 		Power          : [],
 		Toughness      : [],
@@ -187,12 +188,12 @@ function _statSources(contextIndex : number, targetContext : Context, elements :
 		}
 
 		let attributeSet;
-		if(item && 'attribute_set' in item && item.attribute_set) {
-			attributeSet = APICache.storage.itemstats.get(item.attribute_set);
-		}
-		else {
+		{
 			const attributeSetId = +String(element.getAttribute('stats'));
 			if(!isNaN(attributeSetId)) attributeSet = APICache.storage.itemstats.get(attributeSetId);
+			else if(item && 'attribute_set' in item && item.attribute_set) {
+				attributeSet = APICache.storage.itemstats.get(item.attribute_set);
+			}
 		}
 
 		if(attributeSet) {
@@ -212,26 +213,14 @@ function _statSources(contextIndex : number, targetContext : Context, elements :
 			if(tier.modifiers) for(const mod of tier.modifiers!) {
 				if(!mod.target_attribute_or_buff || (mod.mode && mod.mode !== targetContext.gameMode) || (mod.trait_req && !targetContext.character.traits.includes(mod.trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
 
-				let source = formatItemName(item!, targetContext, attributeSet);
+				let source = formatItemName(item!, targetContext, attributeSet, undefined, -1);
 				if(sourceRuneSuffix) {
 					source = `${source} (Tier ${tierNumber && tierNumber < 6 ? tierNumber : i + 1} Bonus)`;
 					amountToAdd = 1; //TODO(Rennorb) @cleanup
 				}
 
-				(typeof mod.target_attribute_or_buff !== 'number'
-					? sources[mod.target_attribute_or_buff]
-					: (sources[mod.target_attribute_or_buff] || (sources[mod.target_attribute_or_buff] = []))
-				).push({ modifier: mod, source, count: amountToAdd })
-
-				//@debug
-				//TODO(Rennorb) @bug: see NaN @ rune of the monk
-				if(typeof mod.target_attribute_or_buff === 'number') {
-					const buff = APICache.storage.skills.get(mod.target_attribute_or_buff);
-					if(mod.flags.includes('FormatPercent'))
-						console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] [@unstable] ${item!.name}: Percent ${buff?.name} ${mod.base_amount > 0 ? '+' : ''}${mod.base_amount}%`);
-					else
-						console.log(`[gw2-tooltips] [collect] [ctx #${contextIndex}] [@unstable] ${item!.name}: Flat ${buff?.name} ${mod.base_amount > 0 ? '+' : ''}${mod.base_amount}`);
-				}
+				(sources[mod.target_attribute_or_buff] || (sources[mod.target_attribute_or_buff] = []))
+					.push({ modifier: mod, source, count: amountToAdd })
 			}
 		}
 	}
@@ -239,7 +228,12 @@ function _statSources(contextIndex : number, targetContext : Context, elements :
 	//TODO(Rennorb) @cleanup: move this out?
 	switch(mode) {
 		case CollectMode.IgnoreGlobal: targetContext.character.statSources = sources; break
-		case CollectMode.Append: targetContext.character.statSources = Object.assign(targetContext.character.statSources, sources); break;
+		case CollectMode.Append: {
+			for(const [k, values] of Object.entries(sources)) {
+				((targetContext.character.statSources as any)[k] || ((targetContext.character.statSources as any)[k] = []))
+					.push(...values);
+			}
+		} break;
 
 		case CollectMode.PrioritizeGlobal: {
 			if(window.GW2TooltipsContext instanceof Array) {
@@ -293,7 +287,7 @@ function _legacy_getInfusionCount(element : Element) : number | undefined {
 	return amountToAdd;
 }
 
-export function allTraits(contexts : Context[], scope : ScopeElement, mode : CollectMode = CollectMode.PrioritizeGlobal) {
+export function allTraits(scope : ScopeElement, mode : CollectMode = CollectMode.Append) {
 	const elements = scope.querySelectorAll('gw2object[type=specialization]:not(.gw2objectembed)');
 	for(const pair of contexts.entries()) {
 		const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == pair[0]);
@@ -305,10 +299,10 @@ export function allTraits(contexts : Context[], scope : ScopeElement, mode : Col
 		console.warn("[gw2-tooltips] [collect] Some targets in scope ", scope, " have the wrong context: ", elsWithWrongCtx);
 	}
 }
-export function specificTraits(contextIndex : number, targetContext : Context, scope : ScopeElement, mode : CollectMode = CollectMode.PrioritizeGlobal) {
+export function specificTraits(contextIndex : number, targetContext : Context, scope : ScopeElement, mode : CollectMode = CollectMode.Append) {
 	_traits(contextIndex, targetContext, scope.getElementsByTagName('gw2object'), mode);
 }
-function _traits(contextIndex : number, targetContext : Context, elements : Iterable<Element>, mode : CollectMode = CollectMode.PrioritizeGlobal) {
+function _traits(contextIndex : number, targetContext : Context, elements : Iterable<Element>, mode : CollectMode) {
 	const traits : number[] = [];
 	for(const specialization of elements) {
 		const selectedPositions = String(specialization.getAttribute('selected_traits')).split(',').map(i => +i).filter(i => !isNaN(i) && 0 <= i && i <= 2);
@@ -389,10 +383,8 @@ export function traitEffects(contexts : Context[]) {
 				for(const mod of modifiers) {
 					if(!mod.target_attribute_or_buff || (mod.mode && mod.mode !== context.gameMode) || (mod.trait_req && !context.character.traits.includes(mod.trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
 
-					(typeof mod.target_attribute_or_buff === 'number'
-						? (context.character.statSources[mod.target_attribute_or_buff] || (context.character.statSources[mod.target_attribute_or_buff] = []))
-						: context.character.statSources[mod.target_attribute_or_buff]
-					).push({source: `trait '<span class="gw2-color-traited-fact">${trait.name}</span>'`, modifier: mod, count: 1});
+					(context.character.statSources[mod.target_attribute_or_buff] || (context.character.statSources[mod.target_attribute_or_buff] = []))
+						.push({source: `trait '<span class="gw2-color-traited-fact">${trait.name}</span>'`, modifier: mod, count: 1});
 				}
 			};
 			if(trait.modifiers) addModifiers(trait.modifiers);
@@ -424,6 +416,4 @@ const enum CollectMode {
 }
 
 import APICache from "./APICache";
-import { resolveTraitsAndOverrides, DEFAULT_CONTEXT, config, formatItemName } from './TooltipsV2';
-import { calculateModifier } from "./FactsProcessor";import { mapLocale } from "./TUtilsV2";
-
+import { resolveTraitsAndOverrides, config, formatItemName, contexts } from './TooltipsV2';

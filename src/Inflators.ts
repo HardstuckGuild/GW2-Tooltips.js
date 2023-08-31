@@ -14,14 +14,14 @@ export function inflateGenericIcon(gw2Object : HTMLElement, data : { name : stri
 
 export function inflateSkill(gw2Object : HTMLElement, skill : API.Skill) {
 	const contextSet = +String(gw2Object.getAttribute('contextSet')) || 0;
-	const context_ = specializeContextFromInlineAttribs(context[contextSet], gw2Object);
+	const context = specializeContextFromInlineAttribs(contexts[contextSet], gw2Object);
 
 	//NOTE(Rennorb): doing this here might not be the best idea, as this wil prevent us form hot swapping traits.
 	// The issue is that this is the place where the icon gets selected and inflated, so its somewhat required to change the skill before this point.
 	// Maybe this is still the best place to do this and for cases were we need hot swapping (e.g. build editor) we just have to manually re-process skills after swapping traits.
 	// Maybe we should move the original id to another attribute for savekeeping so we can revert it later on if we need to?
 	if(gw2Object.classList.contains('auto-transform')) {
-		const replacementSkill = findTraitedOverride(skill, context_);
+		const replacementSkill = findTraitedOverride(skill, context);
 		if(replacementSkill) {
 			gw2Object.setAttribute('objid', String(replacementSkill.id));
 			skill = replacementSkill;
@@ -35,12 +35,12 @@ export function inflateItem(gw2Object : HTMLElement, item : API.Item) {
 	if(gw2Object.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
 
 	const stackSize = +String(gw2Object.getAttribute('count')) || 1;
-	const context_ = context[+String(gw2Object.getAttribute('contextSet')) || 0];
+	const context = contexts[+String(gw2Object.getAttribute('contextSet')) || 0];
 
 	const wikiLink = newElm('a', newImg(item.icon, undefined, item.name));
 	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + GW2Text2HTML(item.name).replaceAll(/\[.*?\]/g, ''); //remove plural forms ([s] and similar)
 	wikiLink.target = '_blank';
-	if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(formatItemName(item, context_, undefined, undefined, stackSize));
+	if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(formatItemName(item, context, undefined, undefined, stackSize));
 	gw2Object.append(wikiLink);
 }
 
@@ -87,9 +87,9 @@ export function inflateSpecialization(gw2Object : HTMLElement, spec: OfficialAPI
 
 type AdditionalAttributes = 'Profession' | 'MagicFind'
 export function inflateAttribute(gw2Object : HTMLElement, attribute : BaseAttribute | ComputedAttribute | AdditionalAttributes) {
-	const context_ = context[+String(gw2Object.getAttribute('contextSet')) || 0];
+	const context = contexts[+String(gw2Object.getAttribute('contextSet')) || 0];
 
-	const value : number | undefined = context_.character.stats[attribute as Exclude<typeof attribute, AdditionalAttributes>];
+	const value : number | undefined = context.character.stats[attribute as Exclude<typeof attribute, AdditionalAttributes>];
 	const _p  = ({
 		Power            : [ 66722, '' ],
 		Toughness        : [104162, '' ],
@@ -325,7 +325,7 @@ export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, er
 }
 
 export function inferItemUpgrades(wrappers : Iterable<Element>) {
-	const remainingInfusionsByContext = context.map(ctx => {
+	const remainingInfusionsByContext = contexts.map(ctx => {
 		const counts : Character['upgradeCounts'] = {};
 		for(const [id, c] of Object.entries(ctx.character.upgradeCounts)) {
 			let item;
@@ -334,7 +334,7 @@ export function inferItemUpgrades(wrappers : Iterable<Element>) {
 		}
 		return counts;
 	});
-	const enrichmentByContext = context.map(ctx => {
+	const enrichmentByContext = contexts.map(ctx => {
 		for(const [id, c] of Object.entries(ctx.character.upgradeCounts)) {
 			let item;
 			if((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Enrichment')
@@ -384,4 +384,4 @@ export function inferItemUpgrades(wrappers : Iterable<Element>) {
 
 import APICache from "./APICache";
 import { GW2Text2HTML, IMAGE_CDN, mapLocale, newElm, newImg, withUpToNDigits } from "./TUtilsV2";
-import { ICONS, context, findTraitedOverride, formatItemName, specializeContextFromInlineAttribs } from "./TooltipsV2";
+import { ICONS, contexts, findTraitedOverride, formatItemName, specializeContextFromInlineAttribs } from "./TooltipsV2";

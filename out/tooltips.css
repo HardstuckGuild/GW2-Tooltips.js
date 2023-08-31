@@ -149,6 +149,7 @@
 .tooltipWrapper p.description {
 	color: var(--gw2-tt-color-tt-desc);
 	margin: 0.5em 0;
+	line-height: inherit;
 }
 
 .tooltipWrapper .fact-block {
@@ -403,7 +404,7 @@ gw2object[type=specialization] .trait_unselected img {
 
 .gw2-attributes [type=attribute] {
 	height: 1.2em;
-	min-width: 12ch;
+	min-width: 8ch;
 }
 
 

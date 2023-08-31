@@ -20,8 +20,7 @@ let cyclePos    : number = 0
 let lastMouseX  : number
 let lastMouseY  : number
 
-//TODO(Rennorb) @rename
-export const context : Context[] = []; //@debug
+export const contexts : Context[] = []; //@debug
 export let config    : Config = null!;
 
 //TODO(Rennorb) @cleanup: get rid of this
@@ -29,13 +28,13 @@ function _constructor() {
 	//TODO(Rennorb): Validate config. there are a few places this partially happens but its hard to keep track. Should just happen in one place.
 	if(window.GW2TooltipsContext instanceof Array) {
 		for(const partialContext of window.GW2TooltipsContext)
-			context.push(createCompleteContext(partialContext))
+			contexts.push(createCompleteContext(partialContext))
 	}
 	else if(window.GW2TooltipsContext) {
-		context.push(createCompleteContext(window.GW2TooltipsContext))
+		contexts.push(createCompleteContext(window.GW2TooltipsContext))
 	}
 	else{
-		context.push(createCompleteContext({}))
+		contexts.push(createCompleteContext({}))
 	}
 
 	config = Object.assign({}, DEFAULT_CONFIG, window.GW2TooltipsConfig)
@@ -277,7 +276,7 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 	const type = ((gw2Object.getAttribute('type') || 'skill') + 's') as `${V2ObjectType}s`;
 	const objId = gw2Object.getAttribute('objId')
-	let   context_ = context[+String(gw2Object.getAttribute('contextSet')) || 0];
+	let   context = contexts[+String(gw2Object.getAttribute('contextSet')) || 0];
 	const statSetId = +String(gw2Object.getAttribute('stats')) || undefined;
 	const stackSize = +String(gw2Object.getAttribute('count')) || undefined;
 
@@ -289,7 +288,7 @@ function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 		if(objId) {
 			//TODO(Rennorb): should we actually reset this every time?
 			cyclePos = visibleIndex;
-			tooltip.replaceChildren(generateAttributeTooltip(objId as BaseAttribute | ComputedAttribute, gw2Object, context_));
+			tooltip.replaceChildren(generateAttributeTooltip(objId as BaseAttribute | ComputedAttribute, gw2Object, context));
 
 			tooltip.style.display = ''; //empty value resets actual value to use stylesheet
 			for(const tt of tooltip.children) tt.classList.add('active');
@@ -302,8 +301,8 @@ function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 	if(data) {
 		//TODO(Rennorb): should we actually reset this every time?
 		cyclePos = visibleIndex;
-		context_ = specializeContextFromInlineAttribs(context_, gw2Object);
-		tooltip.replaceChildren(...generateToolTipList(data, gw2Object, context_, statSetId, stackSize));
+		context = specializeContextFromInlineAttribs(context, gw2Object);
+		tooltip.replaceChildren(...generateToolTipList(data, gw2Object, context, statSetId, stackSize));
 
 		tooltip.style.display = ''; //empty value resets actual value to use stylesheet
 		if(Array.from(tooltip.children).filter(tt => !tt.classList.contains('not-collapsable')).length > 1) {
@@ -1004,6 +1003,7 @@ function calculateBoonDuration(level : number, concentration : number) {
 }
 
 //TODO(Rennorb): have another look at the suffix. might still be missing in the export
+/** Does not format inflections if stackSize is < 0. */
 export function formatItemName(item : API.Item, context : Context, statSet? : API.AttributeSet, upgradeComponent? : any, stackSize = 1) : string {
 	let name;
 	if(item.type == 'TraitGuide') {
@@ -1030,7 +1030,9 @@ export function formatItemName(item : API.Item, context : Context, statSet? : AP
 		}
 	}
 
-	name = resolveInflections(GW2Text2HTML(name, arg1, arg2, arg3, arg4), stackSize, context.character);
+	name = GW2Text2HTML(name, arg1, arg2, arg3, arg4);
+	if(stackSize > -1)
+		name = resolveInflections(name, stackSize, context.character);
 
 	if(!item.flags.includes('Pve') && (item.flags.includes('Pvp') || item.flags.includes('PvpLobby')))
 		name += " (PvP)";
@@ -1144,7 +1146,7 @@ function createCompleteContext(partialContext : PartialContext) : Context {
 	}
 
 	const stats = Object.assign({}, DEFAULT_CONTEXT.character.stats, partialContext.character?.stats);
-	const statSources = Object.assign({}, DEFAULT_CONTEXT.character.statSources, partialContext.character?.statSources);
+	const statSources = Object.assign({}, structuredClone(DEFAULT_CONTEXT.character.statSources), partialContext.character?.statSources);
 	const upgradeCounts = Object.assign({}, partialContext.character?.upgradeCounts);
 	const character = Object.assign({}, DEFAULT_CONTEXT.character, partialContext.character, { stats, statSources, upgradeCounts });
 	return Object.assign({}, DEFAULT_CONTEXT, partialContext, { character });
@@ -1228,7 +1230,7 @@ if(config.autoInitialize) {
 	const buildNodes = document.getElementsByClassName('gw2-build-wrapper');
 	if(config.autoCollectSelectedTraits) {
 		if(buildNodes.length) for(const target of buildNodes)
-			Collect.allTraits(context, target)
+			Collect.allTraits(target)
 		else {
 			console.warn("[gw2-tooltips] [collect] `config.autoCollectSelectedTraits` is active, but no element with class `gw2-build` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
 		}
@@ -1240,7 +1242,7 @@ if(config.autoInitialize) {
 			if(config.autoCollectRuneCounts) {
 				//TODO(Rennorb) @correctness: this might not work properly with multiple builds on one page
 				if(buildNodes.length) for(const target of buildNodes)
-					Collect.allUpgradeCounts(context, target)
+					Collect.allUpgradeCounts(target)
 				else {
 					console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `gw2-build` could be found to use as source. Upgrades will not be collected as there is no way to tell which upgrades belongs to the build and which ones are just in some arbitrary text.");
 				}
@@ -1248,14 +1250,14 @@ if(config.autoInitialize) {
 
 			if(config.autoCollectStatSources) {
 				if(buildNodes.length) for(const target of buildNodes)
-					Collect.allStatSources(context, target)
+					Collect.allStatSources(target)
 				else {
 					console.warn("[gw2-tooltips] [collect] `config.autoCollectStatSources` is active, but no element with class `gw2-build` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
 				}
 			}
 
 			if(config.autoCollectSelectedTraits) {
-				Collect.traitEffects(context);
+				Collect.traitEffects(contexts);
 			}
 
 			if(config.autoInferEquipmentUpgrades) {
@@ -1268,8 +1270,8 @@ if(config.autoInitialize) {
 			}
 
 			if(config.autoRecomputeCharacterAttributes) {
-				for(const context_ of context) {
-					recomputeCharacterAttributes(context_);
+				for(const context of contexts) {
+					recomputeCharacterAttributes(context);
 				}
 			}
 
