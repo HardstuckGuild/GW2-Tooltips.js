@@ -6,6 +6,7 @@
 	--gw2-tt-build-spec-width: calc(1em + var(--gw2-tt-build-spec-gap) * 8 + var(--gw2-tt-build-trait-size) * 6);
 	--gw2-tt-build-spec-aspect-ratio: 3.155;
 
+	--gw2-tt-color-bg: #25282b;
 	--gw2-tt-color-text: #d3d2cf;
 	--gw2-tt-color-text-accent: hsl(40deg 96% 70%);
 	--gw2-tt-color-tt-title: hsl(40deg 96% 70%);
@@ -79,6 +80,7 @@
 	pointer-events: none;  /* important */
 }
 .tooltipWrapper > .tooltip {
+	position: relative;
 	display: flex;
 	flex-direction: column;
 
@@ -91,11 +93,30 @@
 	max-height: 80vh;
 	overflow-y: auto;
 
-	background-color: #373f46;
+	background-color: var(--gw2-tt-color-bg);
 	background-image: url(../out/tooltip-bg.jpg);
 	background-size: cover;
 	background-blend-mode: hard-light;
 	color: var(--gw2-tt-color-text);
+}
+
+.tooltipWrapper > :not(.tooltip.active) {
+	padding-bottom: 1.5em;
+}
+.tooltipWrapper > :not(.tooltip.active)::after {
+	position: absolute;
+	width: 100%;
+	left: 0;
+	bottom: 0;
+	padding: .25em 0;
+
+	border-top: solid currentcolor 1px;
+	border-image-slice: 1;
+	border-image-source: linear-gradient(to right, transparent, transparent 5%, currentcolor 15%, currentcolor 85%, transparent 95%);
+
+	content: '- Block collapsed -';
+	text-align: center;
+	color: var(--gw2-tt-color-tt-detail);
 }
 .tooltipWrapper > :not(.tooltip.active) .fact {
 	display: none; /*TODO(Rennorb) @correctness: this isn't the best as it only really works with traits / skills*/
