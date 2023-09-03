@@ -205,15 +205,20 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 	const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => (string|Node)[] } = {
 		AdjustByAttributeAndLevelHealing : ({fact}) =>  {
-			const attributeVal = (context.character.stats as any)[fact.target] || 0;
-			let value = (fact.value + attributeVal * fact.attribute_multiplier + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count;
+			let value = (fact.value + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count;
+
+			let attributeVal = 0;
+			if(fact.attribute) {
+				attributeVal = context.character.stats[fact.attribute];
+				value += attributeVal * fact.attribute_multiplier * fact.hit_count;
+			}
 
 			const lines = [];
 
 			if(config.showFactComputationDetail) {
 				lines.push(`${n3(fact.value)} base value`);
 				if(fact.level_multiplier) lines.push(`+ ${n3(context.character.level ** fact.level_exponent * fact.level_multiplier)} from lvl ${context.character.level} ^ ${n3(fact.level_exponent)} lvl exp. * ${n3(fact.level_multiplier)} lvl mul.`);
-				if(attributeVal) lines.push(`+ ${n3(attributeVal * fact.attribute_multiplier)} from ${n3(attributeVal)} ${mapLocale(fact.target)} * ${n3(fact.attribute_multiplier)} attrib. mod.`);
+				if(fact.attribute) lines.push(`+ ${n3(attributeVal * fact.attribute_multiplier)} from ${n3(attributeVal)} ${mapLocale(fact.attribute)} * ${n3(fact.attribute_multiplier)} attrib. mod.`);
 				if(fact.hit_count != 1) lines.push(` * ${fact.hit_count} hits`);
 			}
 
@@ -228,7 +233,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				value *= percentMod / 100;
 			}
 
-			lines.unshift(`${GW2Text2HTML(fact.text) || mapLocale(fact.target)}: ${Math.round(value)}`);
+			lines.unshift(`${GW2Text2HTML(fact.text) || mapLocale(fact.attribute)}: ${Math.round(value)}`);
 
 			return lines;
 		},
@@ -269,11 +274,16 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			return [`${GW2Text2HTML(fact.text)}: ${Math.round(fact.distance)}`];
 		},
 		HealthAdjustHealing: ({ fact }) => {
-			//TODO(Rennorb) @scaling
-			const attribute = (context.character.stats as any)[fact.attribute] || 0;
-			const value = Math.round((fact.value + attribute * fact.multiplier) * fact.hit_count);
-			const text = GW2Text2HTML(fact.text) || mapLocale(fact.attribute);
+			let value = fact.value * fact.hit_count;
 
+			if(fact.attribute) {
+				const attribute = context.character.stats[fact.attribute];
+				value += attribute * fact.attribute_multiplier;
+			}
+
+			//TODO(Rennorb) @scaling
+
+			const text = GW2Text2HTML(fact.text) || mapLocale(fact.attribute);
 			return [`${text}: ${value}`];
 		},
 		Number : ({fact}) => {

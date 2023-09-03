@@ -328,7 +328,7 @@ function getSlotName(skill: API.Skill) : string | undefined {
 				case 'Bundle':
 					//NOTE(Rennorb): mech skills are part pet part equipment skills...
 					//TODO(Rennorb): Figure out a good way to get the actual slot name for that. Also look at actual pets.
-					if(palette.weapon_type !== 'None' || palette.type == 'Bundle') {
+					if(palette.weapon_type || palette.type == 'Bundle') {
 						//TODO(Rennorb) @cleanup: move this to the api side
 						skillSlot = slot.slot.replace(/(Offhand|Main)(\d)/, (_, hand, digit) => {
 							if(hand == 'Offhand') {
@@ -483,7 +483,7 @@ function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean,
 		if('palettes' in apiObject && apiObject.palettes.length) {
 			const criteria = context.character.profession
 				? ((s : API.Slot) => s.profession === context.character.profession)
-				: ((s : API.Slot) => s.profession !== 'None');
+				: ((s : API.Slot) => s.profession);
 			const relevantPalette = apiObject.palettes.find(p => p.slots.some(criteria));
 
 			if(relevantPalette) {
@@ -563,7 +563,7 @@ export function resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { block
 }
 
 function getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) : number {
-	if(weapon_type === 'None') {
+	if(!weapon_type) {
 		if(palette_type === 'Bundle') {
 			return 922.5
 		}
@@ -606,7 +606,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 	const addObjectsToChain = (currentObj : SupportedTTTypes) => {
 		let hasChain = false;
 		if('palettes' in currentObj) {
-			//TODO(Rennorb): cleanup is this neccesary? Since the root element already gets replaced automatically, It would be if we have skills where some skill in the chain needs to be replaced. 
+			//TODO(Rennorb): cleanup is this necessary? Since the root element already gets replaced automatically, It would be if we have skills where some skill in the chain needs to be replaced. 
 			if(adjustTraitedSkillIds) {
 				const replacementSkill = findTraitedOverride(currentObj, context);
 				if(replacementSkill) currentObj = replacementSkill;
@@ -615,7 +615,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 
 			const palette = currentObj.palettes.find(p => validPaletteTypes.includes(p.type));
 			if(palette) for(const slot of palette.slots) {
-				if(slot.next_chain && slot.profession !== 'None') {
+				if(slot.next_chain && slot.profession) {
 					const nextSkillInChain = APICache.storage.skills.get(slot.next_chain);
 					if(nextSkillInChain) {
 						hasChain = true;

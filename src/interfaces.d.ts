@@ -3,6 +3,8 @@ declare interface ObjectConstructor {
 	entries<T>(obj : T) : TypeBridge<T, keyof T>[]
 }
 
+type Undefined<T> = { [k in keyof T]?: undefined }
+
 namespace LegacyCompat {
 	type ObjectType = 'skill' | 'trait' | 'item' | 'specialization' | 'pet' | 'pvp/amulet' | 'specialization' | 'effect';
 }
@@ -60,12 +62,12 @@ namespace API {
 	interface Palette {
 		id          : number
 		type        : 'Standard' | 'Toolbelt' | 'Bundle' | 'Equipment' | 'Heal' | 'Elite' | 'Profession' | 'Monster' | 'Transformation' | 'Pet'
-		weapon_type : 'None' | 'Standard' | 'BundleLarge' | Weapons1H | Weapons2H | WeaponsAquatic
+		weapon_type?: 'Standard' | 'BundleLarge' | Weapons1H | Weapons2H | WeaponsAquatic
 		slots       : Slot[]
 	}
 
 	interface Slot {
-		profession            : 'None' | Profession
+		profession?           : Profession
 		slot                  : `${'Main'|'Offhand'}${1|2|3|4|5}` | `Offhand${1|2}`
 			| 'Heal' | 'Standard' | 'Elite'
 			| 'Pet' | `Transformation${1|2|3|4|5}`
@@ -75,7 +77,7 @@ namespace API {
 	}
 
 	interface ModifierDescriptionOverride {
-		profession  : 'None' | Profession
+		profession  : Profession
 		description : string
 	}
 
@@ -106,18 +108,21 @@ namespace API {
 		skip_next?      : true
 	}
 
-	interface AdjustByAttributeAndLevelHealingFact extends BasicFact<'AdjustByAttributeAndLevelHealing'> {
+	type AdjustByAttributeAndLevelHealingFact = BasicFact<'AdjustByAttributeAndLevelHealing'> & {
 		value                : number
-		target               : BaseAttribute | 'None',
-		attribute_multiplier : number
 		level_exponent       : number
 		level_multiplier     : number
 		hit_count            : number
+	} & (AttributeScaling | Undefined<AttributeScaling>)
+
+	type AttributeScaling = {
+		attribute            : BaseAttribute,
+		attribute_multiplier : number
 	}
 
 	interface AttributeAdjustFact extends BasicFact<'AttributeAdjust'> {
 		range  : number[]
-		target : BaseAttribute | 'None'
+		target : BaseAttribute
 	}
 
 	interface BuffFact extends BasicFact<'Buff'> {
@@ -134,12 +139,10 @@ namespace API {
 		distance : number
 	}
 
-	interface HealthAdjustHealingFact extends BasicFact<'HealthAdjustHealing'> {
+	type HealthAdjustHealingFact = BasicFact<'HealthAdjustHealing'> & {
 		value      : number
-		attribute  : BaseAttribute | 'None'
-		multiplier : number
 		hit_count  : number
-	}
+	} & (AttributeScaling | Undefined<AttributeScaling>)
 
 	interface NumberFact extends BasicFact<'Number'> {
 		value : number
@@ -189,8 +192,8 @@ namespace API {
 	}
 
 	interface BuffConversionFact extends BasicFact<'BuffConversion'> {
-		source  : BaseAttribute | 'None'
-		target  : BaseAttribute | 'None'
+		source  : BaseAttribute
+		target  : BaseAttribute
 		percent : number
 	}
 
@@ -299,7 +302,7 @@ namespace API {
 	type ItemFlag = 'AccountBound' | 'Activity' | 'Dungeon' | 'Pve' | 'Pvp' | 'PvpLobby' | 'WvwLobby' | 'Wvw' | 'GemStore' | 'HideSuffix' | 'MonsterOnly' | 'NoExport' | 'NoMysticForge' | 'NoSalvage' | 'NoSell' | 'NotUpgradeable' | 'SoulBindOnAcquire' | 'SoulBindOnUse' | 'Unique' | 'DisallowTrader' | 'DisallowUnderwater' | 'ItemFlag22' | 'AccountBindOnUse' | 'ItemFlag24' | 'ItemFlag25' | 'BulkConsume' | 'ItemFlag27' | 'BoosterEquipment' | 'Indestructible' | 'ItemFlag30' | 'ItemFlag31' | 'ItemFlag32';
 	type ItemFlagEx = 'ItemFlagEx1' | 'SalvageResearch' | 'ItemFlagEx3' | 'ItemFlagEx4' | 'ItemFlagEx5';
 
-	type WeaponDetailType = Weapons1H | Weapons2H | 'Polearm' | 'BundleSmall' | 'BundleLarge' | WeaponsAquatic | 'Toy' | 'ToyTwoHanded' | 'None';
+	type WeaponDetailType = Weapons1H | Weapons2H | 'Polearm' | 'BundleSmall' | 'BundleLarge' | WeaponsAquatic | 'Toy' | 'ToyTwoHanded';
 
 	//TODO(Rennorb) @cleanup
 	type ItemDetail = ({

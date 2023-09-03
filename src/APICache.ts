@@ -84,7 +84,7 @@ export default class APICache {
 		if('palettes' in datum) {
 			for(const palette of datum.palettes) {
 				for(const slot of palette.slots) {
-					if(slot.profession !== 'None' && slot.next_chain && !this.storage.items.has(slot.next_chain)) {
+					if(slot.profession && slot.next_chain && !this.storage.items.has(slot.next_chain)) {
 						connectedIdsStorage.skills.add(slot.next_chain)
 					}
 					//TODO(Rennorb) @perf: This could be improved if we knew if th corresponding class is actually set on the source object to even do the replacement that we fetch these for.
