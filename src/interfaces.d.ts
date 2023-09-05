@@ -310,9 +310,11 @@ namespace API {
 		defense : ValueOrLutOffset
 		subtype : ArmorType
 		weight  : 'Clothes' | 'Light' | 'Medium' | 'Heavy'
+		skin    : number
 	} | {
 		type    : 'Trinket'
 		subtype : TrinketType
+		skin?   : number
 	} | {
 		type     : 'Weapon'
 		power    : [number, number] | {
@@ -323,6 +325,7 @@ namespace API {
 		}
 		defense? : ValueOrLutOffset
 		subtype  : WeaponDetailType
+		skin     : number
 	}) & {
 		attribute_base : number
 		attribute_set? : number
