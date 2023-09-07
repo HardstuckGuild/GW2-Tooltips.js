@@ -818,7 +818,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 			? 'Compost'
 			: item.rarity == 'Ascended' ? 'Ascended' : 'Standard'
 		];
-		if(item.flags_ex.includes('SalvageResearch')) salvageOptions.push('Research');
+		if(item.flags.includes('SalvageResearch')) salvageOptions.push('Research');
 		if(salvageOptions.length) metaInfo.append(newElm('span', 'Salvage: '+salvageOptions.join(', ')));
 	}
 
