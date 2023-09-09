@@ -333,7 +333,8 @@ function getSlotName(skill: API.Skill) : string | undefined {
 							if(hand == 'Offhand') {
 								digit = digit === '1' ? '4' : '5'
 							}
-							return `${mapLocale(palette.weapon_type)} ${digit}`
+							//NOTE(Rennorb): the 'Bundle' fallback here is required for things like the guardian tome skills, as those are technically bundles.
+							return `${palette.weapon_type ? mapLocale(palette.weapon_type) : 'Bundle'} ${digit}`
 						});
 					}
 					break
@@ -352,7 +353,7 @@ function getSlotName(skill: API.Skill) : string | undefined {
 
 					case 'Pet':
 				case 'Profession':
-					skillSlot = slot.slot
+					skillSlot = slot.slot.replace(/Profession(\d)/, "Profession $1");
 					break;
 
 				case 'Monster':
