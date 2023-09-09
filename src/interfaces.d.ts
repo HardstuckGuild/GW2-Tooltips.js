@@ -324,13 +324,15 @@ namespace API {
 		defense? : ValueOrLutOffset
 		subtype  : WeaponDetailType
 		skin     : number
-	}) & {
+	}) & ItemStatSource | {
+		type  : 'TraitGuide'
+		trait : 'todo'
+	}
+
+	type ItemStatSource = {
 		attribute_base : number
 		attribute_set? : number
 		slots          : ('Upgrade' | 'Infusion' | 'Enrichment')[]
-	} | {
-		type  : 'TraitGuide'
-		trait : 'todo'
 	}
 
 	type ItemAmulet = ItemBase & {

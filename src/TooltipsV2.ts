@@ -687,27 +687,7 @@ export function findTraitedOverride(skill : API.Skill, context : Context) : API.
 }
 
 function generateItemTooltip(item : API.Item, context : Context, target : HTMLElement, statSetId? : number, stackSize = 1) : HTMLElement {
-	let statSet : API.AttributeSet | undefined = undefined;
-	if(item.type == "Armor" || item.type == "Trinket" || item.type == "Weapon") {
-		statSetId = statSetId || item.attribute_set;
-		if(statSetId === undefined) console.warn(`[gw2-tooltips] [tooltip engine] Hovering on item without specified or innate stats. Specify the stats by adding 'stats="<stat_set_id>" to the html element.' `);
-		else {
-			statSet = APICache.storage.itemstats.get(statSetId);
-			if(!statSet) console.error(`[gw2-tooltips] [tooltip engine] itemstat #${statSetId} is missing in cache.`);
-			else {
-				//TODO(Rennorb): should this happen at injection time?
-				if(config.adjustIncorrectStatIds && statSet.similar_sets) {
-					const correctSetId = statSet.similar_sets[item.subtype];
-					if(correctSetId !== undefined) {
-						console.info(`[gw2-tooltips] [tooltip engine] Corrected itemstat #${statSetId} to #${correctSetId} because the target is of type ${item.subtype}.`);
-						const newSet = APICache.storage.itemstats.get(correctSetId);
-						if(!newSet) console.error(`[gw2-tooltips] [tooltip engine] Corrected itemstat #${correctSetId} is missing in the cache.`);
-						else statSet = newSet;
-					}
-				}
-			}
-		}
-	}
+	let statSet = findCorrectAttributeSet(item, statSetId);
 
 	let slottedItems : (API.ItemBase & API.ItemUpgradeComponent)[] | undefined;
 	if('slots' in item) {
@@ -834,6 +814,32 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	const tooltip = newElm('div.tooltip.item.active', ...parts);
 	tooltip.dataset.id = String(item.id);
 	return tooltip;
+}
+
+export function findCorrectAttributeSet(item : API.Item, statSetId? : number) : API.AttributeSet | undefined {
+	let statSet : API.AttributeSet | undefined = undefined;
+	if(item.type == "Armor" || item.type == "Trinket" || item.type == "Weapon") {
+		statSetId = statSetId || item.attribute_set;
+		if(statSetId === undefined) console.warn(`[gw2-tooltips] [tooltip engine] Hovering on item without specified or innate stats. Specify the stats by adding 'stats="<stat_set_id>" to the html element.' `);
+		else {
+			statSet = APICache.storage.itemstats.get(statSetId);
+			if(!statSet) console.error(`[gw2-tooltips] [tooltip engine] itemstat #${statSetId} is missing in cache.`);
+			else {
+				//TODO(Rennorb): should this happen at injection time?
+				if(config.adjustIncorrectStatIds && statSet.similar_sets) {
+					const correctSetId = statSet.similar_sets[item.subtype];
+					if(correctSetId !== undefined) {
+						console.info(`[gw2-tooltips] [tooltip engine] Corrected itemstat #${statSetId} to #${correctSetId} because the target is of type ${item.subtype}.`);
+						const newSet = APICache.storage.itemstats.get(correctSetId);
+						if(!newSet) console.error(`[gw2-tooltips] [tooltip engine] Corrected itemstat #${correctSetId} is missing in the cache.`);
+						else statSet = newSet;
+					}
+				}
+			}
+		}
+	}
+
+	return statSet;
 }
 
 function generateUpgradeItemGroup(item : API.ItemUpgradeComponent | API.ItemConsumable, context : Context) : HTMLElement {

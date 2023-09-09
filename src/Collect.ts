@@ -192,20 +192,13 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 			if(!item) continue;
 		}
 
-		let attributeSet;
-		{
-			const attributeSetId = +String(element.getAttribute('stats'));
-			if(!isNaN(attributeSetId)) attributeSet = APICache.storage.itemstats.get(attributeSetId);
-			else if(item && 'attribute_set' in item && item.attribute_set) {
-				attributeSet = APICache.storage.itemstats.get(item.attribute_set);
-			}
-		}
+		let attributeSet = item && findCorrectAttributeSet(item, +String(element.getAttribute('stats')) || undefined);
 
 		if(attributeSet) {
 			tiersToProcess = [{
 				modifiers: attributeSet.attributes.map(a => ({
 					target_attribute_or_buff: a.attribute,
-					base_amount             : (item as API.ItemAmulet).attribute_base * a.scaling,
+					base_amount             : a.base_value + (item as API.ItemStatSource).attribute_base * a.scaling,
 					formula                 : "NoScaling",
 					
 					flags: [], id: -1, formula_param1: 0, formula_param2: 0, description: '',
@@ -433,4 +426,4 @@ const enum CollectMode {
 }
 
 import APICache from "./APICache";
-import { resolveTraitsAndOverrides, config, formatItemName, contexts, LUT_DEFENSE } from './TooltipsV2';
+import { resolveTraitsAndOverrides, config, formatItemName, contexts, LUT_DEFENSE, findCorrectAttributeSet } from './TooltipsV2';
