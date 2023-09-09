@@ -262,6 +262,7 @@ namespace API {
 		provides_weapon_access? : WeaponAccess []
 		modifiers?         : Modifier[]
 		related_skills?    : number[]
+		specialization?    : number
 	}
 
 	type ContextInformation = ContextGroup & {

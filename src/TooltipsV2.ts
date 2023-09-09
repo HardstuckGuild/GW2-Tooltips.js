@@ -6,7 +6,6 @@
 //TODO(Rennorb): Defiance break on single effect tooltips.
 //TODO(Rennorb): Change anything percent related to use fractions instead of integers (0.2 instead of 20).
 // The only thing this is good for is to make drawing the facts easier. Since we do quite a few calculations this swap would reduce conversions quite a bit.
-//TODO(Rennorb): Note the specialization a trait belongs to on the trait tooltip (probably instead of the slot).
 //TODO(Rennorb) @correctness: Split up incoming / outgoing effects. Mostly relevant for healing.
 //TODO(Rennorb) @correctness: Change the lookup to first try to figure out the palette and then go from there. this is the way to move forward as this is the future-proof way to list skills.
 //TODO(Rennorb) @correctness: implement processing for trait / skill buffs to properly show certain flip skills and chains aswell as properly do trait overrides for skills
@@ -431,6 +430,7 @@ function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean,
 	{
 		//TODO(Rennorb): slots stuff might not be doable serverside since the server is missing context. this is at least a case of @cleanup
 		let slotName = ('slot' in apiObject && apiObject.slot) || ('palettes' in apiObject && getSlotName(apiObject));
+		if('specialization' in apiObject) slotName = (APICache.storage.specializations.get(apiObject.specialization!)?.name || apiObject.specialization!) + ' - ' +  slotName;
 		if(slotName) secondHeaderRow.push(newElm('tes', `( ${slotName} )`));
 	}
 

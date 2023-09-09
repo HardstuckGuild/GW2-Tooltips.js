@@ -123,6 +123,11 @@ export default class APICache {
 			if(!this.storage.skills.has(subSkillId))
 				connectedIdsStorage.skills.add(subSkillId);
 		}
+
+		if('specialization' in datum) {
+			if(!this.storage.specializations.has(datum.specialization!))
+				connectedIdsStorage.specializations.add(datum.specialization!);
+		}
 	}
 }
 
