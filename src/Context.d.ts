@@ -24,20 +24,27 @@ type GameMode      = 'Pve' | 'Pvp' | 'Wvw';
 type Profession    = 'Guardian' | 'Warrior' | 'Engineer' | 'Ranger' | 'Thief' | 'Elementalist' | 'Mesmer' | 'Necromancer' | 'Revenant'
 type BaseAttribute = 'Power' | 'Toughness' | 'Vitality' | 'Precision' | 'Ferocity' | 'ConditionDamage' | 'Expertise' | 'Concentration' | 'HealingPower' | 'AgonyResistance'
 type ComputedAttribute = 'Health' | 'Armor' | 'ConditionDuration' | 'BoonDuration' | 'CritChance' | 'CritDamage'
+type SyntheticAttributes =  'Damage' | 'LifeForce' | 'HealEffectiveness' | 'Stun'
 
 interface Character {
-	level         : number
-	isPlayer      : bool
-	sex           : 'Male' | 'Female'
-	profession?   : Profession
-	traits        : number[]
-	stats         : Stats
-	statSources   : { [k in BaseAttribute | ComputedAttribute | number | 'Damage' | 'LifeForce' | 'Health' | 'HealEffectiveness' | 'Stun']: StatSource[] } //TODO(Rennorb): think about moving this into a single (or two) values per stat. just to reduce computations
-	upgradeCounts : { [k : number]: number }
+	level             : number
+	isPlayer          : bool
+	sex               : 'Male' | 'Female'
+	profession?       : Profession
+	traits            : number[]
+	stats             : BaseStats
+	statsWithWeapons  : BaseAndComputedStats[]
+	selectedWeaponSet : number
+	upgradeCounts     : { [k : number]: number }
 }
 
-type Stats = {
-	[k in BaseAttribute | ComputedAttribute] : number;
+type BaseStats = {
+	values  : { [k in BaseAttribute] : number; }
+	sources : { [k in BaseAttribute | ComputedAttribute | SyntheticAttributes | number]: StatSource[] }
+}
+type BaseAndComputedStats = {
+	values  : { [k in BaseAttribute | ComputedAttribute] : number; }
+	sources : { [k in BaseAttribute | ComputedAttribute | SyntheticAttributes | number]: StatSource[] }
 }
 
 interface StatSource {
@@ -57,6 +64,7 @@ interface Config {
 	autoCollectSelectedTraits        : bool
 	autoInferEquipmentUpgrades       : bool
 	autoRecomputeCharacterAttributes : bool
+	autoInferWeaponSetAssociation    : bool
 	// ^---------------------------
 
 	adjustIncorrectStatIds     : bool

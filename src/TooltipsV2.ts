@@ -287,7 +287,7 @@ function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 		if(objId) {
 			//TODO(Rennorb): should we actually reset this every time?
 			cyclePos = visibleIndex;
-			tooltip.replaceChildren(generateAttributeTooltip(objId as BaseAttribute | ComputedAttribute, gw2Object, context));
+			tooltip.replaceChildren(generateAttributeTooltip(objId as BaseAttribute | ComputedAttribute, context));
 
 			tooltip.style.display = ''; //empty value resets actual value to use stylesheet
 			for(const tt of tooltip.children) tt.classList.add('active');
@@ -368,7 +368,7 @@ function getSlotName(skill: API.Skill) : string | undefined {
 }
 
 // TODO(Rennorb) @cleanup: split this into the inflator system aswell. its getting to convoluted already
-function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean, context : Context) : HTMLElement {
+function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean, context : Context, weaponSet? : number) : HTMLElement {
 	const headerElements = [newImg(apiObject.icon), newElm('teb', GW2Text2HTML(apiObject.name).replaceAll('[s]', '')/* TODO(Rennorb) @cleanup: quick hack to get relics working */), newElm('div.flexbox-fill')]; // split, now the right side
 
 	const currentContextInformation = resolveTraitsAndOverrides(apiObject, context);
@@ -433,6 +433,7 @@ function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean,
 		let slotName = ('slot' in apiObject && apiObject.slot) || ('palettes' in apiObject && getSlotName(apiObject));
 		if('specialization' in apiObject) slotName = (APICache.storage.specializations.get(apiObject.specialization!)?.name || apiObject.specialization!) + ' - ' +  slotName;
 		if(slotName) secondHeaderRow.push(newElm('tes', `( ${slotName} )`));
+		if(weaponSet !== undefined) secondHeaderRow.push(newElm('tes', `( Weapon Set ${weaponSet + 1} )`));
 	}
 
 	secondHeaderRow.push(newElm('div.flexbox-fill')); // split, now the right side
@@ -601,7 +602,6 @@ function getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) :
 
 function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTMLElement, context : Context, statSetId? : number, stackSize? : number) : HTMLElement[] {
 	const objectChain : { obj : SupportedTTTypes, notCollapsable : boolean }[] = []
-	const validPaletteTypes = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard', 'Equipment']
 	const adjustTraitedSkillIds = gw2Object.classList.contains('auto-transform');
 
 	const addObjectsToChain = (currentObj : SupportedTTTypes) => {
@@ -614,7 +614,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 			}
 			objectChain.push({ obj: currentObj, notCollapsable: false });
 
-			const palette = currentObj.palettes.find(p => validPaletteTypes.includes(p.type));
+			const palette = currentObj.palettes.find(p => VALID_CHAIN_PALETTES.includes(p.type));
 			if(palette) for(const slot of palette.slots) {
 				if(slot.next_chain && slot.profession) {
 					const nextSkillInChain = APICache.storage.skills.get(slot.next_chain);
@@ -635,7 +635,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 			const type = gw2Object.getAttribute('type') || 'skill';
 			for(const subSkillId of currentObj.related_skills!) {
 				const subSkillInChain = APICache.storage.skills.get(subSkillId);
-				if(subSkillInChain && ((type != 'skill') || subSkillInChain.palettes.some(palette => validPaletteTypes.includes(palette.type)))) {
+				if(subSkillInChain && ((type != 'skill') || subSkillInChain.palettes.some(palette => VALID_CHAIN_PALETTES.includes(palette.type)))) {
 					objectChain.push({ obj: subSkillInChain, notCollapsable: false })
 				}
 			}
@@ -652,10 +652,12 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 		}
 	}
 
-	addObjectsToChain(initialAPIObject)
+	addObjectsToChain(initialAPIObject);
+
+	let weaponSet : number | undefined = +String(gw2Object.getAttribute('weaponSet')); if(isNaN(weaponSet)) weaponSet = undefined;
 
 	const tooltipChain = objectChain.map(({obj, notCollapsable}) => (
-		('type' in obj) ? generateItemTooltip(obj, context, gw2Object, statSetId, stackSize) : generateToolTip(obj, notCollapsable, context)
+		('type' in obj) ? generateItemTooltip(obj, context, gw2Object, statSetId, stackSize) : generateToolTip(obj, notCollapsable, context, weaponSet)
 	));
 	tooltip.append(...tooltipChain);
 	return tooltipChain
@@ -884,13 +886,16 @@ function generateUpgradeItemGroup(item : API.ItemUpgradeComponent | API.ItemCons
 	return group;
 }
 
-function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute, gw2Object : HTMLElement, context : Context) : HTMLElement {
+function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute, context : Context) : HTMLElement {
 	const [_, parts] = computeAttributeFromMods(attribute, context, true);
 	return newElm('div.tooltip.item.active', ...parts);
 }
 
-function computeAttributeFromMods(attribute : BaseAttribute | ComputedAttribute, context : Context, generateHtml = false) : [number, HTMLElement[]] {
-	let { baseAttribute, suffix, isComputed, base, div } = getAttributeInformation(attribute, context);
+function computeAttributeFromMods(attribute : BaseAttribute | ComputedAttribute, context : Context, generateHtml = false, weaponSet? : number) : [number, HTMLElement[]] {
+	const stats = context.character.stats;
+	const weaponStats = context.character.statsWithWeapons[weaponSet ?? context.character.selectedWeaponSet];
+
+	let { baseAttribute, suffix, isComputed, base, div } = getAttributeInformation(attribute, context.character);
 	const displayMul = suffix ? 100 : 1;
 
 	let value = base, text;
@@ -907,22 +912,23 @@ function computeAttributeFromMods(attribute : BaseAttribute | ComputedAttribute,
 				parts.push(newElm('div.detail', text));
 			}
 			if(isComputed) {
-				let stat = context.character.stats[baseAttribute];
+				const baseAttrValue = stats.values[baseAttribute] + weaponStats.values[baseAttribute];
+				let attrValue = baseAttrValue;
 				//NOTE(Rennorb): precision is processed really wired, so we just hard code this case
 				//TODO(Rennorb) @scaling
-				if(attribute == 'CritChance') stat -= 1000;
-				const statBonus = stat / div;
+				if(attribute == 'CritChance') attrValue -= 1000;
+				const statBonus = attrValue / div;
 				value += statBonus;
 
 				if(generateHtml && statBonus) {
-					text = ` + ${n3(statBonus * displayMul) + suffix} from ${n3(context.character.stats[baseAttribute])} ${mapLocale(baseAttribute)}`
+					text = ` + ${n3(statBonus * displayMul) + suffix} from ${n3(baseAttrValue)} ${mapLocale(baseAttribute)}`
 					if(div != 1) text += ` / ${div / displayMul} (attrib. specific conv. factor)`
 					parts.push(newElm('div.detail', text!));
 				}
 			}
 		}
 		let modValue = 0;
-		for(const source of context.character.statSources[attribute]) {
+		for(const source of stats.sources[attribute].concat(weaponStats.sources[attribute])) {
 			let mod = calculateModifier(source.modifier, context.character) * source.count;
 			const suffix = source.modifier.flags.includes('FormatPercent') ? '%' : '';
 			const displayMul = suffix ? 100 : 1;
@@ -948,7 +954,7 @@ function computeAttributeFromMods(attribute : BaseAttribute | ComputedAttribute,
 	return [value, parts];
 }
 
-function getAttributeInformation<T_>(attribute : BaseAttribute | ComputedAttribute | T_, context : Context) {
+function getAttributeInformation(attribute : BaseAttribute | ComputedAttribute, character : Character) {
 	const _p2 = ({
 		Power            : ['Power'          ,  66722, '' , false,   1000,    1],
 		Toughness        : ['Toughness'      , 104162, '' , false,   1000,    1],
@@ -966,10 +972,10 @@ function getAttributeInformation<T_>(attribute : BaseAttribute | ComputedAttribu
 		BoonDuration     : ['Concentration'  , 156599, '%', true ,      0, 1500],
 		CritChance       : ['Precision'      , 536051, '%', true ,   0.05, 2100],
 		CritDamage       : ['Ferocity'       , 784327, '%', true ,    1.5, 1500],
-	} as { [k in BaseAttribute | ComputedAttribute]? : [BaseAttribute, number, string, boolean, number, number]})[attribute as Exclude<typeof attribute, T_>];
+	} as { [k in BaseAttribute | ComputedAttribute]? : [BaseAttribute, number, string, boolean, number, number]})[attribute];
 	let baseAttribute, img, suffix = '', isComputed, base = 0, div = 1;
 	if(_p2) [baseAttribute, img, suffix, isComputed, base, div] = _p2;
-	if(attribute == 'Health') base = getBaseHealth(context.character);
+	if(attribute == 'Health') base = getBaseHealth(character);
 	return { baseAttribute, img, suffix, isComputed, base, div };
 }
 
@@ -995,9 +1001,11 @@ function recomputeCharacterAttributes(context : Context) {
 		'Power', 'Toughness', 'Vitality', 'Precision', 'Ferocity', 'ConditionDamage', 'Expertise', 'Concentration', 'HealingPower', 'AgonyResistance',
 		'Health', 'Armor', 'ConditionDuration', 'BoonDuration', 'CritChance', 'CritDamage',
 	];
-	for(const attribute of attributeOrder) {
-		const [value, _] = computeAttributeFromMods(attribute, context);
-		context.character.stats[attribute] = value;
+	for(const [weaponSetId, weaponSet] of context.character.statsWithWeapons.entries()) {
+		for(const attribute of attributeOrder) {
+			const [value, _] = computeAttributeFromMods(attribute, context, false, weaponSetId);
+			weaponSet.values[attribute] = value;
+		}
 	}
 }
 
@@ -1007,6 +1015,13 @@ function calculateConditionDuration(level : number, expertise : number) {
 
 function calculateBoonDuration(level : number, concentration : number) {
 	return concentration / (LUT_CRITICAL_DEFENSE[level] * (15 / LUT_CRITICAL_DEFENSE[80]));
+}
+
+export function getAttributeValue(character : Character, attribute : keyof BaseAndComputedStats['values']) : number {
+	return character.statsWithWeapons[character.selectedWeaponSet].values[attribute];
+}
+export function sumUpModifiers(character : Character, attribute : keyof BaseAndComputedStats['sources']) : StatSource[] {
+	return [...(character.stats.sources[attribute] || []), ...(character.statsWithWeapons[character.selectedWeaponSet].sources[attribute] || [])];
 }
 
 //TODO(Rennorb): have another look at the suffix. might still be missing in the export
@@ -1110,58 +1125,109 @@ export const DEFAULT_CONTEXT : Context = {
 		sex              : "Male",
 		traits           : [],
 		stats: {
-			Power            : 1000,
-			Toughness        : 1000,
-			Vitality         : 1000,
-			Precision        : 1000,
-			Ferocity         : 0,
-			ConditionDamage  : 0,
-			Expertise        : 0,
-			Concentration    : 0,
-			HealingPower     : 0,
-			AgonyResistance  : 0,
-			Health           : 10000,
-			Armor            : 1000,
-			CritChance       : 0.05,
-			CritDamage       : 1.5,
-			ConditionDuration: 0,
-			BoonDuration     : 0,
+			values:  {
+				Power            : 0,
+				Toughness        : 0,
+				Vitality         : 0,
+				Precision        : 0,
+				Ferocity         : 0,
+				ConditionDamage  : 0,
+				Expertise        : 0,
+				Concentration    : 0,
+				HealingPower     : 0,
+				AgonyResistance  : 0,
+			},
+			sources: {
+				Power            : [],
+				Toughness        : [],
+				Vitality         : [],
+				Precision        : [],
+				Ferocity         : [],
+				ConditionDamage  : [],
+				Expertise        : [],
+				Concentration    : [],
+				HealingPower     : [],
+				AgonyResistance  : [],
+				Armor            : [],
+				Damage           : [],
+				LifeForce        : [],
+				Health           : [],
+				HealEffectiveness: [],
+				Stun             : [],
+				ConditionDuration: [],
+				BoonDuration     : [],
+				CritChance       : [],
+				CritDamage       : [],
+			},
 		},
-		statSources: {
-			Power            : [],
-			Toughness        : [],
-			Vitality         : [],
-			Precision        : [],
-			Ferocity         : [],
-			ConditionDamage  : [],
-			Expertise        : [],
-			Concentration    : [],
-			HealingPower     : [],
-			AgonyResistance  : [],
-			Armor            : [],
-			BoonDuration     : [],
-			ConditionDuration: [],
-			CritChance       : [],
-			CritDamage       : [],
-			Damage           : [],
-			LifeForce        : [],
-			Health           : [],
-			HealEffectiveness: [],
-			Stun             : [],
-		},
+		statsWithWeapons: [{
+			values: {
+				Power            : 1000,
+				Toughness        : 1000,
+				Vitality         : 1000,
+				Precision        : 1000,
+				Ferocity         : 0,
+				ConditionDamage  : 0,
+				Expertise        : 0,
+				Concentration    : 0,
+				HealingPower     : 0,
+				AgonyResistance  : 0,
+				Health           : 10000,
+				Armor            : 1000,
+				CritChance       : 0.05,
+				CritDamage       : 1.5,
+				ConditionDuration: 0,
+				BoonDuration     : 0,
+			},
+			sources: {
+				Power            : [],
+				Toughness        : [],
+				Vitality         : [],
+				Precision        : [],
+				Ferocity         : [],
+				ConditionDamage  : [],
+				Expertise        : [],
+				Concentration    : [],
+				HealingPower     : [],
+				AgonyResistance  : [],
+				Armor            : [],
+				Damage           : [],
+				LifeForce        : [],
+				Health           : [],
+				HealEffectiveness: [],
+				Stun             : [],
+				ConditionDuration: [],
+				BoonDuration     : [],
+				CritChance       : [],
+				CritDamage       : [],
+			},
+		}],
+		selectedWeaponSet: 0,
 		upgradeCounts: {},
 	},
 }
+
 function createCompleteContext(partialContext : PartialContext) : Context {
 	if(partialContext.gameMode == "Pvp" && partialContext.character?.level && partialContext.character?.level != 80) {
 		console.error('[gw2-tooltips] [init] supplied (partial) context has its gamemode set to pvp, but has a character level specified thats other than 80. In pvp you are always level 80. This will lead to unexpected results; Remove the explicit level or change the gamemode. The (partial) context in question is: ', partialContext);
 	}
 
-	const stats = Object.assign({}, DEFAULT_CONTEXT.character.stats, partialContext.character?.stats);
-	const statSources = Object.assign({}, structuredClone(DEFAULT_CONTEXT.character.statSources), partialContext.character?.statSources);
+	const stats = createCompletedBaseStats(partialContext.character?.stats);
 	const upgradeCounts = Object.assign({}, partialContext.character?.upgradeCounts);
-	const character = Object.assign({}, DEFAULT_CONTEXT.character, partialContext.character, { stats, statSources, upgradeCounts });
+	const weaponStats = partialContext.character?.statsWithWeapons?.map(s => createCompletedStats(s)) || [createCompletedStats()];
+	const character = Object.assign({}, DEFAULT_CONTEXT.character, partialContext.character, { stats, upgradeCounts, weaponStats });
 	return Object.assign({}, DEFAULT_CONTEXT, partialContext, { character });
+}
+
+export function createCompletedBaseStats(partialSource : PartialR<BaseStats> = {}) : BaseStats {
+	const values = Object.assign({}, DEFAULT_CONTEXT.character.stats.values, partialSource.values);
+	const sources = Object.assign({}, structuredClone(DEFAULT_CONTEXT.character.stats.sources), partialSource.sources);
+	return { values, sources };
+}
+export function createCompletedStats(partialSource : PartialR<BaseAndComputedStats> = {}) : BaseAndComputedStats {
+	const values = Object.assign({}, DEFAULT_CONTEXT.character.statsWithWeapons[0].values, partialSource.values);
+	const sources = Object.assign({}, structuredClone(DEFAULT_CONTEXT.character.statsWithWeapons[0].sources), partialSource.sources);
+	return { values, sources };
 }
 
 const DEFAULT_CONFIG : Config = {
@@ -1172,6 +1238,7 @@ const DEFAULT_CONFIG : Config = {
 	autoRecomputeCharacterAttributes: true,
 	adjustIncorrectStatIds          : true,
 	autoInferEquipmentUpgrades      : true,
+	autoInferWeaponSetAssociation   : true,
 	legacyCompatibility             : true,
 	showPreciseAbilityTimings       : false,
 	showFactComputationDetail       : false,
@@ -1234,6 +1301,9 @@ export const ICONS = {
 	SINK            : 2440714,
 }
 
+const VALID_CHAIN_PALETTES = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard', 'Equipment'];
+
+
 type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet | OfficialAPI.Pet | API.Item; //TODO(Rennorb): change pet
 
 
@@ -1250,6 +1320,64 @@ if(config.autoInitialize) {
 
 	hookDocument(document)
 		.then(gw2Objects => {
+			if(config.autoInferWeaponSetAssociation) {
+				for(const buildNode of buildNodes) {
+					for(const [i, setNode] of buildNode.querySelectorAll('.weapon-set').entries()) {
+						for(const objNode of setNode.getElementsByTagName('GW2OBJECT'))
+							objNode.setAttribute('weaponSet', String(i));
+					}
+					
+					const skillIdsBySet = [];
+					for(const [i, setSkillsNode] of buildNode.querySelectorAll('.skills-weapon-set').entries()) {
+						const skillIds : number[] = [];
+						const chainIds = (skill : API.Skill) => {
+							skillIds.push(skill.id);
+							let hasChain = false;
+							const palette = skill.palettes.find(p => VALID_CHAIN_PALETTES.includes(p.type));
+							if(palette) for(const slot of palette.slots) {
+								if(slot.next_chain && slot.profession) {
+									const nextSkillInChain = APICache.storage.skills.get(slot.next_chain);
+									if(nextSkillInChain) {
+										hasChain = true;
+										chainIds(nextSkillInChain)
+									}
+								}
+							}
+							if(!hasChain && skill.related_skills) {
+								for(const subSkillId of skill.related_skills) {
+									const subSkillInChain = APICache.storage.skills.get(subSkillId);
+									if(subSkillInChain && subSkillInChain.palettes.some(palette => VALID_CHAIN_PALETTES.includes(palette.type)))
+										skillIds.push(subSkillId);
+								}
+							}
+						}
+		
+						for(const objNode of setSkillsNode.children) {
+							objNode.setAttribute('weaponSet', String(i));
+		
+							const skill = APICache.storage.skills.get(+String(objNode.getAttribute('objid'))!);
+							if(skill) chainIds(skill);
+							else {
+								console.warn("[gw2-tooltips] [collect] failed to find skill for object ", objNode);
+							}
+						}
+						skillIdsBySet.push(skillIds);
+					}
+		
+					//only run do this charade if there are actually multiple different weapon sets
+					if(skillIdsBySet.length > 1 && (skillIdsBySet[0][0] != skillIdsBySet[1][0] || skillIdsBySet[0][skillIdsBySet[0].length - 1] != skillIdsBySet[1][skillIdsBySet[1].length - 1])) {
+						console.info("[gw2-tooltips] [collect] Will mark the following skills as belonging to weapon sets: ", skillIdsBySet);
+						const descriptionNode = buildNode.parentElement!.nextElementSibling?.nextElementSibling as HTMLElement;
+						if(descriptionNode) for(const skillNode of descriptionNode.querySelectorAll('gw2object[type=skill]')) {
+							const id = +String(skillNode.getAttribute('objid')) || 0;
+							if(id) for(const [i, skills] of skillIdsBySet.entries()) {
+								if(skills.includes(id)) skillNode.setAttribute('weaponSet', String(i));
+							}
+						}
+					}
+				}
+			}
+
 			//TODO(Rennorb) @cleanup: those routines could probably be combined into one when both options are active
 			if(config.autoCollectRuneCounts) {
 				//TODO(Rennorb) @correctness: this might not work properly with multiple builds on one page

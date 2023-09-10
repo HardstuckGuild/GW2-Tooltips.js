@@ -89,7 +89,7 @@ type AdditionalAttributes = 'Profession' | 'MagicFind'
 export function inflateAttribute(gw2Object : HTMLElement, attribute : BaseAttribute | ComputedAttribute | AdditionalAttributes) {
 	const context = contexts[+String(gw2Object.getAttribute('contextSet')) || 0];
 
-	const value : number | undefined = context.character.stats[attribute as Exclude<typeof attribute, AdditionalAttributes>];
+	const value : number | undefined = getAttributeValue(context.character, attribute as Exclude<typeof attribute, AdditionalAttributes>);
 	const _p  = ({
 		Power            : [ 66722, '' ],
 		Toughness        : [104162, '' ],
@@ -384,4 +384,4 @@ export function inferItemUpgrades(wrappers : Iterable<Element>) {
 
 import APICache from "./APICache";
 import { GW2Text2HTML, IMAGE_CDN, mapLocale, newElm, newImg, withUpToNDigits } from "./TUtilsV2";
-import { ICONS, contexts, findTraitedOverride, formatItemName, specializeContextFromInlineAttribs } from "./TooltipsV2";
+import { ICONS, contexts, findTraitedOverride, formatItemName, getAttributeValue, specializeContextFromInlineAttribs } from "./TooltipsV2";

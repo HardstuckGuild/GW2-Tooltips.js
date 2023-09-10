@@ -94,29 +94,9 @@ export function specificStatSources(contextIndex : number, scope : ScopeElement,
 	_statSources(contextIndex, contexts, scope.getElementsByTagName('gw2object'), mode);
 }
 function _statSources(contextIndex : number, contexts : Context[], elements : Iterable<Element>, mode : CollectMode) {
-	const targetContext = contexts[contextIndex];
-	const sources : Context['character']['statSources'] = {
-		Power            : [],
-		Toughness        : [],
-		Vitality         : [],
-		Precision        : [],
-		Ferocity         : [],
-		ConditionDamage  : [],
-		Expertise        : [],
-		Concentration    : [],
-		HealingPower     : [],
-		AgonyResistance  : [],
-		Armor            : [],
-		BoonDuration     : [],
-		ConditionDuration: [],
-		CritChance       : [],
-		CritDamage       : [],
-		Damage           : [],
-		LifeForce        : [],
-		Health           : [],
-		HealEffectiveness: [],
-		Stun             : [],
-	};
+	const context = contexts[contextIndex];
+	const sources : BaseStats['sources'] = structuredClone(DEFAULT_CONTEXT.character.stats.sources);
+	const weaponSetSources : BaseAndComputedStats['sources'][] = [];
 
 	//NOTE(Rennorb): Cant really use the existing upgrade counts since we want to add tiers individually.
 	//TODO(Rennorb) @cleanup: Get rid of the count functions and just put them in here.
@@ -149,7 +129,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 					if(tierNumber > 6) {
 						//NOTE(Rennorb): Only complain if we are manually counting runes.
 						//TODO(Rennorb) @correctness: Is this the right way to do it? should we just complain when runes are specified but we find one that isn't?
-						if(!targetContext.character.upgradeCounts[item.id])
+						if(!context.character.upgradeCounts[item.id])
 							console.warn("[gw2-tooltips] [collect] Found more than 6 runes of the same type. Here is the 7th rune element: ", element);
 						continue;
 					}
@@ -208,7 +188,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 		if(item && 'defense' in item) {
 			const defense = (typeof item.defense  == "number")
 				? item.defense
-				: LUT_DEFENSE[Math.min(100, (item.defense![0] + targetContext.character.level))] * item.defense![1];
+				: LUT_DEFENSE[Math.min(100, (item.defense![0] + context.character.level))] * item.defense![1];
 
 			tiersToProcess![0].modifiers!.push({
 				target_attribute_or_buff: 'Armor',
@@ -219,53 +199,88 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 			} as API.Modifier)
 		}
 
+		let targetSources = sources;
+
+		const weaponSetId = +String(element.getAttribute('weaponSet'));
+		if(!isNaN(weaponSetId)) {
+			targetSources = weaponSetSources[weaponSetId] || (weaponSetSources[weaponSetId] = structuredClone(DEFAULT_CONTEXT.character.stats.sources));
+		}
+
 		if(tiersToProcess) for(const [i, tier] of tiersToProcess.entries()) {
 			if(tier.modifiers) for(const mod of tier.modifiers!) {
-				if(!mod.target_attribute_or_buff || (mod.mode && mod.mode !== targetContext.gameMode) || (mod.trait_req && !targetContext.character.traits.includes(mod.trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
+				if(!mod.target_attribute_or_buff || (mod.mode && mod.mode !== context.gameMode) || (mod.trait_req && !context.character.traits.includes(mod.trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
 
-				let source = formatItemName(item!, targetContext, attributeSet, undefined, -1);
+				let source = formatItemName(item!, context, attributeSet, undefined, -1);
 				if(sourceRuneSuffix) {
 					source = `${source} (Tier ${tierNumber && tierNumber < 6 ? tierNumber : i + 1} Bonus)`;
 					amountToAdd = 1; //TODO(Rennorb) @cleanup
 				}
 
-				(sources[mod.target_attribute_or_buff] || (sources[mod.target_attribute_or_buff] = []))
+				(targetSources[mod.target_attribute_or_buff] || (targetSources[mod.target_attribute_or_buff] = []))
 					.push({ modifier: mod, source, count: amountToAdd })
 			}
 		}
 	}
 
-	//TODO(Rennorb) @cleanup: move this out?
+	const character = context.character;
+	const overwriteWeaponStatSources = () => {
+		for(const [i, sources] of weaponSetSources.entries()) {
+			const target = character.statsWithWeapons[i];
+			if(target) target.sources = sources;
+			else character.statsWithWeapons[i] = { sources, values: Object.assign({}, DEFAULT_CONTEXT.character.statsWithWeapons[0].values) };
+		}
+	}
+	
 	switch(mode) {
-		case CollectMode.IgnoreGlobal: targetContext.character.statSources = sources; break
+		case CollectMode.IgnoreGlobal:
+			character.stats.sources = sources;
+			overwriteWeaponStatSources();
+			break;
+
 		case CollectMode.Append: {
 			for(const [k, values] of Object.entries(sources)) {
-				((targetContext.character.statSources as any)[k] || ((targetContext.character.statSources as any)[k] = []))
+				((character.stats.sources as any)[k] || ((character.stats.sources as any)[k] = []))
 					.push(...values);
+			}
+			for(const [i, sources] of weaponSetSources.entries()) {
+				const target = character.statsWithWeapons[i];
+				if(target) {
+					for(const [k, values] of Object.entries(sources)) {
+						((target.sources as any)[k] || ((target.sources as any)[k] = []))
+							.push(...values);
+					}			
+				}
+				else character.statsWithWeapons[i] = { sources, values: Object.assign({}, DEFAULT_CONTEXT.character.statsWithWeapons[0].values) };
 			}
 		} break;
 
 		case CollectMode.PrioritizeGlobal: {
 			if(window.GW2TooltipsContext instanceof Array) {
-				targetContext.character.statSources = Object.assign(sources, window.GW2TooltipsContext[contextIndex].character?.statSources);
+				character.stats.sources = Object.assign(sources, window.GW2TooltipsContext[contextIndex].character?.stats?.sources);
+				console.assert(false && "todo weaponStats");
 			}
 			else if(window.GW2TooltipsContext) {
-				targetContext.character.statSources = Object.assign(sources, window.GW2TooltipsContext.character?.statSources);
+				character.stats.sources = Object.assign(sources, window.GW2TooltipsContext.character?.stats?.sources);
+				console.assert(false && "todo weaponStats");
 			}
 			else {
-				targetContext.character.statSources = sources;
+				character.stats.sources = sources;
+				overwriteWeaponStatSources();
 			}
 		} break
 
 		case CollectMode.OverwriteGlobal: {
 			if(window.GW2TooltipsContext instanceof Array) {
-				targetContext.character.statSources = Object.assign({}, window.GW2TooltipsContext[contextIndex].character?.statSources, sources);
+				character.stats.sources = Object.assign({}, window.GW2TooltipsContext[contextIndex].character?.stats?.sources, sources);
+				console.assert(false && "todo weaponStats");
 			}
 			else if(window.GW2TooltipsContext) {
-				targetContext.character.statSources = Object.assign({}, window.GW2TooltipsContext.character?.statSources, sources);
+				character.stats.sources = Object.assign({}, window.GW2TooltipsContext.character?.stats?.sources, sources);
+				console.assert(false && "todo weaponStats");
 			}
 			else {
-				targetContext.character.statSources = sources;
+				character.stats.sources = sources;
+				overwriteWeaponStatSources();
 			}
 		} break
 	}
@@ -393,7 +408,7 @@ export function traitEffects(contexts : Context[]) {
 				for(const mod of modifiers) {
 					if(!mod.target_attribute_or_buff || (mod.mode && mod.mode !== context.gameMode) || (mod.trait_req && !context.character.traits.includes(mod.trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
 
-					(context.character.statSources[mod.target_attribute_or_buff] || (context.character.statSources[mod.target_attribute_or_buff] = []))
+					(context.character.stats.sources[mod.target_attribute_or_buff] || (context.character.stats.sources[mod.target_attribute_or_buff] = []))
 						.push({source: `trait '<span class="gw2-color-traited-fact">${trait.name}</span>'`, modifier: mod, count: 1});
 				}
 			};
@@ -418,6 +433,7 @@ export function traitEffects(contexts : Context[]) {
 	}
 }
 
+//TODO(RennorB) @cleanup: this was an idead i head, its uselsee. just get rid of it.
 const enum CollectMode {
 	IgnoreGlobal,
 	PrioritizeGlobal,
@@ -426,4 +442,4 @@ const enum CollectMode {
 }
 
 import APICache from "./APICache";
-import { resolveTraitsAndOverrides, config, formatItemName, contexts, LUT_DEFENSE, findCorrectAttributeSet } from './TooltipsV2';
+import { resolveTraitsAndOverrides, config, formatItemName, contexts, LUT_DEFENSE, findCorrectAttributeSet, DEFAULT_CONTEXT } from './TooltipsV2';
