@@ -738,7 +738,9 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 			power = item.power;
 		}
 
-		parts.push(newElm('te', newElm('tem', 'Weapon Strength: ', newElm('span.gw2-color-stat-green', `${power[0]} - ${power[1]}`))));
+		const line = newElm('tem', 'Weapon Strength: ', newElm('span.gw2-color-stat-green', `${power[0]} - ${power[1]}`));
+		if(item.damage_type) line.append(` (${item.damage_type})`);
+		parts.push(newElm('te', line));
 	}
 
 	if('tiers' in item) {
