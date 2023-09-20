@@ -894,7 +894,13 @@ function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute,
 	const [value, parts] = computeAttributeFromMods(attribute, context, true);
 	if(['ConditionDuration', 'BoonDuration'].includes(attribute)) {
 		const target_type = attribute === 'ConditionDuration' ? 'Condition' : 'Boon';
-		for(const [effect_id, sources] of Object.entries(context.character.stats.sources)) {
+		const completeSources = structuredClone(context.character.stats.sources);
+		for(const [key, mods] of Object.entries(context.character.statsWithWeapons[context.character.selectedWeaponSet].sources)) {
+			if(isNaN(+key)) continue;
+			(completeSources as any)[key] = ((completeSources as any)[key] || []).push(...mods);
+		}
+
+		for(const [effect_id, sources] of Object.entries(completeSources)) {
 			//NOTE(Rennorb): For simplicity of the remaining library we just eat the performance hit of iterating over the additional props here.
 			if(isNaN(+effect_id)) continue;
 			const effect = APICache.storage.skills.get(+effect_id);
@@ -904,8 +910,6 @@ function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute,
 			}
 			if(effect.buff_type !== target_type) continue;
 
-			//todo weapon split
-			const insert_at = parts.length;
 			let specific_mod = value * 100;
 			let specific_parts = [];
 			for(const { source, modifier, count } of sources) {
@@ -914,7 +918,7 @@ function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute,
 					specific_mod += mod;
 			}
 
-			parts.splice(insert_at, 0, newElm('div.fact',
+			parts.push(newElm('div.fact',
 				newImg(effect.icon),
 				newElm('div', newElm('span', `${effect.name}: ${n3(specific_mod)}%`), ...specific_parts))
 			);
