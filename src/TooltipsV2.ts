@@ -891,7 +891,35 @@ function generateUpgradeItemGroup(item : API.ItemUpgradeComponent | API.ItemCons
 }
 
 function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute, context : Context) : HTMLElement {
-	const [_, parts] = computeAttributeFromMods(attribute, context, true);
+	const [value, parts] = computeAttributeFromMods(attribute, context, true);
+	if(['ConditionDuration', 'BoonDuration'].includes(attribute)) {
+		const target_type = attribute === 'ConditionDuration' ? 'Condition' : 'Boon';
+		for(const [effect_id, sources] of Object.entries(context.character.stats.sources)) {
+			//NOTE(Rennorb): For simplicity of the remaining library we just eat the performance hit of iterating over the additional props here.
+			if(isNaN(+effect_id)) continue;
+			const effect = APICache.storage.skills.get(+effect_id);
+			if(!effect) {
+				console.error(`[gw2-tooltips] [tooltip engine] effect #${effect_id} is missing in cache.`);
+				continue;
+			}
+			if(effect.buff_type !== target_type) continue;
+
+			//todo weapon split
+			const insert_at = parts.length;
+			let specific_mod = value * 100;
+			let specific_parts = [];
+			for(const { source, modifier, count } of sources) {
+				const mod = calculateModifier(modifier, context.character);
+				specific_parts.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character)))); //TODO(Rennorb) @cleanup: im not really happy with how this works right now. Storing html in the text is not what i like to do but it works for now. Multiple of this.
+					specific_mod += mod;
+			}
+
+			parts.splice(insert_at, 0, newElm('div.fact',
+				newImg(effect.icon),
+				newElm('div', newElm('span', `${effect.name}: ${n3(specific_mod)}%`), ...specific_parts))
+			);
+		}
+	}
 	return newElm('div.tooltip.item.active', ...parts);
 }
 
