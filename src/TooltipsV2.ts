@@ -715,14 +715,16 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	if('power' in item) {
 		let power;
 		if('mul' in item.power) {
-			let minRarity : keyof typeof LUT_RARITY = 'Common';
+			let minRarity : keyof typeof LUT_RARITY = 'Basic';
 			if(['PlayerLevelScaleRarity', 'ItemScale4'].includes(item.power.scaling!)) {
 				//NOTE(Rennorb) @hardcoded: these thresholds are apparently from a config
-				if(context.character.level >= 14) minRarity = 'Uncommon'; // content:Configuration?guid=Wu52xQQYEUWiDdyKv+jf2Q==
-				else if(context.character.level >= 30) minRarity = 'Rare'; // content:Configuration?guid=AX9BmdFkNkuyIpWOz58kmA==
-				else if(context.character.level >= 60) minRarity = 'Exotic'; // content:Configuration?guid=X6vQWpTe2Ui+LPdJTv560g==
-				else if(context.character.level >= 80) minRarity = 'Legendary'; // content:Configuration?guid=W2O5W4HAPEy3GJFfaSt4mQ==
+				     if(context.character.level < 14) minRarity = 'Common';   // content:Configuration?guid=Wu52xQQYEUWiDdyKv+jf2Q==
+				else if(context.character.level < 30) minRarity = 'Uncommon'; // content:Configuration?guid=AX9BmdFkNkuyIpWOz58kmA==
+				else if(context.character.level < 60) minRarity = 'Rare';     // content:Configuration?guid=X6vQWpTe2Ui+LPdJTv560g==
+				else if(context.character.level < 80) minRarity = 'Exotic';   // content:Configuration?guid=W2O5W4HAPEy3GJFfaSt4mQ==
+				else                                  minRarity = 'Legendary';
 			}
+
 			let index = Math.max(LUT_RARITY[item.rarity], LUT_RARITY[minRarity]);
 			if(!item.power.scaling) //no scaling means ItemLevel scaling
 				index += item.level;
