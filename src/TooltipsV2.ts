@@ -897,7 +897,7 @@ function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute,
 		const completeSources = structuredClone(context.character.stats.sources);
 		for(const [key, mods] of Object.entries(context.character.statsWithWeapons[context.character.selectedWeaponSet].sources)) {
 			if(isNaN(+key)) continue;
-			(completeSources as any)[key] = ((completeSources as any)[key] || []).push(...mods);
+			((completeSources as any)[key] || ((completeSources as any)[key] = [])).push(...mods);
 		}
 
 		for(const [effect_id, sources] of Object.entries(completeSources)) {
