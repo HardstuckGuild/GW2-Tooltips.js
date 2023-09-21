@@ -390,14 +390,14 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 			return lines;
 		},
-		Time : ({fact: { duration, text }}) => {
+		Time : ({fact: { text }}) => {
 			const lines = [];
 			//TODO(Rennorb) @cleanup
 			if(text && (text.includes('Stun') || text.includes('Daze'))) {
 				const modifiers = sumUpModifiers(context.character, 'Stun');
 				if(modifiers.length) {
 					if(config.showFactComputationDetail)
-						lines.push(`${n3(duration / 1000)}s base duration`);
+						lines.push(`${n3(buffDuration / 1000)}s base duration`);
 					let percentMod = 100;
 					for(const { source, modifier, count } of modifiers) {
 						const mod = calculateModifier(modifier, context.character);
@@ -405,11 +405,11 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 							lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character))));
 						percentMod += mod;
 					}
-					duration *= percentMod / 100;
+					buffDuration *= percentMod / 100;
 				}
 			}
-			const time = duration != 1000 ? 'seconds' : 'second';
-			lines.unshift(`${GW2Text2HTML(text)}: ${drawFractional(duration / 1000, config)} ${time}`);
+			const time = buffDuration != 1000 ? 'seconds' : 'second';
+			lines.unshift(`${GW2Text2HTML(text)}: ${drawFractional(buffDuration / 1000, config)} ${time}`);
 			return lines;
 		},
 		ComboField : ({fact}) =>  {
