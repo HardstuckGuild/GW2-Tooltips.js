@@ -82,6 +82,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	let iconSlug : Parameters<typeof newImg>[0] = fact.icon;
 	let buffStackSize = 1;
 	let buffDuration = (fact as API.BuffFact).duration;
+	let defiance_break_per_s = fact.defiance_break;
 
 	const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact, duration : Milliseconds, valueMod : number  /* TODO(Rennorb): kindof a weird hack for now. maybe merge the two export functions? */) => {
 		let modsArray: string[] = []
@@ -285,8 +286,29 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			const text = GW2Text2HTML(fact.text) || mapLocale(fact.attribute);
 			return [`${text}: ${value}`];
 		},
-		Number : ({fact}) => {
-			return [`${GW2Text2HTML(fact.text)}: ${drawFractional(fact.value, config)}`];
+		Number : ({fact: { text, value }}) => {
+			const lines : (string|Node)[] = [];
+
+			if(defiance_break_per_s && text && text.includes('Defiance')) {
+				const modifiers = sumUpModifiers(context.character, 'Stun');
+				if(modifiers.length) {
+					if(config.showFactComputationDetail)
+						lines.push(`${n3(value)} base value`);
+					let percentMod = 100;
+					for(const { source, modifier, count } of modifiers) {
+						const mod = calculateModifier(modifier, context.character);
+						if(config.showFactComputationDetail)
+							lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character))));
+						percentMod += mod;
+					}
+					const mod = percentMod / 100;
+					value *= mod;
+					defiance_break_per_s *= mod;
+				}
+			}
+
+			lines.unshift(`${GW2Text2HTML(text)}: ${drawFractional(value, config)}`);
+			return lines;
 		},
 		Percent : ({fact}) => {
 			return [`${GW2Text2HTML(fact.text)}: ${drawFractional(fact.percent, config)}%`];
@@ -391,11 +413,15 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			return lines;
 		},
 		Time : ({fact: { text }}) => {
-			const lines = [];
+			const lines : (string|Node)[] = [];
+
 			//TODO(Rennorb) @cleanup
-			if(text && (text.includes('Stun') || text.includes('Daze'))) {
+			if(defiance_break_per_s && text && (text.includes('Stun') || text.includes('Daze') 
+				//NOTE(Rennorb): This filters for '{Bonus|Additional} Defiance {Damage|Break}' which apparently is also affected by stun mods like paralyzation sigil
+				|| text.includes('Defiance'))
+			) {
 				const modifiers = sumUpModifiers(context.character, 'Stun');
-				if(modifiers.length) {
+				if(!modifiers.length) {
 					if(config.showFactComputationDetail)
 						lines.push(`${n3(buffDuration / 1000)}s base duration`);
 					let percentMod = 100;
@@ -408,6 +434,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 					buffDuration *= percentMod / 100;
 				}
 			}
+
 			const time = buffDuration != 1000 ? 'seconds' : 'second';
 			lines.unshift(`${GW2Text2HTML(text)}: ${drawFractional(buffDuration / 1000, config)} ${time}`);
 			return lines;
@@ -487,7 +514,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	}
 
 	let defianceBreak = 0;
-	if(fact.defiance_break) {
+	if(defiance_break_per_s) {
 		let effectiveBuffDuration = buffDuration || 1000;
 		let breakDetail = '';
 		//TODO(Rennorb) @perf @cleanup
@@ -498,7 +525,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		else if(effectiveBuffDuration != 1000) {
 			breakDetail = ` (${fact.defiance_break}/s)`;
 		}
-		defianceBreak = fact.defiance_break * effectiveBuffDuration / 1000;
+		defianceBreak = defiance_break_per_s * effectiveBuffDuration / 1000;
 		remainingDetail.push(newElm('span.detail.gw2-color-defiance-fact', `Defiance Break: ${withUpToNDigits(defianceBreak, 2)}${breakDetail}`))
 	}
 
