@@ -488,8 +488,17 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 	let defianceBreak = 0;
 	if(fact.defiance_break) {
-		defianceBreak = fact.defiance_break * (buffDuration || 1000) / 1000;
-		const breakDetail = (buffDuration != undefined && buffDuration != 1000) ? ` (${fact.defiance_break}/s)` : '';
+		let effectiveBuffDuration = buffDuration || 1000;
+		let breakDetail = '';
+		//TODO(Rennorb) @perf @cleanup
+		if(buffDuration < 1000 && fact.text && (fact.text.includes('Stun') || fact.text.includes('Daze') || fact.text.includes('Float') || fact.text.includes('Knockdown'))) {
+			effectiveBuffDuration = 1000;
+			breakDetail = ' (hard CC -> min = 100)';
+		}
+		else if(effectiveBuffDuration != 1000) {
+			breakDetail = ` (${fact.defiance_break}/s)`;
+		}
+		defianceBreak = fact.defiance_break * effectiveBuffDuration / 1000;
 		remainingDetail.push(newElm('span.detail.gw2-color-defiance-fact', `Defiance Break: ${withUpToNDigits(defianceBreak, 2)}${breakDetail}`))
 	}
 
