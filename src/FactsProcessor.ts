@@ -169,9 +169,10 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 		//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
 		let durModStack = sumUpModifiers(context.character, buff.id);
-		if(durModStack) {
+		if(durModStack.length) {
 			//NOTE(Rennorb): Just in case we didn't have a stat duration increase. Im aware that this is jank, but i cant think of a better way rn.
-			if(durMod === 1 && config.showFactComputationDetail) detailStack.push(`base duration: ${n3(duration / 1000)}s`);
+			if(durMod === 1 && config.showFactComputationDetail)
+				detailStack.push(`base duration: ${n3(duration / 1000)}s`);
 			let percentMod = 0;
 			for(const { source, modifier, count } of durModStack) {
 				const mod = calculateModifier(modifier, context.character);
@@ -421,7 +422,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				|| text.includes('Defiance'))
 			) {
 				const modifiers = sumUpModifiers(context.character, 'Stun');
-				if(!modifiers.length) {
+				if(modifiers.length) {
 					if(config.showFactComputationDetail)
 						lines.push(`${n3(buffDuration / 1000)}s base duration`);
 					let percentMod = 100;
