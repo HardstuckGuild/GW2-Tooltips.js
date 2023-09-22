@@ -725,7 +725,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 			}
 
 			const rarity = Math.min(Rarity[item.rarity], maxRarity)
-			let index = Math.min(LUT_RARITY[rarity]);
+			let index = LUT_RARITY[rarity];
 			if(!item.power.scaling) //no scaling property means ItemLevel scaling
 				index += item.level;
 			else { //any of the other three
