@@ -715,24 +715,24 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	if('power' in item) {
 		let power;
 		if('mul' in item.power) {
-			let minRarity : keyof typeof LUT_RARITY = 'Basic';
+			let maxRarity = Rarity.Legendary;
 			if(['PlayerLevelScaleRarity', 'ItemScale4'].includes(item.power.scaling!)) {
 				//NOTE(Rennorb) @hardcoded: these thresholds are apparently from a config
-				     if(context.character.level < 14) minRarity = 'Common';   // content:Configuration?guid=Wu52xQQYEUWiDdyKv+jf2Q==
-				else if(context.character.level < 30) minRarity = 'Uncommon'; // content:Configuration?guid=AX9BmdFkNkuyIpWOz58kmA==
-				else if(context.character.level < 60) minRarity = 'Rare';     // content:Configuration?guid=X6vQWpTe2Ui+LPdJTv560g==
-				else if(context.character.level < 80) minRarity = 'Exotic';   // content:Configuration?guid=W2O5W4HAPEy3GJFfaSt4mQ==
-				else                                  minRarity = 'Legendary';
+				     if(context.character.level < 14) maxRarity = Rarity.Common;   // content:Configuration?guid=Wu52xQQYEUWiDdyKv+jf2Q==
+				else if(context.character.level < 30) maxRarity = Rarity.Uncommon; // content:Configuration?guid=AX9BmdFkNkuyIpWOz58kmA==
+				else if(context.character.level < 60) maxRarity = Rarity.Rare;     // content:Configuration?guid=X6vQWpTe2Ui+LPdJTv560g==
+				else if(context.character.level < 80) maxRarity = Rarity.Exotic;   // content:Configuration?guid=W2O5W4HAPEy3GJFfaSt4mQ==
 			}
 
-			let index = Math.max(LUT_RARITY[item.rarity], LUT_RARITY[minRarity]);
-			if(!item.power.scaling) //no scaling means ItemLevel scaling
+			const rarity = Math.min(Rarity[item.rarity], maxRarity)
+			let index = Math.min(LUT_RARITY[rarity]);
+			if(!item.power.scaling) //no scaling property means ItemLevel scaling
 				index += item.level;
 			else { //any of the other three
 				index += context.character.level;
 			}
 
-			const avg = (context.character.isPlayer ? LUT_POWER_PLAYER : LUT_POWER_MONSTER)[Math.min(100, index)] * item.power.mul;
+			const avg = (context.character.isPlayer ? LUT_POWER_PLAYER : LUT_POWER_MONSTER)[Math.min(100, index)] * item.power.mul * LUT_RARITY_MUL[rarity];
 			const spread = avg * item.power.spread;
 			power = [Math.ceil(avg - spread), Math.ceil(avg + spread)];
 		}
@@ -1292,16 +1292,9 @@ const LUT_POWER_MONSTER = [
 	162, 179, 197, 214, 231, 249, 267, 286, 303, 322, 344, 367, 389, 394, 402, 412, 439, 454, 469, 483, 500, 517, 556, 575, 593, 612, 622, 632, 672, 684, 728, 744, 761, 778, 820, 839, 885, 905, 924, 943, 991, 1016, 1067, 1093, 1119, 1145, 1193, 1220, 1275, 1304, 1337, 1372, 1427, 1461, 1525, 1562, 1599, 1637, 1692, 1731, 1802, 1848, 1891, 1936, 1999, 2045, 2153, 2201, 2249, 2298, 2368, 2424, 2545, 2604, 2662, 2723, 2792, 2854, 2985, 3047, 3191, 3269, 3348, 3427, 3508, 3589, 3671, 3754, 3838, 3922, 4007, 4093, 4180, 4267, 4356, 4445, 4535, 4625, 4717, 4809, 4902,
 ];
 
-const LUT_RARITY = {
-	Junk     : 0,
-	Basic    : 0,
-	Common   : 1,
-	Uncommon : 2,
-	Rare     : 3,
-	Exotic   : 4,
-	Ascended : 4,
-	Legendary: 4,
-};
+enum Rarity { Junk, Basic, Common, Uncommon, Rare, Exotic, Ascended, Legendary }
+const LUT_RARITY = [ 0, 0, 1, 2, 3, 4, 4, 4 ];
+const LUT_RARITY_MUL = [ 0.5, 0.65, 0.8, 0.85, 0.9, 1.0, 1.05, 1.05 ];
 
 const LUT_CRITICAL_DEFENSE = [
 	1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 5.2, 5.4, 5.6, 5.8, 6.0, 6.2, 6.4, 6.6, 6.8, 7.0, 7.3, 7.6, 7.9, 8.2, 8.5, 8.8, 9.1, 9.4, 9.7, 10.0, 10.3, 10.6, 10.9, 11.2, 11.5, 11.8, 12.1, 12.4, 12.7, 13.0, 13.4, 13.8, 14.2, 14.6, 15.0, 15.4, 15.8, 16.2, 16.6, 17.0, 17.4, 17.8, 18.2, 18.6, 19.0, 19.4, 19.8, 20.2, 20.6, 21.0, 21.5, 22.0, 22.5, 23.0, 23.5, 24.0, 24.5, 25.0, 25.5, 26.0, 26.5, 27.0, 27.5, 28.0, 28.5, 29.0, 29.5, 30.0, 30.5, 31.0,
