@@ -12,6 +12,7 @@
 	--gw2-tt-color-tt-title: hsl(40deg 96% 70%);
 	--gw2-tt-color-tt-desc: hsl(0, 2%, 88%);
 	--gw2-tt-color-tt-detail: gray;
+	--gw2-tt-color-tt-detail-capped: #CC6633FF;
   --gw2-tt-font-weight-thick: 600;
 	--gw2-tt-font-size-s: .88em;
 	--gw2-tt-font-size-m: 1.17em;
@@ -144,7 +145,10 @@
 	font-size: var(--gw2-tt-font-size-s);
 }
 .tooltipWrapper .detail:not(.color-defiance-fact) { /* urg, specificity */
-	color: var(--gw2-tt-color-tt-detail);;
+	color: var(--gw2-tt-color-tt-detail);
+}
+.tooltipWrapper .detail.capped {
+	color: var(--gw2-tt-color-tt-detail-capped);
 }
 .tooltip:not(.item) tet teb {
 	color: var(--gw2-tt-color-tt-title);

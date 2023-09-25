@@ -155,15 +155,16 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	}
 
 	const applyMods = (duration : Milliseconds, buff : API.Skill, detailStack : (string | Node)[]) : [Milliseconds, number] => {
-		let durMod = 1, valueMod = 1;
-		const durationAttr : BaseAttribute | false = (buff.buff_type == 'Boon' && 'Concentration') || (buff.buff_type == 'Condition' && 'Expertise');
+		let durMod = 1, valueMod = 1, cap = Number.MAX_SAFE_INTEGER;
+		const durationAttr : ComputedAttribute | false = (buff.buff_type == 'Boon' && 'BoonDuration') || (buff.buff_type == 'Condition' && 'ConditionDuration');
 		if(durationAttr) {
-			const attribVal = getAttributeValue(context.character, durationAttr);
+			const { baseAttribute, div, cap: cap_ } = getAttributeInformation(durationAttr, context.character); cap = cap_;
+			const attribVal = getAttributeValue(context.character, baseAttribute!);
 			// every 15 points add 1%
-			durMod += attribVal / 15 * 0.01;
+			durMod += attribVal / div;
 			if(attribVal > 0 && config.showFactComputationDetail) {
 				detailStack.push(`base duration: ${n3(duration / 1000)}s`);
-				detailStack.push(`+${n3(attribVal / 15)}% from ${n3(attribVal)} ${durationAttr}`);
+				detailStack.push(`+${n3(attribVal / 15)}% from ${n3(attribVal)} ${baseAttribute}`);
 			}
 		}
 
@@ -182,6 +183,13 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			}
 			durMod += percentMod / 100;
 		}
+
+		const uncappedMod = durMod;
+		durMod = Math.min(uncappedMod, cap);
+		if(durMod != uncappedMod && config.showFactComputationDetail) {
+			detailStack.push(newElm('span.detail', `(Capped to ${n3(duration / 1000 * cap)}s! Uncapped duration would be ${n3(duration / 1000 * uncappedMod)}s)`));
+		}
+
 		duration *= durMod;
 
 		if(buff.name.includes('Regeneration')) {
@@ -572,4 +580,4 @@ export const MISSING_SKILL : API.Skill = {
 
 import { newElm, newImg, drawFractional, GW2Text2HTML, withUpToNDigits, mapLocale, joinWordList, fromHTML, n3, resolveInflections } from './TUtilsV2';
 import APICache from './APICache';
-import { ICONS, config, getAttributeValue, sumUpModifiers } from './TooltipsV2';
+import { ICONS, config, getAttributeInformation, getAttributeValue, sumUpModifiers } from './TooltipsV2';

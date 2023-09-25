@@ -894,11 +894,14 @@ function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute,
 	const [value, parts] = computeAttributeFromMods(attribute, context, true);
 	if(['ConditionDuration', 'BoonDuration'].includes(attribute)) {
 		const target_type = attribute === 'ConditionDuration' ? 'Condition' : 'Boon';
-		const completeSources = structuredClone(context.character.stats.sources);
+		const completeSources = structuredClone(context.character.stats.sources); //todo?
 		for(const [key, mods] of Object.entries(context.character.statsWithWeapons[context.character.selectedWeaponSet].sources)) {
 			if(isNaN(+key)) continue;
 			((completeSources as any)[key] || ((completeSources as any)[key] = [])).push(...mods);
 		}
+
+		//NOTE(Rennorb): -1 because the cap is 200% for duration, but the displayed value is the _additional_ duration, so its a max of +100%.
+		const modCap = (getAttributeInformation(attribute, context.character).cap - 1) * 100;
 
 		for(const [effect_id, sources] of Object.entries(completeSources)) {
 			//NOTE(Rennorb): For simplicity of the remaining library we just eat the performance hit of iterating over the additional props here.
@@ -910,17 +913,23 @@ function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute,
 			}
 			if(effect.buff_type !== target_type) continue;
 
-			let specific_mod = value * 100;
-			let specific_parts = [];
+			let specificMod = value * 100;
+			let specificParts = [];
 			for(const { source, modifier, count } of sources) {
 				const mod = calculateModifier(modifier, context.character);
-				specific_parts.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character)))); //TODO(Rennorb) @cleanup: im not really happy with how this works right now. Storing html in the text is not what i like to do but it works for now. Multiple of this.
-					specific_mod += mod;
+				specificParts.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character)))); //TODO(Rennorb) @cleanup: im not really happy with how this works right now. Storing html in the text is not what i like to do but it works for now. Multiple of this.
+				specificMod += mod;
+			}
+
+			const uncappedMod = specificMod;
+			specificMod = Math.min(specificMod, modCap);
+			if(uncappedMod != specificMod) {
+				specificParts.push(newElm('span.detail.capped', `(Capped to +${n3(specificMod)}%! Uncapped value would be ${n3(uncappedMod)}%)`));
 			}
 
 			parts.push(newElm('div.fact',
 				newImg(effect.icon),
-				newElm('div', newElm('span', `${effect.name}: ${n3(specific_mod)}%`), ...specific_parts))
+				newElm('div', newElm('span', `${effect.name}: +${n3(specificMod)}%`), ...specificParts))
 			);
 		}
 	}
@@ -931,7 +940,7 @@ function computeAttributeFromMods(attribute : BaseAttribute | ComputedAttribute,
 	const stats = context.character.stats;
 	const weaponStats = context.character.statsWithWeapons[weaponSet ?? context.character.selectedWeaponSet];
 
-	let { baseAttribute, suffix, isComputed, base, div } = getAttributeInformation(attribute, context.character);
+	let { baseAttribute, suffix, isComputed, base, div, cap } = getAttributeInformation(attribute, context.character);
 	const displayMul = suffix ? 100 : 1;
 
 	let value = base, text;
@@ -980,39 +989,44 @@ function computeAttributeFromMods(attribute : BaseAttribute | ComputedAttribute,
 				parts.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
 			}
 		}
-		value += modValue;
+		const uncappedValue = value + modValue;
+		//NOTE(Rennorb): -1 because the cap is 200% for duration, but the displayed value is the _additional_ duration, so its a max of +100%.
+		value = Math.min(uncappedValue, cap - 1);
 
 		if(generateHtml) {
-			parts.unshift(newElm('tet.title', newElm('teb', n3(value * displayMul) + suffix + ' ' + mapLocale(attribute))));
+			if(uncappedValue != value)
+				parts.push(newElm('span.detail.capped', `(Capped to ${n3(value * displayMul)}${suffix}! Uncapped value would be ${n3(uncappedValue * displayMul)}${suffix})`));
+			parts.unshift(newElm('tet.title', newElm('teb', '+' + n3(value * displayMul) + suffix + ' ' + mapLocale(attribute))));
 		}
 	}
 
 	return [value, parts];
 }
 
-function getAttributeInformation(attribute : BaseAttribute | ComputedAttribute, character : Character) {
+export function getAttributeInformation(attribute : BaseAttribute | ComputedAttribute, character : Character) {
+	const MAX_VAL = Number.MAX_SAFE_INTEGER;
 	const _p2 = ({
-		Power            : ['Power'          ,  66722, '' , false,   1000,    1],
-		Toughness        : ['Toughness'      , 104162, '' , false,   1000,    1],
-		Vitality         : ['Vitality'       , 104163, '' , false,   1000,    1],
-		Precision        : ['Precision'      , 156609, '' , false,   1000,    1],
-		Ferocity         : ['Ferocity'       , 156602, '' , false,      0,    1],
-		ConditionDamage  : ['ConditionDamage', 156600, '' , false,      0,    1],
-		Expertise        : ['Expertise'      , 156601, '' , false,      0,    1],
-		Concentration    : ['Concentration'  , 156599, '' , false,      0,    1],
-		HealingPower     : ['HealingPower'   , 156606, '' , false,      0,    1],
-		AgonyResistance  : ['AgonyResistance', 536049, '' , false,      0,    1],
-		Health           : ['Vitality'       , 536052, '' , true ,      0,  0.1],
-		Armor            : ['Toughness'      , 536048, '' , true ,      0,    1],
-		ConditionDuration: ['Expertise'      , 156601, '%', true ,      0, 1500],
-		BoonDuration     : ['Concentration'  , 156599, '%', true ,      0, 1500],
-		CritChance       : ['Precision'      , 536051, '%', true ,   0.05, 2100],
-		CritDamage       : ['Ferocity'       , 784327, '%', true ,    1.5, 1500],
-	} as { [k in BaseAttribute | ComputedAttribute]? : [BaseAttribute, number, string, boolean, number, number]})[attribute];
-	let baseAttribute, img, suffix = '', isComputed, base = 0, div = 1;
-	if(_p2) [baseAttribute, img, suffix, isComputed, base, div] = _p2;
+		Power            : ['Power'          ,  66722, '' , false,   1000,    1, MAX_VAL],
+		Toughness        : ['Toughness'      , 104162, '' , false,   1000,    1, MAX_VAL],
+		Vitality         : ['Vitality'       , 104163, '' , false,   1000,    1, MAX_VAL],
+		Precision        : ['Precision'      , 156609, '' , false,   1000,    1, MAX_VAL],
+		Ferocity         : ['Ferocity'       , 156602, '' , false,      0,    1, MAX_VAL],
+		ConditionDamage  : ['ConditionDamage', 156600, '' , false,      0,    1, MAX_VAL],
+		Expertise        : ['Expertise'      , 156601, '' , false,      0,    1, MAX_VAL],
+		Concentration    : ['Concentration'  , 156599, '' , false,      0,    1, MAX_VAL],
+		HealingPower     : ['HealingPower'   , 156606, '' , false,      0,    1, MAX_VAL],
+		AgonyResistance  : ['AgonyResistance', 536049, '' , false,      0,    1, MAX_VAL],
+		Health           : ['Vitality'       , 536052, '' , true ,      0,  0.1, MAX_VAL],
+		Armor            : ['Toughness'      , 536048, '' , true ,      0,    1, MAX_VAL],
+		ConditionDuration: ['Expertise'      , 156601, '%', true ,      0, 1500,       2],
+		BoonDuration     : ['Concentration'  , 156599, '%', true ,      0, 1500,       2],
+		CritChance       : ['Precision'      , 536051, '%', true ,   0.05, 2100, MAX_VAL],
+		CritDamage       : ['Ferocity'       , 784327, '%', true ,    1.5, 1500, MAX_VAL],
+	} as { [k in BaseAttribute | ComputedAttribute]? : [BaseAttribute, number, string, boolean, number, number, number]})[attribute];
+	let baseAttribute, img, suffix = '', isComputed, base = 0, div = 1, cap = MAX_VAL;
+	if(_p2) [baseAttribute, img, suffix, isComputed, base, div, cap] = _p2;
 	if(attribute == 'Health') base = getBaseHealth(character);
-	return { baseAttribute, img, suffix, isComputed, base, div };
+	return { baseAttribute, img, suffix, isComputed, base, div, cap };
 }
 
 function getBaseHealth(character : Character) : number {
