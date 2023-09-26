@@ -8,10 +8,11 @@ Some special features include:
 	- character level
 	- character stats
 	- trait interactions
+	- currently active weapon-set
 	- usable with multiple contexts with separate values for all of the above
 - Cycleable skill-chains
 
-To archive all of the functionality we use our own proprietary API as opposed to the official GW2 API.
+To achieve all of the functionality we use our own proprietary API as opposed to the official GW2 API.
 
 ## Normal usage
 
@@ -84,8 +85,32 @@ To archive all of the functionality we use our own proprietary API as opposed to
 	}
 	</script>
 	```
+	These may be defined partially, the defaults should be sensible.
 	If you want to have typings for this context structure you can use `src/Context.d.ts`.
-3. Optionally define config structures <span style="color: red">//TODO(Rennorb)</span>
+3. Optionally define config structures. This works much the same way as the context structures:
+	```html
+	<script>
+		var GW2TooltipsConfig = {
+			autoInitialize                  : true,
+
+			// v-- these only work if auto initialize is turned on
+			autoCollectRuneCounts           : true,
+			autoCollectStatSources          : true,
+			autoCollectSelectedTraits       : true,
+			autoInferEquipmentUpgrades      : true,
+			autoRecomputeCharacterAttributes: true,
+			autoInferWeaponSetAssociation   : true,
+			// ^---------------------------
+
+			adjustIncorrectStatIds          : true,
+			legacyCompatibility             : true,
+			showPreciseAbilityTimings       : false,
+			showFactComputationDetail       : false,
+		}
+	</script>
+	```
+	These can also just be partially defined.
+	The library assumes that you don't change these during its lifetime (except the ones that can be changed using keybinds) so do it at your discretion and expect things to break.
 3. Include the script and style
 	```html
 	<head>
@@ -93,12 +118,15 @@ To archive all of the functionality we use our own proprietary API as opposed to
 		<link rel="stylesheet" type="text/css" href="path/to/your/tooltips.css" />
 	</head>
 	```
+	By including the script it wil automatically hook the whole document of the current page.
 
-By including the script it wil automatically hook the whole document of the current page.
+## Keybinds
+Currently there are two hard-coded keybinds available:
+- `ctrl + alt + D`: toggle `showFactComputationDetail`
+- `ctrl + alt + T`: toggle `showPreciseAbilityTimings`
 
 ## Compiling form TypeScript
 1. Download [Node.js](https://nodejs.org/en)
-2. Get the [typescript compiler](https://www.typescriptlang.org/) (probably obtained and installed globally using node by running `npm install -g typescript`)
 3. Clone this repository (`git clone git@github.com:HardstuckGuild/Tooltips.js.git`) or download it
-4. The `tsconfig.json` in the project root defines all parameters. You only need to run `tsc build` next to it.
-5. The `out/` directory now holds your compiled `tooltips.js` file
+4. The `tsconfig.json` and `rollup.config.mjs` in the project root define all parameters. You only need to run `npm run build` next to them.
+5. The `out/` directory now holds your compiled `tooltips.min.js` file
