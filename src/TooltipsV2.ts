@@ -966,23 +966,35 @@ function computeAttributeFromMods(attribute : BaseAttribute | ComputedAttribute,
 				value += statBonus;
 
 				if(generateHtml && statBonus) {
-					text = ` + ${n3(statBonus * displayMul) + suffix} from ${n3(baseAttrValue)} ${mapLocale(baseAttribute)}`
+					text = ` +${n3(statBonus * displayMul) + suffix} from ${n3(baseAttrValue)} ${mapLocale(baseAttribute)}`
 					if(div != 1) text += ` / ${div / displayMul} (attrib. specific conv. factor)`
 					parts.push(newElm('div.detail', text!));
 				}
 			}
 		}
+		const statSources = stats.sources[attribute].concat(weaponStats.sources[attribute]);
 		let modValue = 0;
-		for(const source of stats.sources[attribute].concat(weaponStats.sources[attribute])) {
-			let mod = calculateModifier(source.modifier, context.character) * source.count;
-			const suffix = source.modifier.flags.includes('FormatPercent') ? '%' : '';
-			const displayMul = suffix ? 100 : 1;
-			const toAdd = suffix ? mod * value : mod;
+		for(const source of statSources.filter(s => !s.modifier.flags.includes('FormatPercent'))) {
+			const mod = calculateModifier(source.modifier, context.character) * source.count;
+			modValue += mod;
+			
+			if(generateHtml) {
+				text = ` +${n3(mod)} from `;
+				if(source.count > 1) text += `${source.count} `;
+				text += source.source;
+				parts.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
+			}
+		}
+		const valueAndAdditiveMods = value + modValue;
+		for(const source of statSources.filter(s => s.modifier.flags.includes('FormatPercent'))) {
+			const mod = calculateModifier(source.modifier, context.character) * source.count / 100; //TODO(Rennorb) @cleanup
+			//NOTE(Rennorb): Having a suffix means the percentage based values should be additive, as this only applies for condition/boon duration, and crit chance/damage.
+			const toAdd = suffix ? mod : valueAndAdditiveMods * mod; 
 			modValue += toAdd;
 			
 			if(generateHtml) {
-				text = `+${n3(toAdd)}`;
-				if(suffix) text += ` (${n3(mod * displayMul)}%)`;
+				text = ` +${n3(toAdd * displayMul)}${suffix}`;
+				if(!suffix) text += ` (${n3(mod * 100)}%)`;
 				text += ' from ';
 				if(source.count > 1) text += `${source.count} `;
 				text += source.source;
@@ -996,7 +1008,7 @@ function computeAttributeFromMods(attribute : BaseAttribute | ComputedAttribute,
 		if(generateHtml) {
 			if(uncappedValue != value)
 				parts.push(newElm('span.detail.capped', `(Capped to ${n3(value * displayMul)}${suffix}! Uncapped value would be ${n3(uncappedValue * displayMul)}${suffix})`));
-			parts.unshift(newElm('tet.title', newElm('teb', '+' + n3(value * displayMul) + suffix + ' ' + mapLocale(attribute))));
+			parts.unshift(newElm('tet.title', newElm('teb', ' +' + n3(value * displayMul) + suffix + ' ' + mapLocale(attribute))));
 		}
 	}
 

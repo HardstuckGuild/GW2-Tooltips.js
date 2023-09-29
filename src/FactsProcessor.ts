@@ -154,7 +154,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		return GW2Text2HTML(buff.description_brief || modsArray.join(', ') || buff.description)
 	}
 
-	const applyMods = (duration : Milliseconds, buff : API.Skill, detailStack : (string | Node)[]) : [Milliseconds, number] => {
+	const applyMods = (baseDuration : Milliseconds, buff : API.Skill, detailStack : (string | Node)[]) : [Milliseconds, number] => {
 		let durMod = 1, valueMod = 1, cap = Number.MAX_SAFE_INTEGER;
 		const durationAttr : ComputedAttribute | false = (buff.buff_type == 'Boon' && 'BoonDuration') || (buff.buff_type == 'Condition' && 'ConditionDuration');
 		if(durationAttr) {
@@ -163,8 +163,26 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			// every 15 points add 1%
 			durMod += attribVal / div;
 			if(attribVal > 0 && config.showFactComputationDetail) {
-				detailStack.push(`base duration: ${n3(duration / 1000)}s`);
-				detailStack.push(`+${n3(attribVal / 15)}% from ${n3(attribVal)} ${baseAttribute}`);
+				detailStack.push(`base duration: ${n3(baseDuration / 1000)}s`);
+				detailStack.push(`+${n3(baseDuration / 1000 * attribVal / div)}s (${n3(attribVal / div * 100)}%) from ${n3(attribVal)} ${baseAttribute}`);
+			}
+
+			for(const source of sumUpModifiers(context.character, durationAttr)) {
+				let mod = calculateModifier(source.modifier, context.character) * source.count;
+				const innerSuffix = source.modifier.flags.includes('FormatPercent') ? '%' : '';
+				const displayMul = innerSuffix ? 100 : 1;
+				mod /= displayMul; //TODO(Rennorb) @cleanup
+				durMod += mod;
+				const toAdd = innerSuffix ? mod * baseDuration : mod;
+				
+				if(config.showFactComputationDetail) {
+					let text = ` +${n3(toAdd / 1000)}s`;
+					if(innerSuffix) text += ` (${n3(mod * displayMul)}%)`;
+					text += ' from ';
+					if(source.count > 1) text += `${source.count} `;
+					text += source.source;
+					detailStack.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
+				}
 			}
 		}
 
@@ -173,7 +191,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		if(durModStack.length) {
 			//NOTE(Rennorb): Just in case we didn't have a stat duration increase. Im aware that this is jank, but i cant think of a better way rn.
 			if(durMod === 1 && config.showFactComputationDetail)
-				detailStack.push(`base duration: ${n3(duration / 1000)}s`);
+				detailStack.push(`base duration: ${n3(baseDuration / 1000)}s`);
 			let percentMod = 0;
 			for(const { source, modifier, count } of durModStack) {
 				const mod = calculateModifier(modifier, context.character);
@@ -187,10 +205,10 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		const uncappedMod = durMod;
 		durMod = Math.min(uncappedMod, cap);
 		if(durMod != uncappedMod && config.showFactComputationDetail) {
-			detailStack.push(newElm('span.detail', `(Capped to ${n3(duration / 1000 * cap)}s! Uncapped duration would be ${n3(duration / 1000 * uncappedMod)}s)`));
+			detailStack.push(newElm('span.detail', `(Capped to ${n3(baseDuration / 1000 * cap)}s! Uncapped duration would be ${n3(baseDuration / 1000 * uncappedMod)}s)`));
 		}
 
-		duration *= durMod;
+		baseDuration *= durMod;
 
 		if(buff.name.includes('Regeneration')) {
 			let valueModStack = context.character.stats.sources.HealEffectiveness;
@@ -210,7 +228,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		}
 
 
-		return [duration, valueMod];
+		return [baseDuration, valueMod];
 	}
 
 	const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => (string|Node)[] } = {
