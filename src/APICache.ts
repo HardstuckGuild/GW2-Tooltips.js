@@ -124,7 +124,7 @@ export default class APICache {
 				connectedIdsStorage.skills.add(subSkillId);
 		}
 
-		if('skills_ai' in datum) for(const subSkillId of datum.skills_soulbeast) {
+		if('skills_ai' in datum) for(const subSkillId of datum.skills_ai) {
 			if(!this.storage.skills.has(subSkillId))
 				connectedIdsStorage.skills.add(subSkillId);
 		}
