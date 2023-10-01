@@ -383,6 +383,16 @@ namespace API {
 			[attribute in ItemDetail['subtype']]?: number
 		}
 	}
+
+	interface Pet {
+		id               : number
+		name             : string
+		icon             : string
+		description      : string
+		skills           : number[]
+		skills_ai        : number[] //not yet available
+		skills_soulbeast : number[]
+	}
 }
 
 type Milliseconds = number;
@@ -402,7 +412,7 @@ type APIResponseTypeMap = {
 	traits         : API.Trait;
 	items          : API.Item;
 	specializations: OfficialAPI.Specialization;
-	pets           : OfficialAPI.Pet;
+	pets           : API.Pet;
 	'pvp/amulets'  : API.ItemAmulet;
 	itemstats      : API.AttributeSet;
 }

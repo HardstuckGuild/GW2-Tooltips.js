@@ -642,7 +642,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 		}
 
 		//pet skills
-		if('skills' in currentObj) for(const { id: petSkillId } of currentObj.skills) {
+		if('skills' in currentObj) for(const petSkillId of currentObj.skills) {
 			let petSkill = APICache.storage.skills.get(petSkillId);
 			if(!petSkill) {
 				console.warn(`[gw2-tooltips] pet skill #${petSkillId} is missing from the cache. The query was caused by `, gw2Object);
@@ -1359,7 +1359,7 @@ export const ICONS = {
 const VALID_CHAIN_PALETTES = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard', 'Equipment'];
 
 
-type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet | OfficialAPI.Pet | API.Item; //TODO(Rennorb): change pet
+type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet | API.Pet | API.Item; //TODO(Rennorb): change pet
 
 
 _constructor();

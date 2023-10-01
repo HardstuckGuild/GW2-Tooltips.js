@@ -3,7 +3,7 @@ export default class APICache {
 		skills         : new Map<number, API.Skill>(),
 		items          : new Map<number, API.Item>(),
 		traits         : new Map<number, API.Trait>(),
-		pets           : new Map<number, OfficialAPI.Pet>(),
+		pets           : new Map<number, API.Pet>(),
 		'pvp/amulets'  : new Map<number, API.ItemAmulet>(),
 		specializations: new Map<number, OfficialAPI.Specialization>(),
 		itemstats      : new Map<number, API.AttributeSet>(),
@@ -119,7 +119,17 @@ export default class APICache {
 				connectedIdsStorage.itemstats.add(datum.attribute_set!);
 		}
 
-		if('skills' in datum) for(const { id: subSkillId } of datum.skills) {
+		if('skills' in datum) for(const subSkillId of datum.skills) {
+			if(!this.storage.skills.has(subSkillId))
+				connectedIdsStorage.skills.add(subSkillId);
+		}
+
+		if('skills_ai' in datum) for(const subSkillId of datum.skills_soulbeast) {
+			if(!this.storage.skills.has(subSkillId))
+				connectedIdsStorage.skills.add(subSkillId);
+		}
+
+		if('skills_soulbeast' in datum) for(const subSkillId of datum.skills_soulbeast) {
 			if(!this.storage.skills.has(subSkillId))
 				connectedIdsStorage.skills.add(subSkillId);
 		}
