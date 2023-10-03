@@ -113,15 +113,16 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 			if(!item || !('subtype' in item)) continue;
 
 			if(item.type === 'UpgradeComponent' || item.type === 'Consumable') {
+				let tiersToAdd = 1;
 				if(item.subtype === 'Rune' && item.flags.includes('Pvp')) {
-					amountToAdd = 6;
+					// Since pvp builds only have one rune we need to add all tiers from just one item.
+					// We still want to increase the upgrade count to do the warnings if we find more than expected.
+					tiersToAdd = 6;
 				}
 
 				//NOTE(Rennorb): We count additional runes, but ignore those over the sensible amount.
 				//NOTE(Rennorb): For pvp runes we get the wrong tier number here, it doesn't matter tho because we need to treat it differently anyways.
-				// Since pvp builds only have one rune we need to add all tiers from just one item.
-				// We still want to increase the upgrade count to do the warnings if we find more than expected.
-				tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + amountToAdd;
+				tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + tiersToAdd;
 
 				if(item.subtype === 'Rune') {
 					sourceRuneSuffix = true;
@@ -212,8 +213,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 
 				let source = formatItemName(item!, context, attributeSet, undefined, -1);
 				if(sourceRuneSuffix) {
-					source = `${source} (Tier ${tierNumber && tierNumber < 6 ? tierNumber : i + 1} Bonus)`;
-					amountToAdd = 1; //TODO(Rennorb) @cleanup
+					source = `${source} (Tier ${tiersToProcess.length === 1 ? tierNumber : i + 1} Bonus)`;
 				}
 
 				(targetSources[mod.target_attribute_or_buff] || (targetSources[mod.target_attribute_or_buff] = []))
