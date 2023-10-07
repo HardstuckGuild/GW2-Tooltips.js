@@ -11,7 +11,15 @@
 	var GW2TooltipsConfig = {
 		apiImpl: (APIs) => new APIs.FakeAPI(),
 	}
-	var GW2TooltipsContext = [{}, {}] //TODO(Rennorb) @fixme: remove the need to explicitly specify contexts if more than one is used
+	var GW2TooltipsContext = [{
+		character: {
+			profession: 'Necromancer',
+		},
+	}, {
+		character: {
+			profession: 'Necromancer',
+		},
+	}] //TODO(Rennorb) @fixme: remove the need to explicitly specify contexts if more than one is used
 </script>
 
 </head>

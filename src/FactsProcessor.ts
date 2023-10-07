@@ -346,27 +346,14 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			return [`${GW2Text2HTML(fact.text)}: ${drawFractional(fact.percent, config)}%`];
 		},
 		PercentLifeForceAdjust : ({fact: {percent, text}}) => {
-			const hpPool = getAttributeValue(context.character, 'Health');
+			const hpPool = getBaseHealth(context.character);
 
 			const lines = [];
-			const modifiers = sumUpModifiers(context.character, 'LifeForce');
-			if(modifiers.length) {
-				if(config.showFactComputationDetail)
-					lines.push(`${n3(percent * 0.01 * hpPool * 0.69)} from ${n3(percent)}% * (${n3(hpPool)} HP * 0.69) base pool`);
+			//NOTE(Rennorb): LifeForce cost is calculated from the base _hp_ pool, without any vitality added.
+			lines.push(`${GW2Text2HTML(text)}: ${n3(Math.round(hpPool * percent * 0.01))}`);
 
-				let percentMod = 100;
-				for(const { source, modifier, count } of modifiers) {
-					const mod = calculateModifier(modifier, context.character);
-					if(config.showFactComputationDetail)
-						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character))));
-					percentMod += mod;
-				}
-				percent *= percentMod / 100;
-			}
-
-			//NOTE(Rennorb): lifeforce is 69% of the hp pool
-			let raw = Math.round(hpPool * 0.69 * percent * 0.01);
-			lines.unshift(`${GW2Text2HTML(text)}: ${drawFractional(percent, config)}% (${raw})`);
+			if(config.showFactComputationDetail)
+				lines.push(`from ${n3(percent)}% * ${n3(hpPool)} HP base pool`);
 
 			return lines;
 		},
@@ -375,14 +362,16 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			return [`${GW2Text2HTML(text)}: ${drawFractional(percent, config)}% (${raw})`];
 		},
 		//TODO(Rennorb) @correctness: this seems to be verry much percent based. Whats the difference to PercentLifeForceAdjust here?
+		// The difference seems to be cost / regain of LF. Should we rename these to make more sense?
 		LifeForceAdjust : ({fact: {percent, text}}) => {
 			const hpPool = getAttributeValue(context.character, 'Health');
 
 			const lines = [];
 			const modifiers = sumUpModifiers(context.character, 'LifeForce');
 			if(modifiers.length) {
-				if(config.showFactComputationDetail)
-					lines.push(`${n3(percent * 0.01 * hpPool * 0.69)} from ${n3(percent)}% * (${n3(hpPool)} HP * 0.69) base pool`);
+				if(config.showFactComputationDetail) {
+					lines.push(`${n3(percent * 0.01 * hpPool * 0.69)} from ${n3(percent)}% * (${n3(hpPool)} HP * 0.69) pool (${n3(getBaseHealth(context.character))} base pool modified by ${n3(getAttributeValue(context.character, 'Vitality'))} Vitality)`);
+				}
 
 				let percentMod = 100;
 				for(const { source, modifier, count } of modifiers) {
@@ -394,9 +383,8 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				percent *= percentMod / 100;
 			}
 
-			//NOTE(Rennorb): lifeforce is 69% of the hp pool
-			let raw = Math.round(hpPool * 0.69 * percent * 0.01);
-			lines.unshift(`${GW2Text2HTML(text)}: ${drawFractional(percent, config)}% (${raw})`);
+			//NOTE(Rennorb): The LifeForce pool is 69% of the hp pool.
+			lines.unshift(`${GW2Text2HTML(text)}: ${drawFractional(percent, config)}% (${Math.round(hpPool * 0.69 * percent * 0.01)})`);
 			
 			return lines;
 		},
@@ -598,4 +586,4 @@ export const MISSING_SKILL : API.Skill = {
 
 import { newElm, newImg, drawFractional, GW2Text2HTML, withUpToNDigits, mapLocale, joinWordList, fromHTML, n3, resolveInflections } from './TUtilsV2';
 import APICache from './APICache';
-import { ICONS, config, getAttributeInformation, getAttributeValue, sumUpModifiers } from './TooltipsV2';
+import { ICONS, config, getAttributeInformation, getAttributeValue, getBaseHealth, sumUpModifiers } from './TooltipsV2';

@@ -1041,7 +1041,7 @@ export function getAttributeInformation(attribute : BaseAttribute | ComputedAttr
 	return { baseAttribute, img, suffix, isComputed, base, div, cap };
 }
 
-function getBaseHealth(character : Character) : number {
+export function getBaseHealth(character : Character) : number {
 	//TODO(Rennorb): level scaling
 	return !character.profession
 		? 1000 //TODO(Rennorb): none?
