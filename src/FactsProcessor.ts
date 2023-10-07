@@ -352,7 +352,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			const modifiers = sumUpModifiers(context.character, 'LifeForce');
 			if(modifiers.length) {
 				if(config.showFactComputationDetail)
-					lines.push(`${n3(percent * hpPool * 0.69)} from ${n3(percent)}% * (${n3(hpPool)} HP * 0.69) base pool`);
+					lines.push(`${n3(percent * 0.01 * hpPool * 0.69)} from ${n3(percent)}% * (${n3(hpPool)} HP * 0.69) base pool`);
 
 				let percentMod = 100;
 				for(const { source, modifier, count } of modifiers) {
