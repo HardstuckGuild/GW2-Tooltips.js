@@ -108,7 +108,7 @@ namespace API {
 		skip_next?      : true
 	}
 
-	type AdjustByAttributeAndLevelHealingFact = BasicFact<'AdjustByAttributeAndLevelHealing'> & {
+	type HealingOrBarrierFact = BasicFact<'HealingOrBarrier'> & {
 		value                : number
 		level_exponent       : number
 		level_multiplier     : number
@@ -139,32 +139,11 @@ namespace API {
 		distance : number
 	}
 
-	type HealthAdjustHealingFact = BasicFact<'HealthAdjustHealing'> & {
-		value      : number
-		hit_count  : number
-	} & (AttributeScaling | Undefined<AttributeScaling>)
-
 	interface NumberFact extends BasicFact<'Number'> {
 		value : number
 	}
 
-	interface PercentFact extends BasicFact<'Percent'> {
-		percent : number
-	}
-
-	interface PercentDamageFact extends BasicFact<'PercentDamage'> {
-		percent : number
-	}
-
-	interface PercentLifeForceAdjustFact extends BasicFact<'PercentLifeForceAdjust'> {
-		percent : number
-	}
-
-	interface PercentHealthFact extends BasicFact<'PercentHealth'> {
-		percent : number
-	}
-
-	interface LifeForceAdjustFact extends BasicFact<'LifeForceAdjust'> {
+	interface PercentFact extends BasicFact<'Percent' | 'PercentDamage' | 'PercentHealth' | 'PercentLifeForceCost' | 'PercentLifeForceGain'> {
 		percent : number
 	}
 
@@ -224,18 +203,17 @@ namespace API {
 	}
 
 	type FactMap = {
-		AdjustByAttributeAndLevelHealing : AdjustByAttributeAndLevelHealingFact
+		HealingOrBarrier                 : HealingOrBarrierFact
 		AttributeAdjust                  : AttributeAdjustFact
 		Buff                             : BuffFact
 		BuffBrief                        : BuffBriefFact
 		Distance                         : DistanceFact
-		HealthAdjustHealing              : HealthAdjustHealingFact
 		Number                           : NumberFact
 		Percent                          : PercentFact
-		PercentDamage                    : PercentDamageFact
-		PercentLifeForceAdjust           : PercentLifeForceAdjustFact
-		PercentHealth                    : PercentHealthFact
-		LifeForceAdjust                  : LifeForceAdjustFact
+		PercentDamage                    : PercentFact
+		PercentHealth                    : PercentFact
+		PercentLifeForceCost             : PercentFact
+		PercentLifeForceGain             : PercentFact
 		Damage                           : DamageFact
 		Time                             : TimeFact
 		ComboField                       : ComboFieldFact

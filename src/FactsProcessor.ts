@@ -232,7 +232,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	}
 
 	const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => (string|Node)[] } = {
-		AdjustByAttributeAndLevelHealing : ({fact}) =>  {
+		HealingOrBarrier : ({fact}) =>  {
 			let value = (fact.value + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count;
 
 			let attributeVal = 0;
@@ -301,18 +301,6 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		Distance : ({fact}) => {
 			return [`${GW2Text2HTML(fact.text)}: ${Math.round(fact.distance)}`];
 		},
-		HealthAdjustHealing: ({ fact }) => {
-			let value = fact.value * fact.hit_count;
-
-			if(fact.attribute) {
-				value += getAttributeValue(context.character, fact.attribute) * fact.attribute_multiplier;
-			}
-
-			//TODO(Rennorb) @scaling
-
-			const text = GW2Text2HTML(fact.text) || mapLocale(fact.attribute);
-			return [`${text}: ${value}`];
-		},
 		Number : ({fact: { text, value }}) => {
 			const lines : (string|Node)[] = [];
 
@@ -345,7 +333,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			//NOTE(Rennorb): this is going to be verry difficult if not impossible
 			return [`${GW2Text2HTML(fact.text)}: ${drawFractional(fact.percent, config)}%`];
 		},
-		PercentLifeForceAdjust : ({fact: {percent, text}}) => {
+		PercentLifeForceCost : ({fact: {percent, text}}) => {
 			const hpPool = getBaseHealth(context.character);
 
 			const lines = [];
@@ -361,18 +349,16 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			const raw = Math.round(getAttributeValue(context.character, 'Health') * percent * 0.01);
 			return [`${GW2Text2HTML(text)}: ${drawFractional(percent, config)}% (${raw})`];
 		},
-		//TODO(Rennorb) @correctness: this seems to be verry much percent based. Whats the difference to PercentLifeForceAdjust here?
-		// The difference seems to be cost / regain of LF. Should we rename these to make more sense?
-		LifeForceAdjust : ({fact: {percent, text}}) => {
+		PercentLifeForceGain : ({fact: {percent, text}}) => {
 			const hpPool = getAttributeValue(context.character, 'Health');
 
 			const lines = [];
+			if(config.showFactComputationDetail) {
+				lines.push(`${n3(percent * 0.01 * hpPool * 0.69)} from ${n3(percent)}% * (${n3(hpPool)} HP * 0.69) pool (${n3(getBaseHealth(context.character))} base pool modified by ${n3(getAttributeValue(context.character, 'Vitality'))} Vitality)`);
+			}
+
 			const modifiers = sumUpModifiers(context.character, 'LifeForce');
 			if(modifiers.length) {
-				if(config.showFactComputationDetail) {
-					lines.push(`${n3(percent * 0.01 * hpPool * 0.69)} from ${n3(percent)}% * (${n3(hpPool)} HP * 0.69) pool (${n3(getBaseHealth(context.character))} base pool modified by ${n3(getAttributeValue(context.character, 'Vitality'))} Vitality)`);
-				}
-
 				let percentMod = 100;
 				for(const { source, modifier, count } of modifiers) {
 					const mod = calculateModifier(modifier, context.character);
