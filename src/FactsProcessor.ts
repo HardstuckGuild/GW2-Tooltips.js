@@ -117,15 +117,15 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				}
 
 				if(modifier.flags.includes('MulByDuration')) {
-					duration /= 1000;
+					let this_duration = duration / 1000;
 					if(modifier.flags.includes('DivDurationBy3')) { //TODO(Rennorb): move to api side and remove this
-						duration /= 3;
+						this_duration /= 3;
 					}
 					if(modifier.flags.includes('DivDurationBy10')) { //TODO(Rennorb): move to api side and remove this
-						duration /= 10;
+						this_duration /= 10;
 					}
 
-					value *= duration || 1;
+					value *= this_duration || 1;
 				}
 
 				if(!modifier.flags.includes('NonStacking')) {
