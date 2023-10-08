@@ -527,9 +527,13 @@ export function resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { block
 				
 				const facts = result.blocks[blockId].facts = baseBlock.facts.slice(); // clone the base facts so we don't override the 'definition'
 				for(const fact of overrideBlock.facts) {
-					if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
+					if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue; // @cleanup > 'trait restrictions only exist on the base block' ?
 
-					if(fact.insert_before !== undefined) facts.splice(fact.insert_before, 0, fact);
+					if(fact.insert_before !== undefined) {
+						//this marker is to later on disambiguate between trait and gamemode overrides
+						if(fact.skip_next) fact.__gamemode_override_marker = true;
+						facts.splice(fact.insert_before, 0, fact);
+					}
 					else facts.push(fact);
 				}
 			}

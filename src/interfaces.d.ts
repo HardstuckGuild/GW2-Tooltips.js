@@ -106,6 +106,7 @@ namespace API {
 		defiance_break? : number
 		insert_before?  : number
 		skip_next?      : true
+		__gamemode_override_marker? : true
 	}
 
 	type HealingOrBarrierFact = BasicFact<'HealingOrBarrier'> & {
