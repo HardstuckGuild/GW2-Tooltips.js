@@ -127,3 +127,16 @@ export function joinWordList(words : string[], quoteWords = false) {
 			return words.slice(0, -1).join(', ') + last;
 	}
 }
+
+export const enum IconRenderMode {
+	HIDE_ICON = 0,
+	SHOW,
+	FILTER_DEV_ICONS,
+}
+
+//NOTE(Rennorb): this does not neeed to catch all dev icons, just hte ones taht actualyl come up.
+// https://github.com/HardstuckGuild/Tooltips.js/issues/55
+//TODO(Rennorb) @cleanup: make icons be numbers
+export function IsDevIcon(ico? : string) {
+	return ['2141735.png', '2141736.png', '2141737.png'].includes(ico!);
+}

@@ -368,13 +368,20 @@ function getSlotName(skill: API.Skill) : string | undefined {
 }
 
 // TODO(Rennorb) @cleanup: split this into the inflator system aswell. its getting to convoluted already
-function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean, context : Context, weaponSet? : number) : HTMLElement {
-	const headerElements = [newImg(apiObject.icon), newElm('teb', GW2Text2HTML(apiObject.name).replaceAll('[s]', '')/* TODO(Rennorb) @cleanup: quick hack to get relics working */), newElm('div.flexbox-fill')]; // split, now the right side
+function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean, iconMode : IconRenderMode, context : Context, weaponSet? : number) : HTMLElement {
+	const headerElements = [];
+
+	if(iconMode == IconRenderMode.SHOW || (iconMode == IconRenderMode.FILTER_DEV_ICONS && !IsDevIcon(apiObject.icon as string | undefined)))
+		headerElements.push(newImg(apiObject.icon));
+
+	headerElements.push(
+		newElm('teb', GW2Text2HTML(apiObject.name).replaceAll('[s]', '')/* TODO(Rennorb) @cleanup: quick hack to get relics working */),
+		newElm('div.flexbox-fill'), // split, now the right side
+	);
 
 	const currentContextInformation = resolveTraitsAndOverrides(apiObject, context);
 
-	// TODO(mithos): add no underwater check
-	if(0) {
+	if('flags' in apiObject && apiObject.flags.includes('DisallowUnderwater')) {
 		headerElements.push(newImg(ICONS.NO_UNDERWATER, 'iconsmall'));
 	}
 
@@ -605,10 +612,16 @@ function getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) :
 }
 
 function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTMLElement, context : Context, statSetId? : number, stackSize? : number) : HTMLElement[] {
-	const objectChain : { obj : SupportedTTTypes, notCollapsable : boolean }[] = []
+	let subiconRenderMode = IconRenderMode.SHOW;
+	//NOTE(Rennorb): This is a bit sad, but we have to hide or at least filter icons for skills attached to traits and relics, as those often don't come with actual icons because they never were meant to be seen (they don't show in game).
+	if((gw2Object.getAttribute('type') || 'skill') == 'trait') subiconRenderMode = IconRenderMode.FILTER_DEV_ICONS;
+	//TODO(Rennorb) @cleanup @stability
+	else if(initialAPIObject.name.includes('Relic[s] of')) subiconRenderMode = IconRenderMode.HIDE_ICON;
+
+	const objectChain : { obj : SupportedTTTypes, notCollapsable : boolean, iconMode : IconRenderMode }[] = []
 	const adjustTraitedSkillIds = gw2Object.classList.contains('auto-transform');
 
-	const addObjectsToChain = (currentObj : SupportedTTTypes) => {
+	const addObjectsToChain = (currentObj : SupportedTTTypes, iconMode : IconRenderMode) => {
 		let hasChain = false;
 		if('palettes' in currentObj) {
 			//TODO(Rennorb): cleanup is this necessary? Since the root element already gets replaced automatically, It would be if we have skills where some skill in the chain needs to be replaced. 
@@ -616,7 +629,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 				const replacementSkill = findTraitedOverride(currentObj, context);
 				if(replacementSkill) currentObj = replacementSkill;
 			}
-			objectChain.push({ obj: currentObj, notCollapsable: false });
+			objectChain.push({ obj: currentObj, notCollapsable: false, iconMode });
 
 			const palette = currentObj.palettes.find(p => VALID_CHAIN_PALETTES.includes(p.type));
 			if(palette) for(const slot of palette.slots) {
@@ -624,13 +637,13 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 					const nextSkillInChain = APICache.storage.skills.get(slot.next_chain);
 					if(nextSkillInChain) {
 						hasChain = true;
-						addObjectsToChain(nextSkillInChain)
+						addObjectsToChain(nextSkillInChain, subiconRenderMode)
 					}
 				}
 			}
 		}
 		else {
-			objectChain.push({ obj: currentObj, notCollapsable: false })
+			objectChain.push({ obj: currentObj, notCollapsable: false, iconMode })
 		}
 
 		//NOTE(Rennorb): Checking for the skill chain here since it usually produces duplicated entries if one is present and the skill chain is more authoritative.
@@ -640,7 +653,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 			for(const subSkillId of currentObj.related_skills!) {
 				const subSkillInChain = APICache.storage.skills.get(subSkillId);
 				if(subSkillInChain && ((type != 'skill') || subSkillInChain.palettes.some(palette => VALID_CHAIN_PALETTES.includes(palette.type)))) {
-					objectChain.push({ obj: subSkillInChain, notCollapsable: false })
+					objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode })
 				}
 			}
 		}
@@ -652,16 +665,16 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 				console.warn(`[gw2-tooltips] pet skill #${petSkillId} is missing from the cache. The query was caused by `, gw2Object);
 				petSkill = MISSING_SKILL;
 			}
-			objectChain.push({ obj: petSkill, notCollapsable: true })
+			objectChain.push({ obj: petSkill, notCollapsable: true, iconMode: subiconRenderMode })
 		}
 	}
 
-	addObjectsToChain(initialAPIObject);
+	addObjectsToChain(initialAPIObject, IconRenderMode.SHOW);
 
 	let weaponSet : number | undefined = +String(gw2Object.getAttribute('weaponSet')); if(isNaN(weaponSet)) weaponSet = undefined;
 
-	const tooltipChain = objectChain.map(({obj, notCollapsable}) => (
-		('type' in obj) ? generateItemTooltip(obj, context, gw2Object, statSetId, stackSize) : generateToolTip(obj, notCollapsable, context, weaponSet)
+	const tooltipChain = objectChain.map(({obj, notCollapsable, iconMode}) => (
+		('type' in obj) ? generateItemTooltip(obj, context, gw2Object, statSetId, stackSize) : generateToolTip(obj, notCollapsable, iconMode, context, weaponSet)
 	));
 	tooltip.append(...tooltipChain);
 	return tooltipChain
@@ -1485,7 +1498,7 @@ if(config.autoInitialize) {
 		})
 }
 
-import { newElm, newImg, GW2Text2HTML, mapLocale, drawFractional, fromHTML, findSelfOrParent, n3, resolveInflections } from './TUtilsV2';
+import { newElm, newImg, GW2Text2HTML, mapLocale, drawFractional, fromHTML, findSelfOrParent, n3, resolveInflections, IconRenderMode, IsDevIcon } from './TUtilsV2';
 import * as APIs from './API';
 import APICache from './APICache';
 import { MISSING_SKILL, calculateModifier, generateFact, generateFacts } from './FactsProcessor';
