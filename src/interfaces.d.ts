@@ -105,7 +105,7 @@ namespace API {
 		requires_trait? : number[]
 		defiance_break? : number
 		insert_before?  : number
-		skip_next?      : true
+		skip_next?      : number
 		__gamemode_override_marker? : true
 	}
 

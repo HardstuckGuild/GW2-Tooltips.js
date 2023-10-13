@@ -514,7 +514,9 @@ export function resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { block
 	let result = Object.assign({}, apiObject, override);
 	result.blocks = structuredClone(apiObject.blocks); // always have to clone this because we later on manipulate the facts
 
-	if(result.blocks && override?.blocks) {
+	if(!result.blocks) return result;
+
+	if(override?.blocks) {
 		const end = Math.max(apiObject.blocks!.length, override.blocks.length);
 		for(let blockId = 0; blockId < end; blockId++) {
 			const baseBlock = apiObject.blocks![blockId];
@@ -524,7 +526,7 @@ export function resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { block
 			}
 			else if (overrideBlock) {
 				if(!overrideBlock.facts) continue;
-				//NOTE(Rennorb): trait restrictions only exist on the base block
+				//NOTE(Rennorb): trait restrictions only exist on the (first) base block
 
 				//TODO(Rennorb): description and trait requirements cannot be overridden. so is this the wrong structure then?
 				if(!baseBlock.facts) {
@@ -534,7 +536,7 @@ export function resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { block
 				
 				const facts = result.blocks[blockId].facts = baseBlock.facts.slice(); // clone the base facts so we don't override the 'definition'
 				for(const fact of overrideBlock.facts) {
-					if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue; // @cleanup > 'trait restrictions only exist on the base block' ?
+					if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
 
 					if(fact.insert_before !== undefined) {
 						//this marker is to later on disambiguate between trait and gamemode overrides
@@ -548,29 +550,29 @@ export function resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { block
 		}
 	}
 
-	if(result.blocks) {
-		const finalBlocks = [];
-		for(const block of result.blocks) {
-			if(block.trait_requirements?.some(t => !context.character.traits.includes(t))) continue;
-			
-			if(block.facts) {
-				const finalFacts = [];
-				for(let i = 0; i < block.facts.length; i++) {
-					const fact = block.facts[i];
+	const finalBlocks = [];
+	for(const block of result.blocks) {
+		if(block.trait_requirements?.some(t => !context.character.traits.includes(t))) continue;
+		
+		if(block.facts) {
+			const finalFacts = [];
+			let to_skip = 0;
+			for(let i = 0; i < block.facts.length; i++) {
+				const fact = block.facts[i];
 
-					if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
+				if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
+				if(to_skip-- > 0) continue;
 
-					finalFacts.push(fact);
-					
-					if(fact.skip_next) i++;
-				}
-
-				block.facts = finalFacts;
+				finalFacts.push(fact);
+				
+				to_skip = fact.skip_next || 0;
 			}
-			finalBlocks.push(block);
+
+			block.facts = finalFacts;
 		}
-		result.blocks = finalBlocks;
+		finalBlocks.push(block);
 	}
+	result.blocks = finalBlocks;
 
 	return result;
 }
