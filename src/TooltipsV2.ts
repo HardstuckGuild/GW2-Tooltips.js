@@ -1145,8 +1145,8 @@ export function formatItemName(item : API.Item, context : Context, statSet? : AP
 
 //TODO(Rennorb): @docs
 export function specializeContextFromInlineAttribs(context : Context, gw2Object : HTMLElement) : Context {
-	let traitOverrides;
-	if(gw2Object.getAttribute('type') === 'skill' && (traitOverrides = gw2Object.getAttribute('with-traits'))) {
+	let traitOverrides = gw2Object.getAttribute('with-traits');
+	if(traitOverrides) {
 		context = structuredClone(context);
 		const invalid : string[] = [];
 		context.character.traits = traitOverrides.split(',').map(t => {
