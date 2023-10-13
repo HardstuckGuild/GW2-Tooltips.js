@@ -533,7 +533,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	if(fact.requires_trait) {
 		//NOTE(Rennorb): If the trait is manually set on the object then we don't have it cached, so we just use the id if we don't have a name.
 		const trait_names = joinWordList(fact.requires_trait.map(id => `'<span class="gw2-color-traited-fact">${APICache.storage.traits.get(id)?.name || id}</span>'`))
-		remainingDetail.unshift(fromHTML(`<span class="detail">${(fact.skip_next && !fact.__gamemode_override_marker) ? 'overridden' : 'exists'} because of trait${fact.requires_trait.length == 1 ? '' : 's'} ${trait_names}</span>`));
+		remainingDetail.unshift(fromHTML(`<span class="detail">${(fact.skip_next && (fact.skip_next > 1 || !fact.__gamemode_override_marker)) ? 'overridden' : 'exists'} because of trait${fact.requires_trait.length == 1 ? '' : 's'} ${trait_names}</span>`));
 	}
 
 	wrapper.append(generateBuffIcon(iconSlug, buffStackSize))
