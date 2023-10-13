@@ -124,7 +124,7 @@ export function joinWordList(words : string[], quoteWords = false) {
 		case 1: return words[0];
 		default:
 			const last = words[words.length - 1];
-			return words.slice(0, -1).join(', ') + last;
+			return words.slice(0, -1).join(', ') + ' and ' + last;
 	}
 }
 

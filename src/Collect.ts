@@ -191,7 +191,9 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 				? item.defense
 				: LUT_DEFENSE[Math.min(100, (item.defense![0] + context.character.level))] * item.defense![1];
 
-			tiersToProcess![0].modifiers!.push({
+			//NOTE(Rennorb): Pvp shields might have defense but no attribute set.
+			if(!tiersToProcess) tiersToProcess = [{ modifiers: [] }];
+			tiersToProcess[0].modifiers!.push({
 				target_attribute_or_buff: 'Armor',
 				base_amount             : defense,
 				formula                 : "NoScaling",
