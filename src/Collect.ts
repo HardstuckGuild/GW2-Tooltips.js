@@ -102,6 +102,35 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 	//TODO(Rennorb) @cleanup: Get rid of the count functions and just put them in here.
 	let upgrades = {} as { [k : number] : number };
 
+	//NOTE(Rennorb): its common to specify both weapon sets of infusions. The issue becomes that those are too many and therefore we need to be able to reduce them in a sensible way.
+	const actualInfusionCounts = contexts.map(ctx => {
+		let total = 0;
+		const counts : { [k : string] : number } = {};
+		for(let [id, c] of Object.entries(ctx.character.upgradeCounts)) {
+			let item;
+			if((item = APICache.storage.items.get(+id)) && 'subtype' in item && item.subtype == 'Infusion') {
+				c = Math.min(c, 18); // A max of 18 infusions of one kind, more doesn't make sense.
+				counts[id] = c;
+				total += c;
+			}
+		}
+
+		let tooMany = Math.max(0, total - 18);
+
+		for(let stop = 100; tooMany > 0 && stop > 0; stop--) {
+			for(const [id, c] of Object.entries(counts).sort((a, b) => b[1] - a[1])) {
+				if(c > 2) {
+					const toRemove = (c & 1) ? 1 : 2;
+					counts[id] -= toRemove;
+					tooMany -= toRemove;
+					if(tooMany <= 0) break;
+				}
+			}
+		}
+
+		return counts;
+	});
+
 	for(const element of elements) {
 		let id, type = element.getAttribute('type');
 		if(!(id = +String(element.getAttribute('objid')))) continue;
@@ -205,6 +234,16 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 		let targetSources = sources;
 
 		const weaponSetId = +String(element.getAttribute('weaponSet'));
+		if(isNaN(weaponSetId) && item && item.type == "UpgradeComponent") {
+			const override = actualInfusionCounts[contextIndex][item.id];
+			if(override) {
+				amountToAdd = override;
+			}
+			else if(amountToAdd > 18) {
+				amountToAdd = 18;
+			}
+		}
+
 		if(!isNaN(weaponSetId)) {
 			targetSources = weaponSetSources[weaponSetId] || (weaponSetSources[weaponSetId] = structuredClone(DEFAULT_CONTEXT.character.stats.sources));
 		}

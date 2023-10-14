@@ -711,11 +711,11 @@ export function findTraitedOverride(skill : API.Skill, context : Context) : API.
 function generateItemTooltip(item : API.Item, context : Context, target : HTMLElement, statSetId? : number, stackSize = 1) : HTMLElement {
 	let statSet = findCorrectAttributeSet(item, statSetId);
 
-	let slottedItems : (API.ItemBase & API.ItemUpgradeComponent)[] | undefined;
+	let slottedItems : API.ItemUpgradeComponent[] | undefined;
 	if('slots' in item) {
 		slottedItems = target.getAttribute('slotted')?.split(',')
 			.map(id => APICache.storage.items.get(+String(id) || 0))
-			.filter(i => i && 'subtype' in i) as (API.ItemBase & API.ItemUpgradeComponent)[];
+			.filter(i => i && 'subtype' in i) as API.ItemUpgradeComponent[];
 	}
 
 	const countPrefix = stackSize > 1 ? stackSize + ' ' : '';
