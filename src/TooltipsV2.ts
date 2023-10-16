@@ -521,20 +521,22 @@ export function resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { block
 		for(let blockId = 0; blockId < end; blockId++) {
 			const baseBlock = apiObject.blocks![blockId];
 			const overrideBlock = override.blocks[blockId];
-			if(!baseBlock && overrideBlock) {
-				result.blocks[blockId] = structuredClone(overrideBlock);
-			}
-			else if (overrideBlock) {
+			if (overrideBlock) {
+				//NOTE(Rennorb): Don't shortcut a lot of these, even if we only have an override block that may still use the insert logic.
+				//TODO(Rennorb) @cleanup: We probably want to add logic on the server to do that processing in that case.
+				if(!baseBlock) {
+					result.blocks[blockId] = {
+						description: overrideBlock.description,
+						trait_requirements: overrideBlock.trait_requirements,
+					};
+				}
+
 				if(!overrideBlock.facts) continue;
 				//NOTE(Rennorb): trait restrictions only exist on the (first) base block
 
 				//TODO(Rennorb): description and trait requirements cannot be overridden. so is this the wrong structure then?
-				if(!baseBlock.facts) {
-					result.blocks[blockId].facts = overrideBlock.facts.slice(); //clone the array
-					continue;
-				}
 				
-				const facts = result.blocks[blockId].facts = baseBlock.facts.slice(); // clone the base facts so we don't override the 'definition'
+				const facts = result.blocks[blockId].facts = baseBlock.facts?.slice() ?? []; // clone the base facts so we don't override the 'definition'
 				for(const fact of overrideBlock.facts) {
 					if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
 
