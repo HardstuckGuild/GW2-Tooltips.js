@@ -1297,8 +1297,8 @@ function createCompleteContext(partialContext : PartialContext) : Context {
 
 	const stats = createCompletedBaseStats(partialContext.character?.stats);
 	const upgradeCounts = Object.assign({}, partialContext.character?.upgradeCounts);
-	const weaponStats = partialContext.character?.statsWithWeapons?.map(s => createCompletedStats(s)) || [createCompletedStats()];
-	const character = Object.assign({}, DEFAULT_CONTEXT.character, partialContext.character, { stats, upgradeCounts, weaponStats });
+	const statsWithWeapons = partialContext.character?.statsWithWeapons?.map(s => createCompletedStats(s)) || [createCompletedStats()];
+	const character = Object.assign({}, DEFAULT_CONTEXT.character, partialContext.character, { stats, upgradeCounts, statsWithWeapons });
 	return Object.assign({}, DEFAULT_CONTEXT, partialContext, { character });
 }
 

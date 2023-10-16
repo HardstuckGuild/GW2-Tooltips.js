@@ -208,7 +208,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 			tiersToProcess = [{
 				modifiers: attributeSet.attributes.map(a => ({
 					target_attribute_or_buff: a.attribute,
-					base_amount             : a.base_value + (item as API.ItemStatSource).attribute_base * a.scaling,
+					base_amount             : Math.round(a.base_value + (item as API.ItemStatSource).attribute_base * a.scaling),
 					formula                 : "NoScaling",
 					
 					flags: [], id: -1, formula_param1: 0, formula_param2: 0, description: '',
