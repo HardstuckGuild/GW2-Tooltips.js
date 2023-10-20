@@ -78,7 +78,7 @@ export function generateFacts(blocks : API.FactBlock[], weaponStrength : number,
 }
 
 /** @param fact should already be context resolved */
-export function generateFact(fact : API.Fact, weapon_strength : number, context : Context) : { wrapper? : HTMLElement, defiance_break : number } {
+export function generateFact(fact : API.Fact, weapon_strength : number, context : Context, itemMode : boolean = false) : { wrapper? : HTMLElement, defiance_break : number } {
 	let iconSlug : Parameters<typeof newImg>[0] = fact.icon;
 	let buffStackSize = 1;
 	let buffDuration = (fact as API.BuffFact).duration;
@@ -86,7 +86,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 	const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact, duration : Milliseconds, valueMod : number  /* TODO(Rennorb): kindof a weird hack for now. maybe merge the two export functions? */) => {
 		let modsArray: string[] = []
-		if(buff.modifiers && !buff.description_brief) { // early bail to not have to do the work if we use the description anyways
+		if(buff.modifiers && !buff.description_brief && !itemMode) { // early bail to not have to do the work if we use the description anyways
 			//TODO(Rennorb) @consistency: gamemode splitting for mods (?)
 			const relevantModifiers = buff.modifiers.filter(modifier => (
 						(!modifier.trait_req || context.character.traits.includes(modifier.trait_req))
@@ -282,10 +282,11 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 			let buffDescription = generateBuffDescription(buff, fact, buffDuration, valueMod);
 			if(buffDescription) {
-				buffDescription = `: ${buffDescription}`;
+				if(itemMode) buffDescription = `:<div style="margin-left: 0.5em;">${buffDescription}</div>`;
+				else buffDescription = `: ${buffDescription}`;
 			}
 
-			const seconds = buffDuration > 0 ? `(${drawFractional(buffDuration / 1000, config)}s)`: '';
+			const seconds = buffDuration > 0 ? `(${formatDuration(buffDuration, config)})`: '';
 			lines.unshift(`${GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
 
 			buffStackSize = fact.apply_count;
@@ -472,7 +473,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				buffDescription = `: ${buffDescription}`;
 			}
 
-			const seconds = buffDuration > 0 ? `(${drawFractional(buffDuration / 1000, config)}s)`: '';
+			const seconds = buffDuration > 0 ? `(${formatDuration(buffDuration, config)})`: '';
 
 			const list : (string|HTMLElement)[] = [newElm('div.fact', // class is just for styling
 			generateBuffIcon(buff.icon, apply_count),
@@ -570,6 +571,6 @@ export const MISSING_SKILL : API.Skill = {
 	categories : [], palettes   : [], modifiers  : [],
 }
 
-import { newElm, newImg, drawFractional, GW2Text2HTML, withUpToNDigits, mapLocale, joinWordList, fromHTML, n3, resolveInflections } from './TUtilsV2';
+import { newElm, newImg, drawFractional, GW2Text2HTML, withUpToNDigits, mapLocale, joinWordList, fromHTML, n3, resolveInflections, formatDuration } from './TUtilsV2';
 import APICache from './APICache';
 import { ICONS, config, getAttributeInformation, getAttributeValue, getBaseHealth, sumUpModifiers } from './TooltipsV2';

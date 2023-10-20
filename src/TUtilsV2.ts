@@ -93,6 +93,13 @@ export function drawFractional(value : number, config : Config) {
 	}
 }
 
+export function formatDuration(value : number, config : Config) : string {
+	value /= 1000;
+	if(value >= 3600) return drawFractional(value / 3600, config) + 'h';
+	else if(value > 60) return drawFractional(value / 60, config) + 'min';
+	else return drawFractional(value, config) + 's';
+}
+
 //TODO(rennorb) @cleanup: rename
 export function mapLocale<T_ extends string>(type : BaseAttribute | ComputedAttribute | API.ComboFinisherType | API.ComboFieldType | API.Palette['weapon_type'] | T_) {
 	switch (type) {

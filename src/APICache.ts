@@ -65,6 +65,7 @@ export default class APICache {
 		} while((currentEndpoint = findNextRelevantEndpoint()) && i < 100)
 	}
 
+	//TODO(Rennorb) @cleanup
 	static collectConnectedIds({ endpoint, datum } : ConnectedIdDatum, connectedIdsStorage : { [k in Endpoints] : Set<number> }) : void {
 		const addFacts = (facts : API.Fact[]) => {
 			for(const fact of facts) {
@@ -137,6 +138,11 @@ export default class APICache {
 		if('specialization' in datum) {
 			if(!this.storage.specializations.has(datum.specialization!))
 				connectedIdsStorage.specializations.add(datum.specialization!);
+		}
+
+		if('applies_buff' in datum) {
+			if(!this.storage.skills.has(datum.applies_buff.buff))
+				connectedIdsStorage.skills.add(datum.applies_buff.buff);
 		}
 	}
 }

@@ -375,7 +375,7 @@ function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean,
 		headerElements.push(newImg(apiObject.icon));
 
 	headerElements.push(
-		newElm('teb', GW2Text2HTML(apiObject.name).replaceAll('[s]', '')/* TODO(Rennorb) @cleanup: quick hack to get relics working */),
+		newElm('teb', GW2Text2HTML(resolveInflections(apiObject.name, 1, context.character))),
 		newElm('div.flexbox-fill'), // split, now the right side
 	);
 
@@ -803,6 +803,13 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 		})));
 	}
 
+	let descriptionAlreadyShown = false; //idk, maybe i'll change that whole thing in the future.
+	if('applies_buff' in item) {
+		parts.push(newElm('span', fromHTML(GW2Text2HTML(item.description))));
+		parts.push(newElm('div.group', generateFact(item.applies_buff, -1, context, true).wrapper!));
+		descriptionAlreadyShown = true;
+	}
+
 	const metaInfo = newElm('div.group');
 	//NOTE(Rennorb): PvP amulets only show the stats, they aren't real 'items'.
 	if(item.type == "Armor" || item.type == "Weapon" || (item.type == "Trinket" && !item.flags.includes('Pvp'))) {
@@ -812,7 +819,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 		if(item.type == "Weapon" && isTwoHanded(item.subtype)) metaInfo.append(newElm('span.gw2-color-rarity-Junk', `(Two-Handed)`));
 		if(item.required_level) metaInfo.append(newElm('span', 'Required Level: '+item.required_level));
 	}
-	if(item.description) metaInfo.append(newElm('span', fromHTML(GW2Text2HTML(item.description))));
+	if(item.description && !descriptionAlreadyShown) metaInfo.append(newElm('span', fromHTML(GW2Text2HTML(item.description))));
 
 	if(!item.flags.includes('Pvp')) { //NOTE(Rennorb): pvp items (runes / sigils) don't show these
 		if(item.flags.includes('Unique')) metaInfo.append(newElm('span', 'Unique'));
@@ -870,7 +877,7 @@ export function findCorrectAttributeSet(item : API.Item, statSetId? : number) : 
 	return statSet;
 }
 
-function generateUpgradeItemGroup(item : API.ItemUpgradeComponent | API.ItemConsumable, context : Context) : HTMLElement {
+function generateUpgradeItemGroup(item : API.ItemUpgradeComponent, context : Context) : HTMLElement {
 	const group = newElm('div.group');
 	for(const [i, tier] of item.tiers.entries()) {
 		let tier_wrap = newElm('te');
@@ -1505,7 +1512,7 @@ if(config.autoInitialize) {
 import { newElm, newImg, GW2Text2HTML, mapLocale, drawFractional, fromHTML, findSelfOrParent, n3, resolveInflections, IconRenderMode, IsDevIcon } from './TUtilsV2';
 import * as APIs from './API';
 import APICache from './APICache';
-import { MISSING_SKILL, calculateModifier, generateFact, generateFacts } from './FactsProcessor';
+import { MISSING_BUFF, MISSING_SKILL, calculateModifier, generateFact, generateFacts } from './FactsProcessor';
 import * as Collect from './Collect'; //TODO(Rennorb) @cleanup
 import { _legacy_transformEffectToSkillObject, inferItemUpgrades, inflateAttribute, inflateGenericIcon, inflateItem, inflateSkill, inflateSpecialization } from './Inflators'
 

@@ -323,15 +323,14 @@ namespace API {
 		attribute_set  : number
 	}
 
-	type ItemConsumable = ItemBase & {
+	type ItemConsumable = ItemBase & ({
 		type    : 'Consumable'
-		subtype : 'AppearanceChange' | 'Booze' | 'ContractNpc' | 'Food' | 'Generic' | 'Halloween' | 'Immediate' | 'Megaphone' | 'TeleportToFriend' | 'Transmutation' | 'Unlock' | 'RandomUnlock' | 'UpgradeRemoval' | 'Utility' | 'MountRandomUnlock' | 'Currency'
-		tiers   : {
-			description? : string
-			facts?       : Fact[]
-			modifiers?   : Modifier[]
-		}[]
-	}
+		subtype : 'AppearanceChange' | 'Booze' | 'ContractNpc' | 'Generic' | 'Halloween' | 'Immediate' | 'Megaphone' | 'TeleportToFriend' | 'Transmutation' | 'Unlock' | 'RandomUnlock' | 'UpgradeRemoval' |  'MountRandomUnlock' | 'Currency'
+	} | {
+		type         : 'Consumable'
+		subtype      : 'Utility' | 'Food'
+		applies_buff : BuffFact
+	})
 
 	type ItemRelic = ItemBase & {
 		type           : 'Relic'

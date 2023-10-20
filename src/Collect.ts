@@ -136,7 +136,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 		if(!(id = +String(element.getAttribute('objid')))) continue;
 
 		let amountToAdd = 1;
-		let tiersToProcess, item : API.Item | undefined, tierNumber, sourceRuneSuffix;
+		let tiersToProcess : { modifiers? : API.Modifier[] }[] | undefined, item : API.Item | undefined, tierNumber, sourceRuneSuffix;
 		if(type == 'item') {
 			item = APICache.storage.items.get(id);
 			if(!item || !('subtype' in item)) continue;
@@ -170,7 +170,16 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 					else
 						tiersToProcess = [item.tiers[tierNumber - 1]];
 				}
-				else {
+				else if('applies_buff' in item) {
+					const buff = APICache.storage.skills.get(item.applies_buff.buff);
+					if(!buff) {
+						console.warn(`[gw2-tooltips] [collect] Failed to resolve applied buff ${item.applies_buff} for `, element, ". Will not assume anything and just ignore the item.");
+						continue;
+					}
+
+					tiersToProcess = [{ modifiers: buff.modifiers }];
+				}
+				else if('tiers' in item) {
 					if(item.subtype == 'Infusion' || item.subtype == 'Enrichment') {
 						if(!(amountToAdd = +String(element.getAttribute('count')))) { // modern version just has the item count as attribute
 
