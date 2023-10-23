@@ -39,12 +39,13 @@ interface Character {
 }
 
 type BaseStats = {
-	values  : { [k in BaseAttribute] : number; }
+	values  : { [k in BaseAttribute] : number }
 	sources : { [k in BaseAttribute | ComputedAttribute | SyntheticAttributes | number]: StatSource[] }
 }
 type BaseAndComputedStats = {
-	values  : { [k in BaseAttribute | ComputedAttribute] : number; }
-	sources : { [k in BaseAttribute | ComputedAttribute | SyntheticAttributes | number]: StatSource[] }
+	values   : { [k in BaseAttribute | ComputedAttribute] : number }
+	sources  : { [k in BaseAttribute | ComputedAttribute | SyntheticAttributes | number]: StatSource[] }
+	htmlParts: { [k in BaseAttribute | ComputedAttribute] : HTMLElement[] }
 }
 
 interface StatSource {

@@ -82,18 +82,18 @@ namespace API {
 	}
 
 	interface Modifier {
-		id                        : number
-		base_amount               : number
-		formula_param1            : number
-		formula_param2            : number
-		formula                   : 'BuffLevelLinear' | 'ConditionDamage' | 'ConditionDamageSquared' | 'CritDamage' | 'CritDamageSquared' | 'BuffFormulaType5' | 'NoScaling' | 'Regeneration' | 'RegenerationSquared' | 'SpawnScaleLinear' | 'TargetLevelLinear' | 'BuffFormulaType11' | 'InfiniteDungeonScale' | 'Power' | 'PowerSquared' | 'BuffFormulaType15' //TODO(Rennorb) @rename critdamage
-		target_attribute_or_buff? : BaseAttribute | number | 'Armor' | 'Damage' | 'LifeForce' | 'Health' | 'HealEffectiveness' | `${'Boon'|'Condition'}Duration`
-		attribute_conversion?     : BaseAttribute
-		description               : string
-		description_override?     : ModifierDescriptionOverride[]
-		flags                     : ('FormatFraction' | 'FormatPercent' | 'SkipNextEntry' | 'MulByDuration' | 'DivDurationBy3' | 'DivDurationBy10' | 'NonStacking' | 'Subtract')[]
-		trait_req?                : number
-		mode?                     : GameMode
+		id                         : number
+		base_amount                : number
+		formula_param1             : number
+		formula_param2             : number
+		formula                    : 'BuffLevelLinear' | 'ConditionDamage' | 'ConditionDamageSquared' | 'CritDamage' | 'CritDamageSquared' | 'BuffFormulaType5' | 'NoScaling' | 'Regeneration' | 'RegenerationSquared' | 'SpawnScaleLinear' | 'TargetLevelLinear' | 'BuffFormulaType11' | 'InfiniteDungeonScale' | 'Power' | 'PowerSquared' | 'BuffFormulaType15' //TODO(Rennorb) @rename critdamage
+		target_attribute_or_skill? : BaseAttribute | number | 'Armor' | 'Damage' | 'LifeForce' | 'Health' | 'HealEffectiveness' | `${'Boon'|'Condition'}Duration`
+		source_attribute?          : BaseAttribute
+		description                : string
+		description_override?      : ModifierDescriptionOverride[]
+		flags                      : ('FormatFraction' | 'FormatPercent' | 'SkipNextEntry' | 'MulByDuration' | 'DivDurationBy3' | 'DivDurationBy10' | 'NonStacking' | 'Subtract')[]
+		trait_req?                 : number
+		mode?                      : GameMode
 	}
 
 
@@ -171,7 +171,7 @@ namespace API {
 		finisher_type : ComboFinisherType
 	}
 
-	interface BuffConversionFact extends BasicFact<'BuffConversion'> {
+	interface AttributeConversionFact extends BasicFact<'AttributeConversion'> {
 		source  : BaseAttribute
 		target  : BaseAttribute
 		percent : number
@@ -219,7 +219,7 @@ namespace API {
 		Time                             : TimeFact
 		ComboField                       : ComboFieldFact
 		ComboFinisher                    : ComboFinisherFact
-		BuffConversion                   : BuffConversionFact
+		AttributeConversion                   : AttributeConversionFact
 		NoData                           : NoDataFact
 		PrefixedBuff                     : PrefixedBuffFact
 		PrefixedBuffBrief                : PrefixedBuffBriefFact

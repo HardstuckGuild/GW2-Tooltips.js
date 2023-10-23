@@ -216,9 +216,9 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 		if(attributeSet) {
 			tiersToProcess = [{
 				modifiers: attributeSet.attributes.map(a => ({
-					target_attribute_or_buff: a.attribute,
-					base_amount             : Math.round(a.base_value + (item as API.ItemStatSource).attribute_base * a.scaling),
-					formula                 : "NoScaling",
+					target_attribute_or_skill: a.attribute,
+					base_amount              : Math.round(a.base_value + (item as API.ItemStatSource).attribute_base * a.scaling),
+					formula                  : "NoScaling",
 					
 					flags: [], id: -1, formula_param1: 0, formula_param2: 0, description: '',
 				} as API.Modifier))
@@ -232,9 +232,9 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 			//NOTE(Rennorb): Pvp shields might have defense but no attribute set.
 			if(!tiersToProcess) tiersToProcess = [{ modifiers: [] }];
 			tiersToProcess[0].modifiers!.push({
-				target_attribute_or_buff: 'Armor',
-				base_amount             : defense,
-				formula                 : "NoScaling",
+				target_attribute_or_skill: 'Armor',
+				base_amount              : defense,
+				formula                  : "NoScaling",
 				
 				flags: [], id: -1, formula_param1: 0, formula_param2: 0, description: '',
 			} as API.Modifier)
@@ -259,14 +259,14 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 
 		if(tiersToProcess) for(const [i, tier] of tiersToProcess.entries()) {
 			if(tier.modifiers) for(const mod of tier.modifiers!) {
-				if(!mod.target_attribute_or_buff || (mod.mode && mod.mode !== context.gameMode) || (mod.trait_req && !context.character.traits.includes(mod.trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
+				if(!mod.target_attribute_or_skill || (mod.mode && mod.mode !== context.gameMode) || (mod.trait_req && !context.character.traits.includes(mod.trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
 
 				let source = formatItemName(item!, context, attributeSet, undefined, -1);
 				if(sourceRuneSuffix) {
 					source = `${source} (Tier ${tiersToProcess.length === 1 ? tierNumber : i + 1} Bonus)`;
 				}
 
-				(targetSources[mod.target_attribute_or_buff] || (targetSources[mod.target_attribute_or_buff] = []))
+				(targetSources[mod.target_attribute_or_skill] || (targetSources[mod.target_attribute_or_skill] = []))
 					.push({ modifier: mod, source, count: amountToAdd })
 			}
 		}
@@ -277,7 +277,11 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 		for(const [i, sources] of weaponSetSources.entries()) {
 			const target = character.statsWithWeapons[i];
 			if(target) target.sources = sources;
-			else character.statsWithWeapons[i] = { sources, values: Object.assign({}, DEFAULT_CONTEXT.character.statsWithWeapons[0].values) };
+			else character.statsWithWeapons[i] = {
+				sources,
+				values   : Object.assign({}, DEFAULT_CONTEXT.character.statsWithWeapons[0].values),
+				htmlParts: structuredClone(DEFAULT_CONTEXT.character.statsWithWeapons[0].htmlParts),
+			};
 		}
 	}
 	
@@ -300,7 +304,11 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 							.push(...values);
 					}			
 				}
-				else character.statsWithWeapons[i] = { sources, values: Object.assign({}, DEFAULT_CONTEXT.character.statsWithWeapons[0].values) };
+				else character.statsWithWeapons[i] = {
+					sources,
+					values   : Object.assign({}, DEFAULT_CONTEXT.character.statsWithWeapons[0].values),
+					htmlParts: structuredClone(DEFAULT_CONTEXT.character.statsWithWeapons[0].htmlParts),
+				};
 			}
 		} break;
 
@@ -456,9 +464,9 @@ export function traitEffects(contexts : Context[]) {
 
 			const addModifiers = (modifiers : API.Modifier[]) => {
 				for(const mod of modifiers) {
-					if(!mod.target_attribute_or_buff || (mod.mode && mod.mode !== context.gameMode) || (mod.trait_req && !context.character.traits.includes(mod.trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
+					if(!mod.target_attribute_or_skill || (mod.mode && mod.mode !== context.gameMode) || (mod.trait_req && !context.character.traits.includes(mod.trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
 
-					(context.character.stats.sources[mod.target_attribute_or_buff] || (context.character.stats.sources[mod.target_attribute_or_buff] = []))
+					(context.character.stats.sources[mod.target_attribute_or_skill] || (context.character.stats.sources[mod.target_attribute_or_skill] = []))
 						.push({source: `trait '<span class="gw2-color-traited-fact">${trait.name}</span>'`, modifier: mod, count: 1});
 				}
 			};
@@ -492,4 +500,5 @@ const enum CollectMode {
 }
 
 import APICache from "./APICache";
-import { resolveTraitsAndOverrides, config, formatItemName, contexts, LUT_DEFENSE, findCorrectAttributeSet, DEFAULT_CONTEXT } from './TooltipsV2';
+import { LUT_DEFENSE } from "./CharacterAttributes";
+import { resolveTraitsAndOverrides, config, formatItemName, contexts, findCorrectAttributeSet, DEFAULT_CONTEXT } from './TooltipsV2';

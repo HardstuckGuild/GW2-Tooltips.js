@@ -383,5 +383,6 @@ export function inferItemUpgrades(wrappers : Iterable<Element>) {
 }
 
 import APICache from "./APICache";
+import { getAttributeValue } from "./CharacterAttributes";
 import { GW2Text2HTML, IMAGE_CDN, mapLocale, newElm, newImg, withUpToNDigits } from "./TUtilsV2";
-import { ICONS, contexts, findTraitedOverride, formatItemName, getAttributeValue, specializeContextFromInlineAttribs } from "./TooltipsV2";
+import { ICONS, contexts, findTraitedOverride, formatItemName, specializeContextFromInlineAttribs } from "./TooltipsV2";

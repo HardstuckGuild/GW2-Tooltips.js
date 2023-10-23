@@ -1,9 +1,14 @@
 export function calculateModifier(
-	{ formula, base_amount, formula_param1: level_scaling, formula_param2 } : API.Modifier,
-	{ level, stats: { values: { Power, ConditionDamage, HealingPower }}} : Character,
-) {
+	{ formula, base_amount, formula_param1: level_scaling, formula_param2, source_attribute } : API.Modifier,
+	{ level, stats: { values } } : { level : number, stats: { values : Character['stats']['values'] }},
+) : number {
+	let { Power, ConditionDamage, HealingPower } = values;
+	if(source_attribute) {
+		//conversion mod
+		return values[source_attribute] * base_amount / 100;
+	}
+
 	//TODO(Rennorb): this is **screaming** tabledrive me
-	//TODO(Rennorb) @correctness: attribute conversion e.g. Bountiful Maintenance Oil
 	switch (formula) {
 		case 'BuffLevelLinear':
 			return         level * level_scaling + base_amount
@@ -100,8 +105,8 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 				let entry = modsMap.get(modifier.id) || modsMap.set(modifier.id, { modifier: modifier, value: 0 }).get(modifier.id);
 				let value = calculateModifier(modifier, context.character);
-				if (modifier.attribute_conversion) {
-						value *= getAttributeValue(context.character, modifier.attribute_conversion);
+				if (modifier.source_attribute) {
+						value *= getAttributeValue(context.character, modifier.source_attribute);
 				}
 
 				entry!.value += value;
@@ -447,7 +452,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		ComboFinisher : ({fact}) => {
 			return [`${GW2Text2HTML(fact.text)}: ${mapLocale(fact.finisher_type)}`];
 		},
-		BuffConversion : ({fact}) => {
+		AttributeConversion : ({fact}) => {
 			return [`Gain ${mapLocale(fact.target)} Based on a Percentage of ${mapLocale(fact.source)}: ${fact.percent}%`];
 		},
 		NoData : ({fact}) => {
@@ -573,4 +578,5 @@ export const MISSING_SKILL : API.Skill = {
 
 import { newElm, newImg, drawFractional, GW2Text2HTML, withUpToNDigits, mapLocale, joinWordList, fromHTML, n3, resolveInflections, formatDuration } from './TUtilsV2';
 import APICache from './APICache';
-import { ICONS, config, getAttributeInformation, getAttributeValue, getBaseHealth, sumUpModifiers } from './TooltipsV2';
+import { ICONS, config } from './TooltipsV2';
+import { getAttributeInformation, getAttributeValue, getBaseHealth, sumUpModifiers } from './CharacterAttributes';
