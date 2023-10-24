@@ -92,7 +92,10 @@ namespace API {
 		description                : string
 		description_override?      : ModifierDescriptionOverride[]
 		flags                      : ('FormatFraction' | 'FormatPercent' | 'SkipNextEntry' | 'MulByDuration' | 'DivDurationBy3' | 'DivDurationBy10' | 'NonStacking' | 'Subtract')[]
-		trait_req?                 : number
+		source_trait_req?          : number
+		//NOTE(Rennorb): We currently use this for filtering, assuming the target is also the character, just as the source.
+		// This isn't quite correct, but good enough for us.
+		target_trait_req?          : number
 		mode?                      : GameMode
 	}
 

@@ -259,7 +259,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 
 		if(tiersToProcess) for(const [i, tier] of tiersToProcess.entries()) {
 			if(tier.modifiers) for(const mod of tier.modifiers!) {
-				if(!mod.target_attribute_or_skill || (mod.mode && mod.mode !== context.gameMode) || (mod.trait_req && !context.character.traits.includes(mod.trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
+				if(!mod.target_attribute_or_skill || (mod.mode && mod.mode !== context.gameMode) || (mod.source_trait_req && !context.character.traits.includes(mod.source_trait_req)) || (mod.target_trait_req && !context.character.traits.includes(mod.target_trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
 
 				let source = formatItemName(item!, context, attributeSet, undefined, -1);
 				if(sourceRuneSuffix) {
@@ -464,7 +464,7 @@ export function traitEffects(contexts : Context[]) {
 
 			const addModifiers = (modifiers : API.Modifier[]) => {
 				for(const mod of modifiers) {
-					if(!mod.target_attribute_or_skill || (mod.mode && mod.mode !== context.gameMode) || (mod.trait_req && !context.character.traits.includes(mod.trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
+					if(!mod.target_attribute_or_skill || (mod.mode && mod.mode !== context.gameMode) || (mod.source_trait_req && !context.character.traits.includes(mod.source_trait_req)) || (mod.target_trait_req && !context.character.traits.includes(mod.target_trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
 
 					(context.character.stats.sources[mod.target_attribute_or_skill] || (context.character.stats.sources[mod.target_attribute_or_skill] = []))
 						.push({source: `trait '<span class="gw2-color-traited-fact">${trait.name}</span>'`, modifier: mod, count: 1});

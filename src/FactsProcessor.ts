@@ -94,7 +94,9 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		if(buff.modifiers && !buff.description_brief && !itemMode) { // early bail to not have to do the work if we use the description anyways
 			//TODO(Rennorb) @consistency: gamemode splitting for mods (?)
 			const relevantModifiers = buff.modifiers.filter(modifier => (
-						(!modifier.trait_req || context.character.traits.includes(modifier.trait_req))
+				   (!modifier.source_trait_req || context.character.traits.includes(modifier.source_trait_req))
+				//NOTE(Rennorb): We ignore this on purpose. See https://github.com/HardstuckGuild/Tooltips.js/issues/81 for context
+				//&& (!modifier.target_trait_req || context.character.traits.includes(modifier.target_trait_req))
 				&& (!modifier.mode || modifier.mode === context.gameMode)
 			));
 
@@ -291,8 +293,8 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				else buffDescription = `: ${buffDescription}`;
 			}
 
-			const seconds = buffDuration > 0 ? `(${formatDuration(buffDuration, config)})`: '';
-			lines.unshift(`${GW2Text2HTML(fact.text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`);
+			const seconds = buffDuration > 0 ? ` (${formatDuration(buffDuration, config)})`: '';
+			lines.unshift(`${GW2Text2HTML(fact.text) || buff.name_brief || buff.name}${seconds}${buffDescription}`);
 
 			buffStackSize = fact.apply_count;
 			return lines;
@@ -478,11 +480,11 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				buffDescription = `: ${buffDescription}`;
 			}
 
-			const seconds = buffDuration > 0 ? `(${formatDuration(buffDuration, config)})`: '';
+			const seconds = buffDuration > 0 ? ` (${formatDuration(buffDuration, config)})`: '';
 
 			const list : (string|HTMLElement)[] = [newElm('div.fact', // class is just for styling
 			generateBuffIcon(buff.icon, apply_count),
-				newElm('span', fromHTML(`${GW2Text2HTML(text) || buff.name_brief || buff.name} ${seconds}${buffDescription}`))
+				newElm('span', fromHTML(`${GW2Text2HTML(text) || buff.name_brief || buff.name}${seconds}${buffDescription}`))
 			)];
 			list.push(...details);
 
