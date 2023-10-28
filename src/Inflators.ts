@@ -1,5 +1,5 @@
-export function inflateGenericIcon(gw2Object : HTMLElement, data : { name : string, icon? : Parameters<typeof newImg>[0] }) {
-	if(gw2Object.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
+export function inflateGenericIcon(gw2Object : HTMLElement, data : { name : string, icon? : Parameters<typeof newImg>[0] }, force = false) {
+	if(!force && gw2Object.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
 
 	const wikiLink = newElm('a', newImg(data.icon, undefined, data.name));
 	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + GW2Text2HTML(data.name).replaceAll(/\[.*?\]/g, ''); //remove plural forms ([s] and similar)
@@ -16,6 +16,7 @@ export function inflateSkill(gw2Object : HTMLElement, skill : API.Skill) {
 	const contextSet = +String(gw2Object.getAttribute('contextSet')) || 0;
 	const context = specializeContextFromInlineAttribs(contexts[contextSet], gw2Object);
 
+	let force = false;
 	//NOTE(Rennorb): doing this here might not be the best idea, as this wil prevent us form hot swapping traits.
 	// The issue is that this is the place where the icon gets selected and inflated, so its somewhat required to change the skill before this point.
 	// Maybe this is still the best place to do this and for cases were we need hot swapping (e.g. build editor) we just have to manually re-process skills after swapping traits.
@@ -25,10 +26,11 @@ export function inflateSkill(gw2Object : HTMLElement, skill : API.Skill) {
 		if(replacementSkill) {
 			gw2Object.setAttribute('objid', String(replacementSkill.id));
 			skill = replacementSkill;
+			force = true;
 		}
 	}
 	
-	inflateGenericIcon(gw2Object, skill);
+	inflateGenericIcon(gw2Object, skill, force);
 }
 
 export function inflateItem(gw2Object : HTMLElement, item : API.Item) {
