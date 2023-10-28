@@ -41,7 +41,7 @@ export const GW2Text2HTML = (text? : string, ...formatArgs : string[]) => text
 		.replaceAll('%%', '%')
 	: '';
 
-export const resolveInflections = (text : string, count : number, character : Character) => text
+export const resolveInflections = (text : string, count : number, character: { sex : Character['sex'] }) => text
 	.replaceAll('[s]', count > 1 ? 's' : '')
 	.replaceAll(/(\S+)\[pl:"(.+?)"]/g, count > 1 ? '$2' : '$1')
 	.replaceAll(/(\S+)\[f:"(.+?)"]/g, character.sex == "Female" ? '$2' : '$1');

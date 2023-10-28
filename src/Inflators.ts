@@ -2,14 +2,14 @@ export function inflateGenericIcon(gw2Object : HTMLElement, data : { name : stri
 	if(!force && gw2Object.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
 
 	const wikiLink = newElm('a', newImg(data.icon, undefined, data.name));
-	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + GW2Text2HTML(data.name).replaceAll(/\[.*?\]/g, ''); //remove plural forms ([s] and similar)
+	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + resolveInflections(GW2Text2HTML(data.name), 1, { sex: "Male" });
 	wikiLink.target = '_blank';
 	if(gw2Object.classList.contains('gw2objectembed') && !gw2Object.classList.contains('icononly')) {
 		//TODO(Rennorb) @correctness: this should probably take into account the plural form
 		const cleanName = GW2Text2HTML(data.name).replaceAll(/\[.*?\]/g, ''); //remove plural forms ([s] and similar)
 		wikiLink.append(cleanName);
 	}
-	gw2Object.append(wikiLink);
+	gw2Object[force ? 'replaceChildren' : 'append'](wikiLink);
 }
 
 export function inflateSkill(gw2Object : HTMLElement, skill : API.Skill) {
@@ -386,5 +386,5 @@ export function inferItemUpgrades(wrappers : Iterable<Element>) {
 
 import APICache from "./APICache";
 import { getAttributeValue } from "./CharacterAttributes";
-import { GW2Text2HTML, IMAGE_CDN, mapLocale, newElm, newImg, withUpToNDigits } from "./TUtilsV2";
+import { GW2Text2HTML, IMAGE_CDN, mapLocale, newElm, newImg, resolveInflections, withUpToNDigits } from "./TUtilsV2";
 import { ICONS, contexts, findTraitedOverride, formatItemName, specializeContextFromInlineAttribs } from "./TooltipsV2";
