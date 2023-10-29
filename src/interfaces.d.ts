@@ -112,7 +112,7 @@ namespace API {
 		__gamemode_override_marker? : true
 	}
 
-	type HealingOrBarrierFact = BasicFact<'HealingOrBarrier'> & {
+	type AdjustByAttributeAndLevelFact = BasicFact<'AdjustByAttributeAndLevel'> & {
 		value                : number
 		level_exponent       : number
 		level_multiplier     : number
@@ -207,7 +207,7 @@ namespace API {
 	}
 
 	type FactMap = {
-		HealingOrBarrier                 : HealingOrBarrierFact
+		AdjustByAttributeAndLevel                 : AdjustByAttributeAndLevelFact
 		AttributeAdjust                  : AttributeAdjustFact
 		Buff                             : BuffFact
 		BuffBrief                        : BuffBriefFact

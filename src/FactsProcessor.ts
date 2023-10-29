@@ -203,7 +203,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			for(const { source, modifier, count } of durModStack) {
 				const mod = calculateModifier(modifier, context.character);
 				if(config.showFactComputationDetail)
-					detailStack.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character)))); //TODO(Rennorb) @cleanup: im not really happy with how this works right now. Storing html in the text is not what i like to do but it works for now. Multiple of this.
+					detailStack.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${baseDuration / 1000 * mod / 100}s (${n3(mod)}%) from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character)))); //TODO(Rennorb) @cleanup: im not really happy with how this works right now. Storing html in the text is not what i like to do but it works for now. Multiple of this.
 				percentMod += mod;
 			}
 			durMod += percentMod / 100;
@@ -227,6 +227,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				for(const { source, modifier, count } of valueModStack) {
 					const mod = calculateModifier(modifier, context.character);
 					if(config.showFactComputationDetail)
+						// TODO(Rennorb): @completeness: Show the amount this percent mod results in.
 						detailStack.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character))));
 					percentMod += mod;
 				}
@@ -239,7 +240,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	}
 
 	const factInflators : { [k in typeof fact.type] : (params : HandlerParams<API.FactMap[k]>) => (string|Node)[] } = {
-		HealingOrBarrier : ({fact}) =>  {
+		AdjustByAttributeAndLevel : ({fact}) =>  {
 			let value = (fact.value + context.character.level ** fact.level_exponent * fact.level_multiplier) * fact.hit_count;
 
 			let attributeVal = 0;
@@ -257,12 +258,12 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				if(fact.hit_count != 1) lines.push(` * ${fact.hit_count} hits`);
 			}
 
-			if(!fact.text?.includes('Barrier')) { //TODO(Rennorb) @cleanup @correctness
+			if(fact.text?.includes('Heal')) { //TODO(Rennorb) @cleanup @correctness
 				let percentMod = 100;
 				for(const { source, modifier, count } of sumUpModifiers(context.character, 'HealEffectiveness')) {
 					const mod = calculateModifier(modifier, context.character);
 					if(config.showFactComputationDetail)
-						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from ${count > 1 ? `${count} `: ''}`, fromHTML(resolveInflections(source, count, context.character))));
+						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod / 100 * value)} (${n3(mod)}%) from ${count > 1 ? `${count} `: ''}`, fromHTML(resolveInflections(source, count, context.character))));
 					percentMod += mod;
 				}
 				value *= percentMod / 100;
