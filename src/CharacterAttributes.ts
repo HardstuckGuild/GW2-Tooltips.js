@@ -14,7 +14,7 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 	const fakeCharacter = { level: context.character.level, stats: { values : stage1Attributes } };
 
 	for(const attribute of attributeOrder) {
-		const { baseAttribute, suffix, isComputed, base, div } = getAttributeInformation(attribute, context.character);
+		const { baseAttribute, suffix, base, div } = getAttributeInformation(attribute, context.character);
 		let value = base, text;
 		const displayMul = suffix ? 100 : 1;
 
@@ -22,103 +22,93 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 		const sources = stats.sources[attribute].concat(weaponStats.sources[attribute]); //todo cleanup
 		allParts[attribute] = { parts, sources };
 
-		if(!baseAttribute) {
-			parts.push(newElm('tet.title', newElm('teb', attribute)));
-		}
-		else {
-			{
-				text = `${n3(base * displayMul) + suffix} base value`;
-				if(base) { text += ' from lvl 80'; }
-				parts.push(newElm('div.detail', text));
+		{
+			text = `${n3(base * displayMul) + suffix} base value`;
+			if(base) { text += ' from lvl 80'; }
+			parts.push(newElm('div.detail', text));
 
-				if(isComputed) {
-					const baseAttrValue = stage1Attributes[baseAttribute];
-					let attrValue = baseAttrValue;
-					//NOTE(Rennorb): precision is processed really wired, so we just hard code this case
-					//TODO(Rennorb) @scaling
-					if(attribute == 'CritChance') attrValue -= 1000;
-					const statBonus = attrValue / div;
-					value += statBonus;
+			if(baseAttribute) {
+				const baseAttrValue = stage1Attributes[baseAttribute];
+				let attrValue = baseAttrValue;
+				//NOTE(Rennorb): precision is processed really wired, so we just hard code this case
+				//TODO(Rennorb) @scaling
+				if(attribute == 'CritChance') attrValue -= 1000;
+				const statBonus = attrValue / div;
+				value += statBonus;
 
-					if(statBonus) {
-						text = ` +${n3(statBonus * displayMul) + suffix} from ${n3(baseAttrValue)} ${mapLocale(baseAttribute)}`
-						if(div != 1) text += ` / ${div / displayMul} (attrib. specific conv. factor)`
-						parts.push(newElm('div.detail', text!));
-					}
+				if(statBonus) {
+					text = ` +${n3(statBonus * displayMul) + suffix} from ${n3(baseAttrValue)} ${mapLocale(baseAttribute)}`
+					if(div != 1) text += ` / ${div / displayMul} (attrib. specific conv. factor)`
+					parts.push(newElm('div.detail', text!));
 				}
 			}
-
-			//additive mods
-			let modValue = 0;
-			for(const source of sources.filter(s => !s.modifier.flags.includes('FormatPercent'))) {
-				const mod = calculateModifier(source.modifier, fakeCharacter) * source.count;
-				modValue += mod;
-			
-				text = ` +${n3(mod)} from `;
-				if(source.count > 1) text += `${source.count} `;
-				text += source.source;
-				parts.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
-			}
-			value += modValue;
 		}
+
+		//additive mods
+		let modValue = 0;
+		for(const source of sources.filter(s => !s.modifier.flags.includes('FormatPercent'))) {
+			const mod = calculateModifier(source.modifier, fakeCharacter) * source.count;
+			modValue += mod;
+		
+			text = ` +${n3(mod)} from `;
+			if(source.count > 1) text += `${source.count} `;
+			text += source.source;
+			parts.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
+		}
+		value += modValue;
 
 		stage1Attributes[attribute] = value;
 	}
 
 	for(const attribute of attributeOrder) {
-		const { baseAttribute } = getAttributeInformation(attribute, context.character);
 		const { parts, sources } = allParts[attribute];
 
-		if(baseAttribute) {
-			//conversion mods
-			let modValue = 0;
-			for(const source of sources.filter(s => s.modifier.flags.includes('FormatPercent') && s.modifier.source_attribute)) {
-				const mod = calculateModifier(source.modifier, fakeCharacter) * source.count;
-				modValue += mod
-				
-				let text = ` +${n3(mod)} (${n3(source.modifier.base_amount)}% of ${source.modifier.source_attribute}) from `;
-				if(source.count > 1) text += `${source.count} `;
-				text += source.source;
-				parts.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
-			}
-			stage2Attributes[attribute] = stage1Attributes[attribute] + modValue;
+		let modValue = 0;
+		//conversion mods
+		for(const source of sources.filter(s => s.modifier.flags.includes('FormatPercent') && s.modifier.source_attribute)) {
+			const mod = calculateModifier(source.modifier, fakeCharacter) * source.count;
+			modValue += mod
+			
+			let text = ` +${n3(mod)} (${n3(source.modifier.base_amount)}% of ${source.modifier.source_attribute}) from `;
+			if(source.count > 1) text += `${source.count} `;
+			text += source.source;
+			parts.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
 		}
+		stage2Attributes[attribute] = stage1Attributes[attribute] + modValue;
 	}
 
 	fakeCharacter.stats.values = stage2Attributes;
 
 	for(const attribute of attributeOrder) {
-		const { baseAttribute, suffix, cap } = getAttributeInformation(attribute, context.character);;
+		const { suffix, cap } = getAttributeInformation(attribute, context.character);;
 
 		let value = stage2Attributes[attribute], text;
 		
-		if(baseAttribute) {
-			//percent mods
-			const { parts, sources } = allParts[attribute];
-			const displayMul = suffix ? 100 : 1;
-			for(const source of sources.filter(s => s.modifier.flags.includes('FormatPercent') && !s.modifier.source_attribute)) {
-				const mod = calculateModifier(source.modifier, fakeCharacter) * source.count / 100; //TODO(Rennorb) @cleanup
-				//NOTE(Rennorb): Having a suffix means the percentage based values should be additive, as this only applies for condition/boon duration, and crit chance/damage.
-				const toAdd = suffix ? mod : value * mod; 
-				value += toAdd;
-				
-				text = ` +${n3(toAdd * displayMul)}${suffix}`;
-				if(!suffix) text += ` (${n3(mod * 100)}%)`;
-				text += ' from ';
-				if(source.count > 1) text += `${source.count} `;
-				text += source.source;
-				parts.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
-			}
-
-
-			const uncappedValue = value;
-			//NOTE(Rennorb): -1 because the cap is 200% for duration, but the displayed value is the _additional_ duration, so its a max of +100%.
-			stage2Attributes[attribute] = value = Math.min(uncappedValue, cap - 1);
-
-			if(uncappedValue != value)
-				parts.push(newElm('span.detail.capped', `(Capped to ${n3(value * displayMul)}${suffix}! Uncapped value would be ${n3(uncappedValue * displayMul)}${suffix})`));
-			parts.unshift(newElm('tet.title', newElm('teb', ' +' + n3(value * displayMul) + suffix + ' ' + mapLocale(attribute))));
+		//percent mods
+		const { parts, sources } = allParts[attribute];
+		const displayMul = suffix ? 100 : 1;
+		for(const source of sources.filter(s => s.modifier.flags.includes('FormatPercent') && !s.modifier.source_attribute)) {
+			const mod = calculateModifier(source.modifier, fakeCharacter) * source.count / 100; //TODO(Rennorb) @cleanup
+			//NOTE(Rennorb): Having a suffix means the percentage based values should be additive, as this only applies for condition/boon duration, and crit chance/damage.
+			const toAdd = suffix ? mod : value * mod; 
+			value += toAdd;
+			
+			text = ` +${n3(toAdd * displayMul)}${suffix}`;
+			if(!suffix) text += ` (${n3(mod * 100)}%)`;
+			text += ' from ';
+			if(source.count > 1) text += `${source.count} `;
+			text += source.source;
+			parts.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
 		}
+
+
+		const uncappedValue = value;
+		//NOTE(Rennorb): -1 because the cap is 200% for duration, but the displayed value is the _additional_ duration, so its a max of +100%.
+		stage2Attributes[attribute] = value = Math.min(uncappedValue, cap - 1);
+
+		if(uncappedValue != value)
+			parts.push(newElm('span.detail.capped', `(Capped to ${n3(value * displayMul)}${suffix}! Uncapped value would be ${n3(uncappedValue * displayMul)}${suffix})`));
+		parts.unshift(newElm('tet.title', newElm('teb', ' +' + n3(value * displayMul) + suffix + ' ' + mapLocale(attribute))));
 	}
 
 	for(const attribute of attributeOrder) {
@@ -128,39 +118,40 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 }
 
 type AttributeInfo = {
-	baseAttribute? : BaseAttribute
-	img?           : number
-	suffix         : string
-	isComputed?    : boolean
-	base           : number
-	div            : number
-	cap            : number
+	baseAttribute?     : BaseAttribute
+	computedAttribute? : ComputedAttribute
+	img?               : number
+	suffix             : string
+	base               : number
+	div                : number
+	cap                : number
 }
 
-export function getAttributeInformation(attribute : BaseAttribute | ComputedAttribute, character : Character) : AttributeInfo {
-	const MAX_VAL = Number.MAX_SAFE_INTEGER;
-	const _p2 = ({
-		Power            : ['Power'          ,  66722, '' , false,   1000,    1, MAX_VAL],
-		Toughness        : ['Toughness'      , 104162, '' , false,   1000,    1, MAX_VAL],
-		Vitality         : ['Vitality'       , 104163, '' , false,   1000,    1, MAX_VAL],
-		Precision        : ['Precision'      , 156609, '' , false,   1000,    1, MAX_VAL],
-		Ferocity         : ['Ferocity'       , 156602, '' , false,      0,    1, MAX_VAL],
-		ConditionDamage  : ['ConditionDamage', 156600, '' , false,      0,    1, MAX_VAL],
-		Expertise        : ['Expertise'      , 156601, '' , false,      0,    1, MAX_VAL],
-		Concentration    : ['Concentration'  , 156599, '' , false,      0,    1, MAX_VAL],
-		HealingPower     : ['HealingPower'   , 156606, '' , false,      0,    1, MAX_VAL],
-		AgonyResistance  : ['AgonyResistance', 536049, '' , false,      0,    1, MAX_VAL],
-		Health           : ['Vitality'       , 536052, '' , true ,      0,  0.1, MAX_VAL],
-		Armor            : ['Toughness'      , 536048, '' , true ,      0,    1, MAX_VAL],
-		ConditionDuration: ['Expertise'      , 156601, '%', true ,      0, 1500,       2],
-		BoonDuration     : ['Concentration'  , 156599, '%', true ,      0, 1500,       2],
-		CritChance       : ['Precision'      , 536051, '%', true ,   0.05, 2100, MAX_VAL],
-		CritDamage       : ['Ferocity'       , 784327, '%', true ,    1.5, 1500, MAX_VAL],
-	} as { [k in BaseAttribute | ComputedAttribute]? : [BaseAttribute, number, string, boolean, number, number, number]})[attribute];
-	let baseAttribute, img, suffix = '', isComputed, base = 0, div = 1, cap = MAX_VAL;
-	if(_p2) [baseAttribute, img, suffix, isComputed, base, div, cap] = _p2;
+const ATTRIBUTE_INFO_LUT = {
+	Power            : [undefined      , undefined          ,  66722, '' , 1000,    1, Number.MAX_SAFE_INTEGER],
+	Toughness        : [undefined      , 'Armor'            , 104162, '' , 1000,    1, Number.MAX_SAFE_INTEGER],
+	Vitality         : [undefined      , 'Health'           , 104163, '' , 1000,    1, Number.MAX_SAFE_INTEGER],
+	Precision        : [undefined      , 'CritChance'       , 156609, '' , 1000,    1, Number.MAX_SAFE_INTEGER],
+	Ferocity         : [undefined      , 'CritDamage'       , 156602, '' ,    0,    1, Number.MAX_SAFE_INTEGER],
+	ConditionDamage  : [undefined      , undefined          , 156600, '' ,    0,    1, Number.MAX_SAFE_INTEGER],
+	Expertise        : [undefined      , 'ConditionDuration', 156601, '' ,    0,    1, Number.MAX_SAFE_INTEGER],
+	Concentration    : [undefined      , 'BoonDuration'     , 156599, '' ,    0,    1, Number.MAX_SAFE_INTEGER],
+	HealingPower     : [undefined      , undefined          , 156606, '' ,    0,    1, Number.MAX_SAFE_INTEGER],
+	AgonyResistance  : [undefined      , undefined          , 536049, '' ,    0,    1, Number.MAX_SAFE_INTEGER],
+	Health           : ['Vitality'     , undefined          , 536052, '' ,    0,  0.1, Number.MAX_SAFE_INTEGER],
+	Armor            : ['Toughness'    , undefined          , 536048, '' ,    0,    1, Number.MAX_SAFE_INTEGER],
+	ConditionDuration: ['Expertise'    , undefined          , 156601, '%',    0, 1500,                       2],
+	BoonDuration     : ['Concentration', undefined          , 156599, '%',    0, 1500,                       2],
+	CritChance       : ['Precision'    , undefined          , 536051, '%', 0.05, 2100, Number.MAX_SAFE_INTEGER],
+	CritDamage       : ['Ferocity'     , undefined          , 784327, '%',  1.5, 1500, Number.MAX_SAFE_INTEGER],
+} as { [k in BaseAttribute | ComputedAttribute]? : [BaseAttribute | undefined, ComputedAttribute | undefined, number, string, number, number, number]};
+
+export function getAttributeInformation<R>(attribute : BaseAttribute | ComputedAttribute | R, character : Character) : AttributeInfo {
+	const _p2 = ATTRIBUTE_INFO_LUT[attribute as Exclude<typeof attribute, R>];
+	let baseAttribute, computedAttribute, img, suffix = '', base = 0, div = 1, cap = Number.MAX_SAFE_INTEGER;
+	if(_p2) [baseAttribute, computedAttribute, img, suffix, base, div, cap] = _p2;
 	if(attribute == 'Health') base = getBaseHealth(character);
-	return { baseAttribute, img, suffix, isComputed, base, div, cap };
+	return { baseAttribute, computedAttribute, img, suffix, base, div, cap };
 }
 
 export function getBaseHealth(character : Character) : number {

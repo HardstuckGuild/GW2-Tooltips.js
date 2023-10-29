@@ -1010,7 +1010,10 @@ export function formatItemName(item : API.Item, context : Context, statSet? : AP
 export function specializeContextFromInlineAttribs(context : Context, gw2Object : HTMLElement) : Context {
 	let traitOverrides = gw2Object.getAttribute('with-traits');
 	if(traitOverrides) {
-		context = structuredClone(context);
+		//NOTE(Rennorb): Cannot use structured clone here because it will fail with the html chunks as those are invalid objects.
+		//TODO(Rennorb) @cleanup: get rid of those jank custom tags.
+		context = Object.assign({}, context);
+		context.character = Object.assign({}, context.character);
 		const invalid : string[] = [];
 		context.character.traits = traitOverrides.split(',').map(t => {
 			const v = +t;

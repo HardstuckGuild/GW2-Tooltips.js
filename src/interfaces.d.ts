@@ -3,6 +3,10 @@ declare interface ObjectConstructor {
 	entries<T>(obj : T) : TypeBridge<T, keyof T>[]
 }
 
+interface Array<T> {
+	includes<T2>(searchElement : T | T2, fromIndex? : number) : searchElement is T;
+}
+
 type Undefined<T> = { [k in keyof T]?: undefined }
 
 namespace LegacyCompat {

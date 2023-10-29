@@ -139,7 +139,6 @@
   justify-content: space-between;
   align-items: center;
   gap: 0 1ch;
-  white-space: nowrap;
 }
 .tooltipWrapper .detail {
 	font-size: var(--gw2-tt-font-size-s);
@@ -212,6 +211,9 @@
 	vertical-align: bottom;
 }
 
+.tooltipWrapper ter {
+  white-space: nowrap;
+}
 .tooltipWrapper ter img {
 	margin-left: .5ch;
 	vertical-align: bottom;

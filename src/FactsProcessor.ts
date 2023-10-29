@@ -154,6 +154,15 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				}
 				strValue += ' ' + modifier.description;
 
+				if(typeof modifier.target_attribute_or_skill === 'string') {
+					const { computedAttribute } = getAttributeInformation(modifier.target_attribute_or_skill, context.character);
+					if(computedAttribute) {
+						const { div, suffix } = getAttributeInformation(computedAttribute, context.character);
+						const displayMul = suffix ? 100 : 1;
+						strValue += ` <span class="detail">(converts to ${n3(value / div * displayMul)}${suffix} ${mapLocale(computedAttribute)})</span>`;
+					}
+				}
+
 				modsArray.push(strValue);
 			}
 		}
@@ -276,17 +285,25 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		AttributeAdjust : ({fact}) => {
 			const value = Math.round((fact.range[1] - fact.range[0]) / (context.character.level / 80) + fact.range[0]);
 			const sign = value > 0 ? '+' : ''
-			const text = GW2Text2HTML(fact.text) || mapLocale(fact.target);
-			return [`${text}: ${sign}${value}`];
+			const parts = [`${GW2Text2HTML(fact.text) || mapLocale(fact.target)}: ${sign}${value}`];
+			
+			const { computedAttribute } = getAttributeInformation(fact.target, context.character);
+			if(computedAttribute) {
+				const { div, suffix } = getAttributeInformation(computedAttribute, context.character);
+				const displayMul = suffix ? 100 : 1;
+				parts.push(`(converts to ${n3(value / div * displayMul)}${suffix} ${mapLocale(computedAttribute)})`);
+			}
+			
+			return parts;
 		},
 		Buff : ({fact, buff}) =>  {
 			if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
 			buff = buff || MISSING_BUFF; // in case we didn't get the buff we wanted from the api
 			iconSlug = buff.icon || iconSlug;
 
-			const lines : (string | Node)[] = [];
+			const parts : (string | Node)[] = [];
 			let valueMod;
-			[buffDuration, valueMod] = applyMods(fact.duration, buff, lines);
+			[buffDuration, valueMod] = applyMods(fact.duration, buff, parts);
 
 			let buffDescription = generateBuffDescription(buff, fact, buffDuration, valueMod);
 			if(buffDescription) {
@@ -295,10 +312,10 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			}
 
 			const seconds = buffDuration > 0 ? ` (${formatDuration(buffDuration, config)})`: '';
-			lines.unshift(`${GW2Text2HTML(fact.text) || buff.name_brief || buff.name}${seconds}${buffDescription}`);
+			parts.unshift(`${GW2Text2HTML(fact.text) || buff.name_brief || buff.name}${seconds}${buffDescription}`);
 
 			buffStackSize = fact.apply_count;
-			return lines;
+			return parts;
 		},
 		BuffBrief : ({fact, buff}) =>  {
 			if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
@@ -356,7 +373,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		},
 		PercentHealth : ({fact: {percent, text}}) => {
 			const raw = Math.round(getAttributeValue(context.character, 'Health') * percent * 0.01);
-			return [`${GW2Text2HTML(text)}: ${drawFractional(percent, config)}% (${raw})`];
+			return [`${GW2Text2HTML(text)}: ${drawFractional(percent, config)}% (${raw} HP)`];
 		},
 		PercentLifeForceGain : ({fact: {percent, text}}) => {
 			const hpPool = getAttributeValue(context.character, 'Health');
@@ -472,9 +489,9 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 			let {duration, apply_count, text} = fact;
 
-			const details : string[] = [];
+			const parts : (string | Node)[] = [];
 			let valueMod;
-			[buffDuration, valueMod] = applyMods(duration, buff, details);
+			[buffDuration, valueMod] = applyMods(duration, buff, parts);
 
 			let buffDescription = generateBuffDescription(buff, fact, buffDuration, valueMod);
 			if(buffDescription) {
@@ -483,13 +500,13 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 			const seconds = buffDuration > 0 ? ` (${formatDuration(buffDuration, config)})`: '';
 
-			const list : (string|HTMLElement)[] = [newElm('div.fact', // class is just for styling
-			generateBuffIcon(buff.icon, apply_count),
-				newElm('span', fromHTML(`${GW2Text2HTML(text) || buff.name_brief || buff.name}${seconds}${buffDescription}`))
-			)];
-			list.push(...details);
+			parts.unshift(newElm('div.fact', // class is just for styling
+				generateBuffIcon(buff.icon, apply_count),
+					newElm('span', fromHTML(`${GW2Text2HTML(text) || buff.name_brief || buff.name}${seconds}${buffDescription}`))
+				)
+			);
 
-			return list;
+			return parts;
 		},
 		PrefixedBuffBrief : ({fact, buff}) => {
 			let prefix = APICache.storage.skills.get(fact.prefix)
