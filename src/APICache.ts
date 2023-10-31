@@ -102,6 +102,12 @@ export default class APICache {
 				if(!this.storage.skills.has(subSkill))
 					connectedIdsStorage.skills.add(subSkill);
 		}
+		
+		if('bundle_skills' in datum) {
+			for(const subSkill of datum.bundle_skills!)
+				if(!this.storage.skills.has(subSkill))
+					connectedIdsStorage.skills.add(subSkill);
+		}
 
 		if('blocks' in datum) for(const block of datum.blocks!) {
 			if(block.facts)

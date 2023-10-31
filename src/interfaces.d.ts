@@ -51,6 +51,8 @@ namespace API {
 		categories         : any[]
 		palettes           : Palette[]
 		related_skills?    : number[]
+		bundle_skills?     : number[]
+		bundle_item?       : number
 		modifiers?         : Modifier[]
 		buff_type?         : 'Boon' | 'Buff' | 'Condition' | 'Finisher' | 'Food' | 'Guild' | 'Item' | 'Persistent' | 'Purchased' | 'Species' | 'Training' | 'Trait' | 'Transformation' | 'Utility' | 'Wvw' | 'BuffType16' | 'BuffType17' | 'Realtime'
 	}

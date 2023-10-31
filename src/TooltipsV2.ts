@@ -652,12 +652,22 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 
 		//NOTE(Rennorb): Checking for the skill chain here since it usually produces duplicated entries if one is present and the skill chain is more authoritative.
 		//NOTE(Rennorb): `related_skills` is also used for traits.
-		if(!hasChain && 'related_skills' in currentObj) {
-			const type = gw2Object.getAttribute('type') || 'skill';
-			for(const subSkillId of currentObj.related_skills!) {
-				const subSkillInChain = APICache.storage.skills.get(subSkillId);
-				if(subSkillInChain && ((type != 'skill') || subSkillInChain.palettes.some(palette => VALID_CHAIN_PALETTES.includes(palette.type)))) {
-					objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode })
+		if(!hasChain) {
+			if('bundle_skills' in currentObj) {
+				for(const subSkillId of currentObj.bundle_skills!) {
+					const subSkillInChain = APICache.storage.skills.get(subSkillId);
+					if(subSkillInChain) {
+						objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode })
+					}
+				}
+			}
+			if('related_skills' in currentObj) {
+				const type = gw2Object.getAttribute('type') || 'skill';
+				for(const subSkillId of currentObj.related_skills!) {
+					const subSkillInChain = APICache.storage.skills.get(subSkillId);
+					if(subSkillInChain && ((type != 'skill') || subSkillInChain.palettes.some(palette => VALID_CHAIN_PALETTES.includes(palette.type)))) {
+						objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode })
+					}
 				}
 			}
 		}
@@ -1286,11 +1296,20 @@ if(config.autoInitialize) {
 									}
 								}
 							}
-							if(!hasChain && skill.related_skills) {
-								for(const subSkillId of skill.related_skills) {
-									const subSkillInChain = APICache.storage.skills.get(subSkillId);
-									if(subSkillInChain && subSkillInChain.palettes.some(palette => VALID_CHAIN_PALETTES.includes(palette.type)))
-										skillIds.push(subSkillId);
+							if(!hasChain) {
+								if(skill.bundle_skills) {
+									for(const subSkillId of skill.bundle_skills) {
+										const subSkillInChain = APICache.storage.skills.get(subSkillId);
+										if(subSkillInChain)
+											skillIds.push(subSkillId);
+									}
+								}
+								if(skill.related_skills) {
+									for(const subSkillId of skill.related_skills) {
+										const subSkillInChain = APICache.storage.skills.get(subSkillId);
+										if(subSkillInChain && subSkillInChain.palettes.some(palette => VALID_CHAIN_PALETTES.includes(palette.type)))
+											skillIds.push(subSkillId);
+									}
 								}
 							}
 						}
