@@ -635,7 +635,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 			}
 			objectChain.push({ obj: currentObj, notCollapsable: false, iconMode });
 
-			const palette = currentObj.palettes.find(p => VALID_CHAIN_PALETTES.includes(p.type));
+			const palette = currentObj.palettes.find(p => VALID_CHAIN_PALETTES.includes(p.type) && p.slots.some(s => s.profession));
 			if(palette) for(const slot of palette.slots) {
 				if(slot.next_chain && slot.profession) {
 					const nextSkillInChain = APICache.storage.skills.get(slot.next_chain);
