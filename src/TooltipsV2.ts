@@ -740,7 +740,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 			? item.defense
 			: LUT_DEFENSE[Math.min(100, (item.defense[0] + context.character.level))] * item.defense[1];
 
-		parts.push(newElm('te', newElm('tem', 'Defense: ', newElm('span.gw2-color-stat-green', String(defense)))));
+		parts.push(newElm('te', newElm('tem', 'Defense: ', newElm('span.gw2-color-stat-green', String(Math.ceil(defense))))));
 	}
 
 	if('power' in item) {

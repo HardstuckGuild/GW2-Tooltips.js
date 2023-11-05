@@ -233,7 +233,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 			if(!tiersToProcess) tiersToProcess = [{ modifiers: [] }];
 			tiersToProcess[0].modifiers!.push({
 				target_attribute_or_skill: 'Armor',
-				base_amount              : defense,
+				base_amount              : Math.ceil(defense),
 				formula                  : "NoScaling",
 				
 				flags: [], id: -1, formula_param1: 0, formula_param2: 0, description: '',
