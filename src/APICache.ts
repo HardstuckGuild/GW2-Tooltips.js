@@ -102,7 +102,13 @@ export default class APICache {
 				if(!this.storage.skills.has(subSkill))
 					connectedIdsStorage.skills.add(subSkill);
 		}
-		
+
+		if('ambush_skills' in datum) {
+			for(const subSkill of datum.ambush_skills!)
+				if(!this.storage.skills.has(subSkill.id))
+					connectedIdsStorage.skills.add(subSkill.id);
+		}
+
 		if('bundle_skills' in datum) {
 			for(const subSkill of datum.bundle_skills!)
 				if(!this.storage.skills.has(subSkill))

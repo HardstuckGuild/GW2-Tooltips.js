@@ -51,6 +51,7 @@ namespace API {
 		categories         : any[]
 		palettes           : Palette[]
 		related_skills?    : number[]
+		ambush_skills?     : { id: number, spec? : number }[]
 		bundle_skills?     : number[]
 		bundle_item?       : number
 		modifiers?         : Modifier[]

@@ -387,7 +387,13 @@ export function specificTraits(contextIndex : number, targetContext : Context, s
 }
 function _traits(contextIndex : number, targetContext : Context, elements : Iterable<Element>, mode : CollectMode) {
 	const traits : number[] = [];
+	const specializations : number[] = [];
 	for(const specialization of elements) {
+		const specId = +String(specialization.getAttribute('objid'));
+		if(!isNaN(specId)) {
+			specializations.push(specId);
+		}
+
 		const selectedPositions = String(specialization.getAttribute('selected_traits')).split(',').map(i => +i).filter(i => !isNaN(i) && 0 <= i && i <= 2);
 		if(selectedPositions.length != 3) {
 			console.warn("[gw2-tooltips] [collect] Specialization object ", specialization, " does not have its 'selected_traits' (properly) set. Add the attribute as `selected_traits=\"0,2,1\"` where the numbers are 0-2 indicating top, middle or bottom selection. Will not assume anything and just ignore the element.");
@@ -431,7 +437,10 @@ function _traits(contextIndex : number, targetContext : Context, elements : Iter
 	switch(mode) {
 		case CollectMode.IgnoreGlobal:
 			// It doest actually make sense to 'overwrite' here, so its just the same as IgnoreGlobal.
-		case CollectMode.OverwriteGlobal: targetContext.character.traits = traits; break
+		case CollectMode.OverwriteGlobal: 
+			targetContext.character.traits = traits;
+			targetContext.character.specializations = specializations;
+			break
 
 		// It doest actually make sense to 'append' here, so its just the same as PrioritizeGlobal.
 		case CollectMode.Append:
@@ -440,14 +449,23 @@ function _traits(contextIndex : number, targetContext : Context, elements : Iter
 				const set = new Set(window.GW2TooltipsContext[contextIndex].character?.traits);
 				traits.forEach(t => set.add(t));
 				targetContext.character.traits = Array.from(set);
+
+				const set2 = new Set(window.GW2TooltipsContext[contextIndex].character?.specializations);
+				specializations.forEach(t => set2.add(t));
+				targetContext.character.specializations = Array.from(set2);
 			}
 			else if(window.GW2TooltipsContext) {
 				const set = new Set(window.GW2TooltipsContext.character?.traits);
 				traits.forEach(t => set.add(t));
 				targetContext.character.traits = Array.from(set);
+
+				const set2 = new Set(window.GW2TooltipsContext.character?.specializations);
+				specializations.forEach(t => set2.add(t));
+				targetContext.character.specializations = Array.from(set2);
 			}
 			else {
 				targetContext.character.traits = traits;
+				targetContext.character.specializations = specializations;
 			}
 		} break
 	}

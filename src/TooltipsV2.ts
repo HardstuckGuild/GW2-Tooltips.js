@@ -657,7 +657,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 				for(const subSkillId of currentObj.bundle_skills!) {
 					const subSkillInChain = APICache.storage.skills.get(subSkillId);
 					if(subSkillInChain) {
-						objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode })
+						objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode });
 					}
 				}
 			}
@@ -666,7 +666,16 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 				for(const subSkillId of currentObj.related_skills!) {
 					const subSkillInChain = APICache.storage.skills.get(subSkillId);
 					if(subSkillInChain && ((type != 'skill') || subSkillInChain.palettes.some(palette => VALID_CHAIN_PALETTES.includes(palette.type)))) {
-						objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode })
+						objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode });
+					}
+				}
+			}
+			if('ambush_skills' in currentObj) {
+				for(const { id: subSkillId, spec } of currentObj.ambush_skills!) {
+					const subSkillInChain = APICache.storage.skills.get(subSkillId);
+					if(subSkillInChain && (!spec || context.character.specializations.includes(spec))) {
+						objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode });
+						break; // only one ambush skill
 					}
 				}
 			}
@@ -1081,6 +1090,7 @@ export const DEFAULT_CONTEXT : Context = {
 		isPlayer         : true,
 		sex              : "Male",
 		traits           : [],
+		specializations  : [],
 		stats: {
 			values:  {
 				Power            : 0,
@@ -1190,7 +1200,7 @@ function createCompleteContext(partialContext : PartialContext) : Context {
 	const stats = createCompletedBaseStats(partialContext.character?.stats);
 	const upgradeCounts = Object.assign({}, partialContext.character?.upgradeCounts);
 	const statsWithWeapons = partialContext.character?.statsWithWeapons?.map(s => createCompletedStats(s)) || [createCompletedStats()];
-	const character = Object.assign({}, DEFAULT_CONTEXT.character, partialContext.character, { stats, upgradeCounts, statsWithWeapons });
+	const character = Object.assign({}, DEFAULT_CONTEXT.character, partialContext.character, { stats, upgradeCounts, statsWithWeapons, traits: [], specializations: [] });
 	return Object.assign({}, DEFAULT_CONTEXT, partialContext, { character });
 }
 
@@ -1297,19 +1307,20 @@ if(config.autoInitialize) {
 								}
 							}
 							if(!hasChain) {
-								if(skill.bundle_skills) {
-									for(const subSkillId of skill.bundle_skills) {
-										const subSkillInChain = APICache.storage.skills.get(subSkillId);
-										if(subSkillInChain)
-											skillIds.push(subSkillId);
-									}
+								if(skill.bundle_skills) for(const subSkillId of skill.bundle_skills) {
+									const subSkillInChain = APICache.storage.skills.get(subSkillId);
+									if(subSkillInChain)
+										skillIds.push(subSkillId);
 								}
-								if(skill.related_skills) {
-									for(const subSkillId of skill.related_skills) {
-										const subSkillInChain = APICache.storage.skills.get(subSkillId);
-										if(subSkillInChain && subSkillInChain.palettes.some(palette => VALID_CHAIN_PALETTES.includes(palette.type)))
-											skillIds.push(subSkillId);
-									}
+								if(skill.related_skills) for(const subSkillId of skill.related_skills) {
+									const subSkillInChain = APICache.storage.skills.get(subSkillId);
+									if(subSkillInChain && subSkillInChain.palettes.some(palette => VALID_CHAIN_PALETTES.includes(palette.type)))
+										skillIds.push(subSkillId);
+								}
+								if(skill.ambush_skills) for(const { id: subSkillId } of skill.ambush_skills) {
+									const subSkillInChain = APICache.storage.skills.get(subSkillId);
+									if(subSkillInChain)
+										skillIds.push(subSkillId);
 								}
 							}
 						}

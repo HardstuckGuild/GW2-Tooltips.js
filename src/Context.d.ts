@@ -32,6 +32,7 @@ interface Character {
 	sex               : 'Male' | 'Female'
 	profession?       : Profession
 	traits            : number[]
+	specializations   : number[]
 	stats             : BaseStats
 	statsWithWeapons  : BaseAndComputedStats[]
 	selectedWeaponSet : number
