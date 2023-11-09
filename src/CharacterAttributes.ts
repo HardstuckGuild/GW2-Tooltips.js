@@ -67,7 +67,7 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 		//conversion mods
 		for(const source of sources.filter(s => s.modifier.flags.includes('FormatPercent') && s.modifier.source_attribute)) {
 			const mod = calculateModifier(source.modifier, fakeCharacter) * source.count;
-			modValue += mod
+			modValue += Math.round(mod);
 			
 			let text = ` +${n3(mod)} (${n3(source.modifier.base_amount)}% of ${source.modifier.source_attribute}) from `;
 			if(source.count > 1) text += `${source.count} `;
