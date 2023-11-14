@@ -300,7 +300,23 @@ function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 	if(data) {
 		//TODO(Rennorb): should we actually reset this every time?
 		cyclePos = visibleIndex;
+		const ogContext = context;
 		context = specializeContextFromInlineAttribs(context, gw2Object);
+		if('flags' in data) {
+			//NOTE(Rennorb): This is here so we can look at underwater skills from a land context and vice versa.
+			if(context.underwater) {
+				if(!(data as API.Skill).flags.includes('UsableUnderWater') && (data as API.Skill).flags.includes('UsableLand')) {
+					if(context == ogContext) context = Object.assign({}, context);
+					context.underwater = false;
+				}
+			}
+			else if(!context.underwater) {
+				if(!(data as API.Skill).flags.includes('UsableLand') && (data as API.Skill).flags.includes('UsableUnderWater')) {
+					if(context == ogContext) context = Object.assign({}, context);
+					context.underwater = true;
+				}
+			}
+		}
 		tooltip.replaceChildren(...generateToolTipList(data, gw2Object, context, statSetId, stackSize));
 
 		tooltip.style.display = ''; //empty value resets actual value to use stylesheet
@@ -381,7 +397,7 @@ function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean,
 
 	const currentContextInformation = resolveTraitsAndOverrides(apiObject, context);
 
-	if('flags' in apiObject && apiObject.flags.includes('DisallowUnderwater')) {
+	if('flags' in apiObject && (apiObject as API.Item).flags.includes('DisallowUnderwater')) {
 		headerElements.push(newImg(ICONS.NO_UNDERWATER, 'iconsmall'));
 	}
 
@@ -656,7 +672,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 			if('bundle_skills' in currentObj) {
 				for(const subSkillId of currentObj.bundle_skills!) {
 					const subSkillInChain = APICache.storage.skills.get(subSkillId);
-					if(subSkillInChain) {
+					if(subSkillInChain && can_be_used_on_current_terrain(subSkillInChain, context)) {
 						objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode });
 					}
 				}
@@ -665,7 +681,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 				const type = gw2Object.getAttribute('type') || 'skill';
 				for(const subSkillId of currentObj.related_skills!) {
 					const subSkillInChain = APICache.storage.skills.get(subSkillId);
-					if(subSkillInChain && ((type != 'skill') || subSkillInChain.palettes.some(palette => VALID_CHAIN_PALETTES.includes(palette.type)))) {
+					if(subSkillInChain && can_be_used_on_current_terrain(subSkillInChain, context) && ((type != 'skill') || subSkillInChain.palettes.some(palette => VALID_CHAIN_PALETTES.includes(palette.type)))) {
 						objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode });
 					}
 				}
@@ -673,7 +689,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 			if('ambush_skills' in currentObj) {
 				for(const { id: subSkillId, spec } of currentObj.ambush_skills!) {
 					const subSkillInChain = APICache.storage.skills.get(subSkillId);
-					if(subSkillInChain && (!spec || context.character.specializations.includes(spec))) {
+					if(subSkillInChain && can_be_used_on_current_terrain(subSkillInChain, context) && (!spec || context.character.specializations.includes(spec))) {
 						objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode });
 						break; // only one ambush skill
 					}
@@ -701,6 +717,10 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 	));
 	tooltip.append(...tooltipChain);
 	return tooltipChain
+}
+
+function can_be_used_on_current_terrain(skill : API.Skill, context : Context) : boolean {
+	return context.underwater ? skill.flags.includes('UsableUnderWater') : skill.flags.includes('UsableLand')
 }
 
 export function findTraitedOverride(skill : API.Skill, context : Context) : API.Skill | undefined {
@@ -1084,6 +1104,7 @@ function isTwoHanded(type : API.WeaponDetailType) {
 //NOTE(Rennorb): stats are going to be processed separately
 export const DEFAULT_CONTEXT : Context = {
 	gameMode           : 'Pve',
+	underwater         : false,
 	targetArmor        : 2597,
 	character: {
 		level            : 80,

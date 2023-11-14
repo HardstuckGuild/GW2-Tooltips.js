@@ -15,6 +15,7 @@ type PartialR<T> = { [P in keyof T]?: (T[P] extends string | number | StatSource
 
 interface Context {
 	gameMode    : GameMode
+	underwater  : bool
 	targetArmor : number
 	character   : Character
 }

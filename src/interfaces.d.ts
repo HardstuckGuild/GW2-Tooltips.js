@@ -56,6 +56,7 @@ namespace API {
 		bundle_item?       : number
 		modifiers?         : Modifier[]
 		buff_type?         : 'Boon' | 'Buff' | 'Condition' | 'Finisher' | 'Food' | 'Guild' | 'Item' | 'Persistent' | 'Purchased' | 'Species' | 'Training' | 'Trait' | 'Transformation' | 'Utility' | 'Wvw' | 'BuffType16' | 'BuffType17' | 'Realtime'
+		flags              : ('AimIkEnabled' | 'AllowPlayerControl' | 'AnimateUpperBody' | 'AutoFollow' | 'BasicAttack' | 'BreakStun' | 'ClientCancelable' | 'ControlsTurret' | 'DecalAnchored' | 'DoNotReplaceEffect' | 'GroundFastCast' | 'GroundIgnoreLos' | 'GroundTargeted' | 'HideLeftHandWeapon' | 'HideRightHandWeapon' | 'IgnoreEvasionTypeExtreme' | 'IgnoreEvasionTypeFly' | 'IgnoreEvasionTypeHop' | 'IgnoreEvasionTypeSidestep' | 'Instant' | 'MultiHit' | 'NonCombat' | 'NotClientCancelable' | 'SkillFlag24' | 'RequiresTarget' | 'UsableAir' | 'UsableLand' | 'UsableOutOfCombat' | 'UsableUnderWater' | 'UsableWaterSurface' | 'NoTarget' | 'SkillFlag32')[]
 	}
 
 	type Fact = FactMap[keyof FactMap];

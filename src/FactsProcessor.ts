@@ -587,13 +587,13 @@ export const MISSING_BUFF : API.Skill = {
 	id         : 0,
 	name       : 'Missing Buff',
 	description: '<c=@warning>This Buff failed to load</c>',
-	categories : [], palettes   : [], modifiers  : [],
+	categories : [], palettes   : [], modifiers  : [], flags: [],
 }
 export const MISSING_SKILL : API.Skill = {
 	id         : 0,
 	name       : 'Missing Skill',
 	description: '<c=@warning>This Skill failed to load</c>',
-	categories : [], palettes   : [], modifiers  : [],
+	categories : [], palettes   : [], modifiers  : [], flags: [],
 }
 
 import { newElm, newImg, drawFractional, GW2Text2HTML, withUpToNDigits, mapLocale, joinWordList, fromHTML, n3, resolveInflections, formatDuration } from './TUtilsV2';
