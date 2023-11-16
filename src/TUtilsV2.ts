@@ -54,6 +54,10 @@ export function withUpToNDigits(x : number, digits : number) {
 	return str;
 }
 
+export function s(v : number) { return v >= 0 ? '+'+v : v }
+export function n3s(v : number) { return v >= 0 ? '+'+n3(v) : n3(v) }
+export function n3ss(v : number) { return v >= 0 ? '+ '+n3(v) : '- '+-n3(v) }
+
 //TODO(Rennorb) @cleanup @rename
 export function drawFractional(value : number, config : Config) {
 	if (!config.showPreciseAbilityTimings) {
