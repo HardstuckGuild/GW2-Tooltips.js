@@ -11,7 +11,7 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 	const allParts : { [k in BaseAttribute | ComputedAttribute]: { parts : HTMLElement[], sources : StatSource[] } } = { } as any;
 	const stage1Attributes : { [k in BaseAttribute | ComputedAttribute]: number } = { } as any;
 	const stage2Attributes : { [k in BaseAttribute | ComputedAttribute]: number } = { } as any;
-	const fakeCharacter = { level: context.character.level, stats: { values : stage1Attributes } };
+	let fakeAttributes = stage1Attributes;
 
 	for(const attribute of attributeOrder) {
 		const { baseAttribute, suffix, base, div } = getAttributeInformation(attribute, context.character);
@@ -47,7 +47,7 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 		//additive mods
 		let modValue = 0;
 		for(const source of sources.filter(s => !s.modifier.flags.includes('FormatPercent'))) {
-			const mod = calculateModifier(source.modifier, fakeCharacter) * source.count;
+			const mod = calculateModifier(source.modifier, context.character.level, fakeAttributes) * source.count;
 			modValue += mod;
 		
 			text = ` +${n3(mod)} from `;
@@ -66,7 +66,7 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 		let modValue = 0;
 		//conversion mods
 		for(const source of sources.filter(s => s.modifier.flags.includes('FormatPercent') && s.modifier.source_attribute)) {
-			const mod = calculateModifier(source.modifier, fakeCharacter) * source.count;
+			const mod = calculateModifier(source.modifier, context.character.level, fakeAttributes) * source.count;
 			modValue += Math.round(mod);
 			
 			let text = ` +${n3(mod)} (${n3(source.modifier.base_amount)}% of ${source.modifier.source_attribute}) from `;
@@ -77,7 +77,7 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 		stage2Attributes[attribute] = stage1Attributes[attribute] + modValue;
 	}
 
-	fakeCharacter.stats.values = stage2Attributes;
+	fakeAttributes = stage2Attributes;
 
 	for(const attribute of attributeOrder) {
 		const { suffix, cap } = getAttributeInformation(attribute, context.character);;
@@ -88,7 +88,7 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 		const { parts, sources } = allParts[attribute];
 		const displayMul = suffix ? 100 : 1;
 		for(const source of sources.filter(s => s.modifier.flags.includes('FormatPercent') && !s.modifier.source_attribute)) {
-			const mod = calculateModifier(source.modifier, fakeCharacter) * source.count / 100; //TODO(Rennorb) @cleanup
+			const mod = calculateModifier(source.modifier, context.character.level, fakeAttributes) * source.count / 100; //TODO(Rennorb) @cleanup
 			//NOTE(Rennorb): Having a suffix means the percentage based values should be additive, as this only applies for condition/boon duration, and crit chance/damage.
 			const toAdd = suffix ? mod : value * mod; 
 			value += toAdd;
@@ -180,8 +180,13 @@ function calculateBoonDuration(level : number, concentration : number) {
 }
 
 export function getAttributeValue(character : Character, attribute : keyof BaseAndComputedStats['values']) : number {
-	return character.statsWithWeapons[character.selectedWeaponSet].values[attribute];
+	return getActiveAttributes(character)[attribute];
 }
+
+export function getActiveAttributes(character : Character) : BaseAndComputedStats['values'] {
+	return character.statsWithWeapons[character.selectedWeaponSet].values;
+}
+
 export function sumUpModifiers(character : Character, attribute : keyof BaseAndComputedStats['sources']) : StatSource[] {
 	return [...(character.stats.sources[attribute] || []), ...(character.statsWithWeapons[character.selectedWeaponSet].sources[attribute] || [])];
 }

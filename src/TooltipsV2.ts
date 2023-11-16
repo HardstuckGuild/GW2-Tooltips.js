@@ -672,7 +672,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 			if('bundle_skills' in currentObj) {
 				for(const subSkillId of currentObj.bundle_skills!) {
 					const subSkillInChain = APICache.storage.skills.get(subSkillId);
-					if(subSkillInChain && can_be_used_on_current_terrain(subSkillInChain, context)) {
+					if(subSkillInChain && canBeUsedOnCurrentTerrain(subSkillInChain, context)) {
 						objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode });
 					}
 				}
@@ -681,7 +681,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 				const type = gw2Object.getAttribute('type') || 'skill';
 				for(const subSkillId of currentObj.related_skills!) {
 					const subSkillInChain = APICache.storage.skills.get(subSkillId);
-					if(subSkillInChain && can_be_used_on_current_terrain(subSkillInChain, context) && ((type != 'skill') || subSkillInChain.palettes.some(palette => VALID_CHAIN_PALETTES.includes(palette.type)))) {
+					if(subSkillInChain && canBeUsedOnCurrentTerrain(subSkillInChain, context) && ((type != 'skill') || subSkillInChain.palettes.some(palette => VALID_CHAIN_PALETTES.includes(palette.type)))) {
 						objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode });
 					}
 				}
@@ -689,7 +689,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 			if('ambush_skills' in currentObj) {
 				for(const { id: subSkillId, spec } of currentObj.ambush_skills!) {
 					const subSkillInChain = APICache.storage.skills.get(subSkillId);
-					if(subSkillInChain && can_be_used_on_current_terrain(subSkillInChain, context) && (!spec || context.character.specializations.includes(spec))) {
+					if(subSkillInChain && canBeUsedOnCurrentTerrain(subSkillInChain, context) && (!spec || context.character.specializations.includes(spec))) {
 						objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode });
 						break; // only one ambush skill
 					}
@@ -719,7 +719,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 	return tooltipChain
 }
 
-function can_be_used_on_current_terrain(skill : API.Skill, context : Context) : boolean {
+function canBeUsedOnCurrentTerrain(skill : API.Skill, context : Context) : boolean {
 	return context.underwater ? skill.flags.includes('UsableUnderWater') : skill.flags.includes('UsableLand')
 }
 
@@ -932,9 +932,10 @@ function generateUpgradeItemGroup(item : API.ItemUpgradeComponent, context : Con
 
 		else if(tier.modifiers) {
 			tier_wrap.style.flexDirection = "column";
+			const activeAttributes = getActiveAttributes(context.character);
 			for(const modifier of tier.modifiers) {
 				//TODO(Rennorb) @cleanup: unify this wth the buf fact processing
-				let modifierValue = calculateModifier(modifier, context.character);
+				let modifierValue = calculateModifier(modifier, context.character.level, activeAttributes);
 
 				let text;
 				if(modifier.flags.includes('FormatPercent')) {
@@ -973,6 +974,7 @@ function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute,
 
 		//NOTE(Rennorb): -1 because the cap is 200% for duration, but the displayed value is the _additional_ duration, so its a max of +100%.
 		const modCap = (getAttributeInformation(attribute, context.character).cap - 1) * 100;
+		const activeAttributes = getActiveAttributes(context.character);
 
 		for(const [effect_id, sources] of Object.entries(completeSources)) {
 			//NOTE(Rennorb): For simplicity of the remaining library we just eat the performance hit of iterating over the additional props here.
@@ -987,7 +989,7 @@ function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute,
 			let specificMod = value * 100;
 			let specificParts = [];
 			for(const { source, modifier, count } of sources) {
-				const mod = calculateModifier(modifier, context.character);
+				const mod = calculateModifier(modifier, context.character.level, activeAttributes);
 				specificParts.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character)))); //TODO(Rennorb) @cleanup: im not really happy with how this works right now. Storing html in the text is not what i like to do but it works for now. Multiple of this.
 				specificMod += mod;
 			}
@@ -1428,5 +1430,5 @@ import APICache from './APICache';
 import { MISSING_SKILL, calculateModifier, generateFact, generateFacts } from './FactsProcessor';
 import * as Collect from './Collect'; //TODO(Rennorb) @cleanup
 import { _legacy_transformEffectToSkillObject, inferItemUpgrades, inflateAttribute, inflateGenericIcon, inflateItem, inflateSkill, inflateSpecialization } from './Inflators'
-import { LUT_DEFENSE, LUT_POWER_MONSTER, LUT_POWER_PLAYER, getAttributeInformation, recomputeAttributesFromMods } from './CharacterAttributes'
+import { LUT_DEFENSE, LUT_POWER_MONSTER, LUT_POWER_PLAYER, getActiveAttributes, getAttributeInformation, recomputeAttributesFromMods } from './CharacterAttributes'
 

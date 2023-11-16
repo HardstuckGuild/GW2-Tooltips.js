@@ -1,11 +1,11 @@
 export function calculateModifier(
 	{ formula, base_amount, formula_param1: level_scaling, formula_param2, source_attribute } : API.Modifier,
-	{ level, stats: { values } } : { level : number, stats: { values : Character['stats']['values'] }},
+	level : number, stats : Character['stats']['values'],
 ) : number {
-	let { Power, ConditionDamage, HealingPower } = values;
+	let { Power, ConditionDamage, HealingPower } = stats;
 	if(source_attribute) {
 		//conversion mod
-		return values[source_attribute] * base_amount / 100;
+		return stats[source_attribute] * base_amount / 100;
 	}
 
 	//TODO(Rennorb): this is **screaming** tabledrive me
@@ -88,6 +88,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	let buffStackSize = 1;
 	let buffDuration = (fact as API.BuffFact).duration;
 	let defiance_break_per_s = fact.defiance_break;
+	let activeStats = getActiveAttributes(context.character);
 
 	const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact, duration : Milliseconds, valueMod : number  /* TODO(Rennorb): kindof a weird hack for now. maybe merge the two export functions? */) => {
 		let modsArray: string[] = []
@@ -106,9 +107,10 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				const modifier = relevantModifiers[i];
 
 				let entry = modsMap.get(modifier.id) || modsMap.set(modifier.id, { modifier: modifier, value: 0 }).get(modifier.id);
-				let value = calculateModifier(modifier, context.character);
-				if (modifier.source_attribute) {
-						value *= getAttributeValue(context.character, modifier.source_attribute);
+				let value = calculateModifier(modifier, context.character.level, activeStats);
+				if (modifier.source_attribute) { //TODO(Rennorb) @cleanup @correctness: is this still required?
+					console.log(`-- value before was ${value}, after is ${value * activeStats[modifier.source_attribute]}`); // @debug
+					value *= activeStats[modifier.source_attribute];
 				}
 
 				entry!.value += value;
@@ -184,7 +186,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			}
 
 			for(const source of sumUpModifiers(context.character, durationAttr)) {
-				let mod = calculateModifier(source.modifier, context.character) * source.count;
+				let mod = calculateModifier(source.modifier, context.character.level, activeStats) * source.count;
 				const innerSuffix = source.modifier.flags.includes('FormatPercent') ? '%' : '';
 				const displayMul = innerSuffix ? 100 : 1;
 				mod /= displayMul; //TODO(Rennorb) @cleanup
@@ -210,7 +212,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				detailStack.push(`base duration: ${n3(baseDuration / 1000)}s`);
 			let percentMod = 0;
 			for(const { source, modifier, count } of durModStack) {
-				const mod = calculateModifier(modifier, context.character);
+				const mod = calculateModifier(modifier, context.character.level, activeStats);
 				if(config.showFactComputationDetail)
 					detailStack.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${baseDuration / 1000 * mod / 100}s (${n3(mod)}%) from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character)))); //TODO(Rennorb) @cleanup: im not really happy with how this works right now. Storing html in the text is not what i like to do but it works for now. Multiple of this.
 				percentMod += mod;
@@ -234,10 +236,16 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 					detailStack.push('regeneration value mods:');
 				let percentMod = 0;
 				for(const { source, modifier, count } of valueModStack) {
-					const mod = calculateModifier(modifier, context.character);
-					if(config.showFactComputationDetail)
+					let mod = calculateModifier(modifier, context.character.level, activeStats);
+					if(modifier.source_attribute) mod *= 100; // @cleanup
+
+					if(config.showFactComputationDetail) {
+						const conversion = modifier.source_attribute
+							? `${n3(mod)}% from ${n3(modifier.base_amount)} * ${n3(activeStats[modifier.source_attribute])} ${mapLocale(modifier.source_attribute)}`
+							: `${n3(mod)}%`;
 						// TODO(Rennorb): @completeness: Show the amount this percent mod results in.
-						detailStack.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character))));
+						detailStack.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${conversion} from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character))));
+					}
 					percentMod += mod;
 				}
 				valueMod += percentMod / 100;
@@ -270,9 +278,15 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			if(fact.text?.includes('Heal')) { //TODO(Rennorb) @cleanup @correctness
 				let percentMod = 100;
 				for(const { source, modifier, count } of sumUpModifiers(context.character, 'HealEffectiveness')) {
-					const mod = calculateModifier(modifier, context.character);
-					if(config.showFactComputationDetail)
-						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod / 100 * value)} (${n3(mod)}%) from ${count > 1 ? `${count} `: ''}`, fromHTML(resolveInflections(source, count, context.character))));
+					let mod = calculateModifier(modifier, context.character.level, activeStats);
+					if(modifier.source_attribute) mod *= 100; // @cleanup
+
+					if(config.showFactComputationDetail) {
+						const conversion = modifier.source_attribute
+							? `${n3(mod)}% from ${n3(modifier.base_amount)} * ${n3(activeStats[modifier.source_attribute])} ${mapLocale(modifier.source_attribute)}`
+							: `${n3(mod)}%`;
+						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod / 100 * value)} (${conversion}) from ${count > 1 ? `${count} `: ''}`, fromHTML(resolveInflections(source, count, context.character))));
+					}
 					percentMod += mod;
 				}
 				value *= percentMod / 100;
@@ -337,7 +351,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 						lines.push(`${n3(value)} base value`);
 					let percentMod = 100;
 					for(const { source, modifier, count } of modifiers) {
-						const mod = calculateModifier(modifier, context.character);
+						const mod = calculateModifier(modifier, context.character.level, activeStats);
 						if(config.showFactComputationDetail)
 							lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character))));
 						percentMod += mod;
@@ -387,7 +401,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			if(modifiers.length) {
 				let percentMod = 100;
 				for(const { source, modifier, count } of modifiers) {
-					const mod = calculateModifier(modifier, context.character);
+					const mod = calculateModifier(modifier, context.character.level, activeStats);
 					if(config.showFactComputationDetail)
 						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character))));
 					percentMod += mod;
@@ -426,7 +440,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			if(modifiers.length) {
 				let percentMod = 100;
 				for(const { source, modifier, count } of modifiers) {
-					const mod = calculateModifier(modifier, context.character);
+					const mod = calculateModifier(modifier, context.character.level, activeStats);
 					if(config.showFactComputationDetail)
 						lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character))));
 					percentMod += mod;
@@ -453,7 +467,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 						lines.push(`${n3(buffDuration / 1000)}s base duration`);
 					let percentMod = 100;
 					for(const { source, modifier, count } of modifiers) {
-						const mod = calculateModifier(modifier, context.character);
+						const mod = calculateModifier(modifier, context.character.level, activeStats);
 						if(config.showFactComputationDetail)
 							lines.push(newElm('span.detail', `${mod > 0 ? '+' : ''}${n3(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character))));
 						percentMod += mod;
@@ -599,4 +613,4 @@ export const MISSING_SKILL : API.Skill = {
 import { newElm, newImg, drawFractional, GW2Text2HTML, withUpToNDigits, mapLocale, joinWordList, fromHTML, n3, resolveInflections, formatDuration } from './TUtilsV2';
 import APICache from './APICache';
 import { ICONS, config } from './TooltipsV2';
-import { getAttributeInformation, getAttributeValue, getBaseHealth, sumUpModifiers } from './CharacterAttributes';
+import { getActiveAttributes, getAttributeInformation, getAttributeValue, getBaseHealth, sumUpModifiers } from './CharacterAttributes';
