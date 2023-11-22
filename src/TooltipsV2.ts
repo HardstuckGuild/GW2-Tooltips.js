@@ -41,7 +41,10 @@ function _constructor() {
 
 	tooltip = newElm('div.tooltipWrapper')
 	tooltip.style.display = 'none';
-	document.body.appendChild(tooltip)
+	if(document.body)
+		document.body.appendChild(tooltip);
+	else
+		document.addEventListener('DOMContentLoaded', () => document.body.appendChild(tooltip));
 
 	const isMobile = /android|webos|iphone|ipad|ipod|blackberry|bb|playbook|mobile|windows phone|kindle|silk|opera mini/.test(navigator.userAgent.toLowerCase())
 	document.addEventListener('mousemove', event => {
@@ -230,11 +233,7 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 			}
 		}
 
-		gw2Object.addEventListener('mouseenter', (e) => showTooltipFor(e.target as HTMLElement));
-		gw2Object.addEventListener('mouseleave', () => {
-			tooltip.style.display   = 'none';
-			tooltip.style.transform = '';
-		});
+		attachMouseListeners(gw2Object);
 	}
 
 	if(_legacy_effectErrorStore.size) {
@@ -270,6 +269,14 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 	}));
 
 	return objectsToGet;	
+}
+
+export function attachMouseListeners(target : HTMLElement) {
+	target.addEventListener('mouseenter', (e) => showTooltipFor(e.target as HTMLElement));
+	target.addEventListener('mouseleave', () => {
+		tooltip.style.display   = 'none';
+		tooltip.style.transform = '';
+	});
 }
 
 function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
@@ -391,7 +398,7 @@ function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean,
 		headerElements.push(newImg(apiObject.icon));
 
 	headerElements.push(
-		newElm('teb', GW2Text2HTML(resolveInflections(apiObject.name, 1, context.character))),
+		newElm('teb', fromHTML(GW2Text2HTML(resolveInflections(apiObject.name, 1, context.character)))),
 		newElm('div.flexbox-fill'), // split, now the right side
 	);
 
