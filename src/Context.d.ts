@@ -13,6 +13,7 @@ type PartialContext = PartialR<Context>
 
 type PartialR<T> = { [P in keyof T]?: (T[P] extends string | number | StatSource | number[] ? T[P] : PartialR<T[P]>) | undefined; }
 
+//TODO(Rennorb): cloned marker in the context itself
 interface Context {
 	gameMode    : GameMode
 	underwater  : bool

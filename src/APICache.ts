@@ -7,6 +7,7 @@ export default class APICache {
 		'pvp/amulets'  : new Map<number, API.ItemAmulet>(),
 		specializations: new Map<number, OfficialAPI.Specialization>(),
 		itemstats      : new Map<number, API.AttributeSet>(),
+		palettes       : new Map<number, API.Palette>(),
 	}
 
 	static apiImpl : APIImplementation
@@ -26,6 +27,7 @@ export default class APICache {
 			'pvp/amulets'  : new Set<number>(),
 			specializations: new Set<number>(),
 			itemstats      : new Set<number>(),
+			palettes       : new Set<number>(),
 		}, { [endpoint]: new Set(initialIds) })
 
 		const findNextRelevantEndpoint = () => {
@@ -35,9 +37,11 @@ export default class APICache {
 			return undefined
 		}
 
+		let didCollectPalettes = false;
 		let currentEndpoint : Endpoints | undefined = endpoint
 		let i = 0
 		do {
+			if(currentEndpoint == 'palettes') didCollectPalettes = true;
 
 			const storageSet = this.storage[currentEndpoint]
 			//TODO(Rennorb): i really don't like this but it seems to be the most sensible way for now
@@ -55,8 +59,8 @@ export default class APICache {
 				for(const datum of response) {
 					if(storageSet.has(datum.id)) continue
 
-					storageSet.set(datum.id, datum as any) //TODO
-					this.collectConnectedIds({ endpoint: currentEndpoint, datum } as any, additionalIds)
+					storageSet.set(datum.id, datum as any)
+					this.collectConnectedIds(datum, additionalIds, didCollectPalettes)
 				}
 			}
 			catch(ex) {
@@ -65,13 +69,12 @@ export default class APICache {
 		} while((currentEndpoint = findNextRelevantEndpoint()) && i < 100)
 	}
 
-	//TODO(Rennorb) @cleanup
-	static collectConnectedIds({ endpoint, datum } : ConnectedIdDatum, connectedIdsStorage : { [k in Endpoints] : Set<number> }) : void {
+	static collectConnectedIds(datum : APIResponseTypeMap[keyof APIResponseTypeMap], connectedIdsStorage : { [k in Endpoints] : Set<number> }, didCollectPalettes : boolean) : void {
 		const addFacts = (facts : API.Fact[]) => {
 			for(const fact of facts) {
 				if(fact.type == 'Buff' || fact.type == 'BuffBrief') {
 					if(!this.storage.skills.has(fact.buff))
-						connectedIdsStorage.skills.add(fact.buff) // TODO(Rennorb) @correctness: are we sure about using the skill endpoint for this?
+						connectedIdsStorage.skills.add(fact.buff)
 				}
 				if(fact.type === 'PrefixedBuffBrief' || fact.type === 'PrefixedBuff') {
 					if(!this.storage.skills.has(fact.prefix))
@@ -82,18 +85,15 @@ export default class APICache {
 			}
 		}
 
-		if('palettes' in datum) {
-			for(const palette of datum.palettes) {
-				for(const slot of palette.slots) {
-					if(slot.profession && slot.next_chain && !this.storage.items.has(slot.next_chain)) {
-						connectedIdsStorage.skills.add(slot.next_chain)
-					}
-					//TODO(Rennorb) @perf: This could be improved if we knew if th corresponding class is actually set on the source object to even do the replacement that we fetch these for.
-					if(slot.traited_alternatives) for(const [_, skillId] of slot.traited_alternatives) {
-						if(!this.storage.skills.has(skillId))
-							connectedIdsStorage.skills.add(skillId);
-					}
-				}
+		if(!didCollectPalettes && 'palettes' in datum) for(const palette of datum.palettes) {
+			if(!this.storage.palettes.has(palette))
+				connectedIdsStorage.palettes.add(palette);
+		}
+
+		if('groups' in datum) for(const group of datum.groups) {
+			for(const candidate of group.candidates) {
+				if(!this.storage.skills.has(candidate.skill))
+					connectedIdsStorage.skills.add(candidate.skill);
 			}
 		}
 
@@ -157,30 +157,6 @@ export default class APICache {
 				connectedIdsStorage.skills.add(datum.applies_buff.buff);
 		}
 	}
-}
-
-//TODO(Rennorb) @cleanup: disgusting
-type ConnectedIdDatum = {
-	endpoint : 'skills'
-	datum    : APIResponseTypeMap['skills']
-} | {
-	endpoint : 'traits'
-	datum    : APIResponseTypeMap['traits']
-} | {
-	endpoint : 'items'
-	datum    : APIResponseTypeMap['items']
-} | {
-	endpoint : 'specializations'
-	datum    : APIResponseTypeMap['specializations']
-} | {
-	endpoint : 'pets'
-	datum    : APIResponseTypeMap['pets']
-} | {
-	endpoint : 'pvp/amulets'
-	datum    : APIResponseTypeMap['pvp/amulets']
-} | {
-	endpoint : 'itemstats'
-	datum    : APIResponseTypeMap['itemstats']
 }
 
 (window as any).APICache = APICache; //@debug

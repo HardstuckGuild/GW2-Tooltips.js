@@ -108,8 +108,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 				let entry = modsMap.get(modifier.id) || modsMap.set(modifier.id, { modifier: modifier, value: 0 }).get(modifier.id);
 				let value = calculateModifier(modifier, context.character.level, activeStats);
-				if (modifier.source_attribute) { //TODO(Rennorb) @cleanup @correctness: is this still required?
-					console.log(`-- value before was ${value}, after is ${value * activeStats[modifier.source_attribute]}`); // @debug
+				if (modifier.source_attribute) { //TODO(Rennorb) @cleanup 'force of will'
 					value *= activeStats[modifier.source_attribute];
 				}
 

@@ -49,7 +49,7 @@ namespace API {
 		description_brief? : string
 		icon?              : string | number // TODO: move to using numbers
 		categories         : any[]
-		palettes           : Palette[]
+		palettes           : number[]
 		related_skills?    : number[]
 		ambush_skills?     : { id: number, spec? : number }[]
 		bundle_skills?     : number[]
@@ -71,18 +71,32 @@ namespace API {
 		id          : number
 		type        : 'Standard' | 'Toolbelt' | 'Bundle' | 'Equipment' | 'Heal' | 'Elite' | 'Profession' | 'Monster' | 'Transformation' | 'Pet'
 		weapon_type?: 'Standard' | 'BundleLarge' | Weapons1H | Weapons2H | WeaponsAquatic
-		slots       : Slot[]
+		groups      : SlotGroup[]
 	}
 
-	interface Slot {
-		profession?           : Profession
-		slot                  : `${'Main'|'Offhand'}${1|2|3|4|5}` | `Offhand${1|2}`
+	interface SlotGroup {
+		profession? : Profession
+		slot        : `Main${1|2|3}` | `Offhand${1|2}`
 			| 'Heal' | 'Standard' | 'Elite'
-			| 'Pet' | `Transformation${1|2|3|4|5}`
-		prev_chain?           : number
-		next_chain?           : number
-		traited_alternatives? : [number, number][]
+			| 'Pet' | `Transformation${1|2|3|4|5|6|7|8|9}`
+		candidates  : SkillInfo[]
 	}
+
+	interface SkillInfo {
+		skill               : number
+		min_level?          : number
+		usability           : ('UsableAir' | 'UsableLand' | 'UsableUnderWater' | 'UsableWaterSurface')[]
+		weapon_mainhand?    : 'Standard' | 'BundleLarge' | Weapons1H | Weapons2H | WeaponsAquatic
+		weapon_offhand?     : 'Standard' | 'BundleLarge' | Weapons1H
+		profession_state?   : ProfessionState
+		profession_state_2? : ProfessionState
+		specialization?     : number
+		trait?              : number
+		buff?               : number
+		previous_chain_skill_index? : number
+	}
+
+	type ProfessionState = 'todo';
 
 	interface ModifierDescriptionOverride {
 		profession  : Profession
@@ -404,6 +418,7 @@ type APIResponseTypeMap = {
 	pets           : API.Pet;
 	'pvp/amulets'  : API.ItemAmulet;
 	itemstats      : API.AttributeSet;
+	palettes       : API.Palette;
 }
 
 type Endpoints = keyof APIResponseTypeMap;

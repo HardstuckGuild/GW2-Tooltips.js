@@ -8,7 +8,7 @@ export default {
 		name: 'GW2TooltipsV2',
 		file: 'out/tooltips.min.js',
 		format: 'iife',
-		plugins: [ terser() ],
+		plugins: [ /* terser() */ ],
 		sourcemap: true,
 	}]
 }

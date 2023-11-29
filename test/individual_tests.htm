@@ -6,6 +6,12 @@
 <script>
 	var GW2TooltipsConfig = {
 		apiImpl: (APIs) => new APIs.FakeAPI(),
+		autoCollectRuneCounts           : false,
+		autoCollectStatSources          : false,
+		autoCollectSelectedTraits       : false,
+		autoInferEquipmentUpgrades      : false,
+		autoRecomputeCharacterAttributes: false,
+		autoInferWeaponSetAssociation   : false,
 	}
 	var GW2TooltipsContext = [{
 		gameMode: 'Pve',
