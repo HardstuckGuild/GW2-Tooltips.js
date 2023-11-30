@@ -340,70 +340,8 @@ function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 	}
 }
 
-//TODO(Rennorb): this is neither complete, nor reliable
-//TODO(Rennorb): context
-function getSlotName(skill : API.Skill) : string | undefined {
-	let skillSlot;
-
-	for(const pid of skill.palettes) {
-		const palette = APICache.storage.palettes.get(pid);
-		if(!palette) {
-			console.warn(`[gw2-tooltips] [slot-name] Palette #${pid} is missing from the cache. The query was caused by `, skill);
-			continue;
-		}
-
-		for(const { slot, candidates } of palette.groups) {
-			if(!candidates.some(c => c.skill == skill.id)) continue;
-
-			switch (palette.type) {
-				case 'Equipment':
-				case 'Bundle':
-					//NOTE(Rennorb): mech skills are part pet part equipment skills...
-					//TODO(Rennorb): Figure out a good way to get the actual slot name for that. Also look at actual pets.
-					if(palette.weapon_type || palette.type == 'Bundle') {
-						//TODO(Rennorb) @cleanup: move this to the api side
-						skillSlot = slot.replace(/(Offhand|Main)(\d)/, (_, hand, digit) => {
-							if(hand == 'Offhand') {
-								digit = digit === '1' ? '4' : '5'
-							}
-							//NOTE(Rennorb): the 'Bundle' fallback here is required for things like the guardian tome skills, as those are technically bundles.
-							return `${palette.weapon_type ? mapLocale(palette.weapon_type) : 'Bundle'} ${digit}`
-						});
-					}
-					break
-
-				case 'Standard':
-					if(slot === 'Standard') {
-						skillSlot = 'Utility'
-					}
-					break
-
-				case 'Heal':
-				case 'Toolbelt':
-				case 'Elite':
-					skillSlot = palette.type;
-					break;
-
-				case 'Pet':
-				case 'Profession':
-				case 'Transformation':
-					skillSlot = slot.replace(/(\S+?)(\d)/, "$1 $2");
-					break;
-
-				case 'Monster':
-					break;
-
-				default:
-					console.error(`[gw2-tooltips] [tooltip engine] unknown palette type '${palette.type}' for skill '${skill.name}'`)
-			}
-		}
-	}
-	
-	return skillSlot;
-}
-
 // TODO(Rennorb) @cleanup: split this into the inflator system aswell. its getting to convoluted already
-function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean, iconMode : IconRenderMode, context : Context, weaponSet? : number) : HTMLElement {
+function generateToolTip(apiObject : SupportedTTTypes, slotName : string | undefined, notCollapsable : boolean, iconMode : IconRenderMode, context : Context, weaponSet? : number) : HTMLElement {
 	const headerElements = [];
 
 	if(iconMode == IconRenderMode.SHOW || (iconMode == IconRenderMode.FILTER_DEV_ICONS && !IsDevIcon(apiObject.icon as string | undefined)))
@@ -471,10 +409,6 @@ function generateToolTip(apiObject : SupportedTTTypes, notCollapsable : boolean,
 
 	const secondHeaderRow = [];
 	{
-		//TODO(Rennorb): slots stuff might not be doable serverside since the server is missing context. this is at least a case of @cleanup
-		// use the new palette stuff
-		let slotName = ('slot' in apiObject && apiObject.slot) || ('palettes' in apiObject && getSlotName(apiObject));
-		if('specialization' in apiObject) slotName = (APICache.storage.specializations.get(apiObject.specialization!)?.name || apiObject.specialization!) + ' - ' +  slotName;
 		if(slotName) secondHeaderRow.push(newElm('tes', `( ${slotName} )`));
 		if(weaponSet !== undefined) secondHeaderRow.push(newElm('tes', `( Weapon Set ${weaponSet + 1} )`));
 	}
@@ -661,49 +595,30 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 	//TODO(Rennorb) @cleanup @stability
 	else if(initialAPIObject.name.includes('Relic[s] of')) subiconRenderMode = IconRenderMode.HIDE_ICON;
 
-	const objectChain : { obj : SupportedTTTypes, notCollapsable : boolean, iconMode : IconRenderMode }[] = []
+	const tooltipChain : HTMLElement[] = []
 	const adjustTraitedSkillIds = gw2Object.classList.contains('auto-transform');
+	let weaponSet : number | undefined = +String(gw2Object.getAttribute('weaponSet')); if(isNaN(weaponSet)) weaponSet = undefined;
+	let palette, group, slot : string | undefined = undefined;
 
-	{
-		if('palettes' in initialAPIObject) {
-			//TODO(Rennorb): cleanup is this necessary? The root element already gets replaced automatically. It would be if we have skills where some skill in the chain needs to be replaced. 
-			if(adjustTraitedSkillIds) {
-				const replacementSkill = findTraitedOverride(initialAPIObject, context);
-				if(replacementSkill) initialAPIObject = replacementSkill;
-			}
+	if('palettes' in initialAPIObject) {
+		//TODO(Rennorb): cleanup is this necessary? The root element already gets replaced automatically. It would be if we have skills where some skill in the chain needs to be replaced. 
+		if(adjustTraitedSkillIds) {
+			const replacementSkill = findTraitedOverride(initialAPIObject, context);
+			if(replacementSkill) initialAPIObject = replacementSkill;
+		}
 
-			//find skillchain
-			let group, i;
-			[group, i, context] = findMostLikelyGroupAndContext(initialAPIObject, context);
-			if(group) {
-				let candidate = group.candidates[i];
+		//find skillchain
+		let i;
+		[palette, group, i, context] = guessGroupAndContext(initialAPIObject, context);
+		if(group) {
+			slot = refineSlotName(palette!, group.slot);
+			let candidate = group.candidates[i];
 
-				//in case we catch a chain in the middle
-				const insertAtIndex = objectChain.length;
-				while(candidate.previous_chain_skill_index) {
-					const otherCandidate = group.candidates[candidate.previous_chain_skill_index];
-					if(!canBeSelected(otherCandidate, context)) break;
-
-					let skill = APICache.storage.skills.get(otherCandidate.skill);
-					if(!skill) {
-						console.warn(`[gw2-tooltips] Chain skill #${otherCandidate.skill} is missing from the cache. The query was caused by `, gw2Object);
-						skill = MISSING_SKILL;
-					}
-
-					objectChain.splice(insertAtIndex, 0, { obj: skill, notCollapsable: false, iconMode: subiconRenderMode });
-
-					candidate = otherCandidate;
-				}
-			}
-
-			//now ourself
-			objectChain.push({ obj: initialAPIObject, notCollapsable: false, iconMode: IconRenderMode.SHOW });
-
-			//remaining chain
-			for(let j = 0; j < i; j++) {
-				const otherCandidate = group.candidates[j];
-				if(otherCandidate.previous_chain_skill_index != i) continue;
-				if(!canBeSelected(otherCandidate, context)) continue;
+			//in case we catch a chain in the middle
+			const insertAtIndex = tooltipChain.length;
+			while(candidate.previous_chain_skill_index) {
+				const otherCandidate = group.candidates[candidate.previous_chain_skill_index];
+				if(!canBeSelected(otherCandidate, context)) break;
 
 				let skill = APICache.storage.skills.get(otherCandidate.skill);
 				if(!skill) {
@@ -711,68 +626,114 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 					skill = MISSING_SKILL;
 				}
 
-				objectChain.push({ obj: skill, notCollapsable: false, iconMode: subiconRenderMode });
+				tooltipChain.splice(insertAtIndex, 0, generateToolTip(skill, slot, false, IconRenderMode.SHOW, context, weaponSet));
 
-				i = j;
-				j = -1;
+				candidate = otherCandidate;
 			}
+		}
+
+		//now ourself
+		tooltipChain.push(generateToolTip(initialAPIObject, slot, false, IconRenderMode.SHOW, context, weaponSet));
+
+		//remaining chain
+		for(let j = 0; j < i; j++) {
+			const otherCandidate = group!.candidates[j];
+			if(otherCandidate.previous_chain_skill_index != i) continue;
+			if(!canBeSelected(otherCandidate, context)) continue;
+
+			let skill = APICache.storage.skills.get(otherCandidate.skill);
+			if(!skill) {
+				console.warn(`[gw2-tooltips] Chain skill #${otherCandidate.skill} is missing from the cache. The query was caused by `, gw2Object);
+				skill = MISSING_SKILL;
+			}
+
+			tooltipChain.push(generateToolTip(skill, slot, false, IconRenderMode.SHOW, context, weaponSet));
+
+			i = j;
+			j = -1;
+		}
+	}
+	else {
+		if('type' in initialAPIObject) {
+			tooltipChain.push(generateItemTooltip(initialAPIObject, context, gw2Object, statSetId, stackSize));
 		}
 		else {
-			objectChain.push({ obj: initialAPIObject, notCollapsable: false, iconMode: IconRenderMode.SHOW })
-		}
-
-		if('bundle_skills' in initialAPIObject) {
-			for(const subSkillId of initialAPIObject.bundle_skills!) {
-				const subSkillInChain = APICache.storage.skills.get(subSkillId);
-				if(subSkillInChain && canBeUsedOnCurrentTerrain(subSkillInChain, context)) {
-					objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode });
-				}
+			let slotName = undefined;
+			if('slot' in initialAPIObject) {
+				slotName = initialAPIObject.slot
+				if('specialization' in initialAPIObject) (APICache.storage.specializations.get(initialAPIObject.specialization!)?.name || initialAPIObject.specialization!) + ' - ' + slotName;
 			}
-		}
-		if('related_skills' in initialAPIObject) {
-			const type = gw2Object.getAttribute('type') || 'skill';
-			for(const subSkillId of initialAPIObject.related_skills!) {
-				const subSkillInChain = APICache.storage.skills.get(subSkillId);
-				if(subSkillInChain && canBeUsedOnCurrentTerrain(subSkillInChain, context) && ((type != 'skill') || subSkillInChain.palettes.some(pid => {
-					const palette = APICache.storage.palettes.get(pid);
-					return palette && VALID_CHAIN_PALETTES.includes(palette.type);
-				}))) {
-					objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode });
-				}
-			}
-		}
-		if('ambush_skills' in initialAPIObject) {
-			for(const { id: subSkillId, spec } of initialAPIObject.ambush_skills!) {
-				const subSkillInChain = APICache.storage.skills.get(subSkillId);
-				if(subSkillInChain && canBeUsedOnCurrentTerrain(subSkillInChain, context) && (!spec || context.character.specializations.includes(spec))) {
-					objectChain.push({ obj: subSkillInChain, notCollapsable: false, iconMode: subiconRenderMode });
-					break; // only one ambush skill
-				}
-			}
-		}
-
-		//pet skills
-		if('skills' in initialAPIObject) for(const petSkillId of initialAPIObject.skills) {
-			let petSkill = APICache.storage.skills.get(petSkillId);
-			if(!petSkill) {
-				console.warn(`[gw2-tooltips] pet skill #${petSkillId} is missing from the cache. The query was caused by `, gw2Object);
-				petSkill = MISSING_SKILL;
-			}
-			objectChain.push({ obj: petSkill, notCollapsable: true, iconMode: subiconRenderMode })
+			tooltipChain.push(generateToolTip(initialAPIObject, slotName, false, IconRenderMode.SHOW, context, weaponSet));
 		}
 	}
 
-	let weaponSet : number | undefined = +String(gw2Object.getAttribute('weaponSet')); if(isNaN(weaponSet)) weaponSet = undefined;
+	if('bundle_skills' in initialAPIObject) {
+		for(const subSkillId of initialAPIObject.bundle_skills!) {
+			const subSkillInChain = APICache.storage.skills.get(subSkillId);
+			if(subSkillInChain && canBeUsedOnCurrentTerrain(subSkillInChain, context)) {
+				const [palette, group] = guessGroupAndContext(subSkillInChain, context); //@perf
+				tooltipChain.push(generateToolTip(subSkillInChain, refineSlotName(palette!, group?.slot), false, IconRenderMode.SHOW, context, weaponSet));
+			}
+		}
+	}
+	if('related_skills' in initialAPIObject) {
+		const type = gw2Object.getAttribute('type') || 'skill';
+		for(const subSkillId of initialAPIObject.related_skills!) {
+			const subSkillInChain = APICache.storage.skills.get(subSkillId);
+			if(subSkillInChain && canBeUsedOnCurrentTerrain(subSkillInChain, context) && ((type != 'skill') || subSkillInChain.palettes.some(pid => {
+				const palette = APICache.storage.palettes.get(pid);
+				return palette && VALID_CHAIN_PALETTES.includes(palette.type);
+			}))) {
+				const [palette, group] = guessGroupAndContext(subSkillInChain, context); //@perf
+				tooltipChain.push(generateToolTip(subSkillInChain, refineSlotName(palette!, group?.slot), false, subiconRenderMode, context, weaponSet));
+			}
+		}
+	}
+	if('ambush_skills' in initialAPIObject) {
+		for(const { id: subSkillId, spec } of initialAPIObject.ambush_skills!) {
+			const subSkillInChain = APICache.storage.skills.get(subSkillId);
+			if(subSkillInChain && canBeUsedOnCurrentTerrain(subSkillInChain, context) && (!spec || context.character.specializations.includes(spec))) {
+				if(!slot) {
+					[palette, group] = guessGroupAndContext(subSkillInChain, context);
+					slot = refineSlotName(palette!, group?.slot);
+				}
+				tooltipChain.push(generateToolTip(subSkillInChain, slot, false, subiconRenderMode, context, weaponSet));
+				break; // only one ambush skill
+			}
+		}
+	}
 
-	const tooltipChain = objectChain.map(({obj, notCollapsable, iconMode}) => (
-		('type' in obj) ? generateItemTooltip(obj, context, gw2Object, statSetId, stackSize) : generateToolTip(obj, notCollapsable, iconMode, context, weaponSet)
-	));
+	//pet skills
+	if('skills' in initialAPIObject) for(const petSkillId of initialAPIObject.skills) {
+		let petSkill = APICache.storage.skills.get(petSkillId);
+		if(!petSkill) {
+			console.warn(`[gw2-tooltips] pet skill #${petSkillId} is missing from the cache. The query was caused by `, gw2Object);
+			petSkill = MISSING_SKILL;
+		}
+		const [palette, group] = guessGroupAndContext(petSkill, context);
+		tooltipChain.push(generateToolTip(petSkill, refineSlotName(palette!, group?.slot), true, subiconRenderMode, context, weaponSet));
+	}
+
 	tooltip.append(...tooltipChain);
 	return tooltipChain
 }
 
-function findMostLikelyGroupAndContext(skill : API.Skill, context : Context) : [API.SlotGroup, number, Context] {
-	let fallback : [API.SlotGroup, number, Context] | undefined = undefined;
+function refineSlotName(palette : API.Palette, slot : string | undefined) : string | undefined {
+	if(!slot) return undefined;
+
+	if(palette.type == 'Bundle' && slot.includes('_')) {
+		return 'Bundle ' + slot.substring(slot.lastIndexOf('_') + 1);
+	}
+
+	if(slot.startsWith('Weapon') && palette.weapon_type) {
+		return mapLocale(palette.weapon_type) + ' ' + slot.substring(slot.lastIndexOf('_') + 1);
+	}
+
+	return slot.replace(/(\S+?)_(\d)/, "$1 $2");
+}
+
+function guessGroupAndContext(skill : API.Skill, context : Context) : [API.Palette, API.SlotGroup, number, Context] | [undefined, undefined, -1, Context] {
+	let fallback : [API.Palette, API.SlotGroup, number, Context] | undefined = undefined;
 
 	for(const pid of skill.palettes) {
 		const palette = APICache.storage.palettes.get(pid);
@@ -788,15 +749,15 @@ function findMostLikelyGroupAndContext(skill : API.Skill, context : Context) : [
 			for(const [i, candidate] of group.candidates.entries()) {
 				if(candidate.skill != skill.id) continue;
 				// track the first match as a fallback
-				if(!fallback) fallback = [group, i, context];
+				if(!fallback) fallback = [palette, group, i, context];
 				
-				if(canBeSelected(candidate, context)) return [group, i, context];
+				if(canBeSelected(candidate, context)) return [palette, group, i, context];
 			}
 		}
 	}
 
 	if(fallback) {
-		fallback[2] = transmuteContext(fallback[0].candidates[fallback[1]], context);
+		fallback[3] = transmuteContext(fallback[1].candidates[fallback[2]], context);
 		return fallback;
 	}
 
@@ -808,7 +769,7 @@ function findMostLikelyGroupAndContext(skill : API.Skill, context : Context) : [
 
 		for(const group of palette.groups) {
 			for(const [i, candidate] of group.candidates.entries()) {
-				if(candidate.skill == skill.id) return [group, i, transmuteContext(candidate, context)];
+				if(candidate.skill == skill.id) return [palette, group, i, transmuteContext(candidate, context)];
 			}
 		}
 	}
@@ -820,12 +781,12 @@ function findMostLikelyGroupAndContext(skill : API.Skill, context : Context) : [
 
 		for(const group of palette.groups) {
 			for(const [i, candidate] of group.candidates.entries()) {
-				if(candidate.skill == skill.id) return [group, i, transmuteContext(candidate, context)];
+				if(candidate.skill == skill.id) return [palette, group, i, transmuteContext(candidate, context)];
 			}
 		}
 	}
 
-	return [undefined!, -1, context];
+	return [undefined, undefined, -1, context];
 }
 
 function transmuteContext(targetCandidate : API.SkillInfo, context : Context, clone = true) : Context {
@@ -1465,8 +1426,8 @@ if(config.autoInitialize) {
 
 							skillIds.push(skill.id);
 
-							let group, i;
-							[group, i, context] = findMostLikelyGroupAndContext(skill, context);
+							let palette, group, i;
+							[palette, group, i, context] = guessGroupAndContext(skill, context);
 							if(group) {
 								let candidate = group.candidates[i];
 				
