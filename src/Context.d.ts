@@ -78,4 +78,6 @@ interface Config {
 
 	// for replacing the api source. Usually not relevant except for debugging
 	apiImpl?                   : (apis : any) => APIImplementation
+	// path where the worker script is hosted
+	workerPath?                : string
 }

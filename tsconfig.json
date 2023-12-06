@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"target": "ES2019",
-		"lib": ["DOM", "DOM.Iterable", "ES2017", "ES2021.String"],
+		"lib": ["DOM", "DOM.Iterable", "ES2017", "ES2021.String", "WebWorker"],
 		
 		"rootDir": "./src",
 		"outDir": "./out",

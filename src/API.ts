@@ -4,7 +4,7 @@
 //TODO(Rennorb): readme
 
 export class FakeAPI implements APIImplementation {
-	hsApi    = new HSAPI('http://127.0.0.1:3000');
+	hsApi    = new HSAPI('http://localhost:3000');
 	fallback = new HSAPI(); // since we now have a public api running we can jsut fall back to that
 
 	async bulkRequest<T extends keyof APIResponseTypeMap>(endpoint: T, ids: number[]): Promise<APIResponseTypeMap[T][]> {
@@ -18,7 +18,10 @@ export class FakeAPI implements APIImplementation {
 	}
 }
 
+export const enum CACHE_WORKER_HEADER { VALUE = 'X-TTJS-Worker-Cached' }
+
 export class HSAPI implements APIImplementation {
+	static WORKER_CACHE_INIT = { headers: { [CACHE_WORKER_HEADER.VALUE]: '1' } };
 	baseUrl : string;
 
 	public constructor(baseUrl : string = 'https://api-v0.hardstuck.gg') {
@@ -26,6 +29,6 @@ export class HSAPI implements APIImplementation {
 	}
 
 	async bulkRequest<T extends keyof APIResponseTypeMap>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]> {
-		return fetch(`${this.baseUrl}/${endpoint}?ids=${ids.join(',')}`).then(r => r.json());
+		return fetch(`${this.baseUrl}/${endpoint}?ids=${ids.join(',')}`, HSAPI.WORKER_CACHE_INIT).then(r => r.json());
 	}
 }

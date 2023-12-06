@@ -39,6 +39,17 @@ function _constructor() {
 	config = Object.assign({}, DEFAULT_CONFIG, window.GW2TooltipsConfig)
 	if(config.apiImpl) APICache.apiImpl = config.apiImpl(APIs);
 
+	
+	if("serviceWorker" in navigator && config.workerPath) {
+		//TODO(Rennorb): options, apparently server needs to set header for broader scope. `Service-Worker-Allowed : /`
+		// https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/register
+		// https://w3c.github.io/ServiceWorker/#service-worker-allowed
+		navigator.serviceWorker.register(config.workerPath, { scope: '/' }).then(
+			(s) => console.log('[gw2-tooltips] [worker] APICache ServiceWorker registered.', s),
+			(e) => console.error(`[gw2-tooltips] [worker] Failed to register APICache ServiceWorker: ${e}`)
+		);
+	}
+
 	tooltip = newElm('div.tooltipWrapper')
 	tooltip.style.display = 'none';
 	if(document.body)

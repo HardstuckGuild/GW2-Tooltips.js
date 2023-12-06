@@ -13,7 +13,7 @@ namespace LegacyCompat {
 	type ObjectType = 'skill' | 'trait' | 'item' | 'specialization' | 'pet' | 'pvp/amulet' | 'specialization' | 'effect';
 }
 
-type V2ObjectType = LegacyCompat.ObjectType | 'attribute';
+type V2ObjectType = LegacyCompat.ObjectType | 'attribute'; //TODO @cleanup
 
 namespace OfficialAPI {
 	type AmuletStats = 'AgonyResistance' | 'BoonDuration' | 'ConditionDamage' | 'ConditionDuration' | 'CritDamage' | 'Healing' | 'Power' | 'Precision' | 'Toughness' | 'Vitality';
