@@ -1,3 +1,4 @@
+//TODO(Rennorb): Invalidation. The data updates and this wont get flushed. basically not usable in prod in this current state.
 let loaded = false;
 let database : IDBDatabase | undefined = undefined;
 

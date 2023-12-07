@@ -15,30 +15,6 @@ namespace LegacyCompat {
 
 type V2ObjectType = LegacyCompat.ObjectType | 'attribute'; //TODO @cleanup
 
-namespace OfficialAPI {
-	type AmuletStats = 'AgonyResistance' | 'BoonDuration' | 'ConditionDamage' | 'ConditionDuration' | 'CritDamage' | 'Healing' | 'Power' | 'Precision' | 'Toughness' | 'Vitality';
-	type Amulet = {
-		id         : number
-		name       : string
-		icon       : string
-		attributes : { [k in AmuletStats] : number }
-	}
-
-	type Specialization = {
-		id         : number
-		name       : string
-		icon       : string
-		background : string
-	}
-
-	type Pet = {
-		id          : number
-		name        : string
-		icon        : string
-		description : string
-		skills      : { id : number }[]
-	}
-}
 
 namespace API {
 	type Skill = ContextInformation & {
@@ -67,22 +43,22 @@ namespace API {
 	type Weapons2H      = 'Greatsword' | 'Hammer' | 'Staff' | 'BowLong' | 'Rifle';
 	type WeaponsAquatic = 'Spear' | 'Trident' | 'Speargun';
 
-	interface Palette {
+	type SkillSlot = `Weapon_${1|2|3|4|5}` | 'Heal' | 'Utility' | 'Elite' | 'Pet' | `Profession_${1|2|3|4|5}` | `Transformation_${1|2|3|4|5|6|7|8|9}` | 'Gathering' | 'MountSummon' | 'Reaction'
+
+	type Palette = {
 		id          : number
 		type        : 'Standard' | 'Toolbelt' | 'Bundle' | 'Equipment' | 'Heal' | 'Elite' | 'Profession' | 'Monster' | 'Transformation' | 'Pet'
 		weapon_type?: 'Standard' | 'BundleLarge' | Weapons1H | Weapons2H | WeaponsAquatic
 		groups      : SlotGroup[]
 	}
 
-	interface SlotGroup {
-		profession? : Profession
-		slot        : `Main${1|2|3}` | `Offhand${1|2}`
-			| 'Heal' | 'Standard' | 'Elite'
-			| 'Pet' | `Transformation${1|2|3|4|5|6|7|8|9}`
+	type SlotGroup = {
+		profession? : ProfessionId
+		slot        : SkillSlot
 		candidates  : SkillInfo[]
 	}
 
-	interface SkillInfo {
+	type SkillInfo = {
 		skill               : number
 		min_level?          : number
 		usability           : ('UsableAir' | 'UsableLand' | 'UsableUnderWater' | 'UsableWaterSurface')[]
@@ -98,12 +74,12 @@ namespace API {
 
 	type ProfessionState = 'todo';
 
-	interface ModifierDescriptionOverride {
+	type ModifierDescriptionOverride = {
 		profession  : Profession
 		description : string
 	}
 
-	interface Modifier {
+	type Modifier = {
 		id                         : number
 		base_amount                : number
 		formula_param1             : number
@@ -122,7 +98,7 @@ namespace API {
 	}
 
 
-	interface BasicFact<Type extends keyof FactMap> {
+	type BasicFact<Type extends keyof FactMap> = {
 		type            : Type
 		icon            : string
 		text?           : string
@@ -146,39 +122,39 @@ namespace API {
 		attribute_multiplier : number
 	}
 
-	interface AttributeAdjustFact extends BasicFact<'AttributeAdjust'> {
+	type AttributeAdjustFact = BasicFact<'AttributeAdjust'> & {
 		range  : number[]
 		target : BaseAttribute
 	}
 
-	interface BuffFact extends BasicFact<'Buff'> {
+	type BuffFact = BasicFact<'Buff'> & {
 		buff        : number
 		apply_count : number
 		duration    : Milliseconds
 	}
 
-	interface BuffBriefFact extends BasicFact<'BuffBrief'> {
+	type BuffBriefFact = BasicFact<'BuffBrief'> & {
 		buff  : number
 	}
 
-	interface DistanceFact extends BasicFact<'Distance'> {
+	type DistanceFact = BasicFact<'Distance'> & {
 		distance : number
 	}
 
-	interface NumberFact extends BasicFact<'Number'> {
+	type NumberFact = BasicFact<'Number'> & {
 		value : number
 	}
 
-	interface PercentFact extends BasicFact<'Percent' | 'PercentDamage' | 'PercentHealth' | 'PercentLifeForceCost' | 'PercentLifeForceGain'> {
+	type PercentFact = BasicFact<'Percent' | 'PercentDamage' | 'PercentHealth' | 'PercentLifeForceCost' | 'PercentLifeForceGain'> & {
 		percent : number
 	}
 
-	interface DamageFact extends BasicFact<'Damage'> {
+	type DamageFact = BasicFact<'Damage'> & {
 		hit_count      : number
 		dmg_multiplier : number
 	}
 
-	interface TimeFact extends BasicFact<'Time'> {
+	type TimeFact = BasicFact<'Time'> & {
 		duration : Milliseconds;
 	}
 
@@ -186,45 +162,45 @@ namespace API {
 		'Air' | 'Dark' | 'Fire' | 'Ice' | 'Light' |
 		'Lightning' | 'Poison' | 'Smoke' | 'Ethereal' | 'Water'
 
-	interface ComboFieldFact extends BasicFact<'ComboField'> {
+	type ComboFieldFact = BasicFact<'ComboField'> & {
 		field_type : ComboFieldType
 	}
 
 	type ComboFinisherType = 'Blast' | 'Leap'  | 'Projectile' | 'Projectile20' | 'Whirl'
 
-	interface ComboFinisherFact extends BasicFact<'ComboFinisher'> {
+	type ComboFinisherFact = BasicFact<'ComboFinisher'> & {
 		finisher_type : ComboFinisherType
 	}
 
-	interface AttributeConversionFact extends BasicFact<'AttributeConversion'> {
+	type AttributeConversionFact = BasicFact<'AttributeConversion'> & {
 		source  : BaseAttribute
 		target  : BaseAttribute
 		percent : number
 	}
 
-	interface NoDataFact extends BasicFact<'NoData'> {
+	type NoDataFact = BasicFact<'NoData'> & {
 		text : never
 	}
 
-	interface PrefixedBuffFact extends BasicFact<'PrefixedBuff'>{
+	type PrefixedBuffFact = BasicFact<'PrefixedBuff'> & {
 		apply_count : number
 		buff        : number
 		prefix      : number
 		duration    : Milliseconds
 	}
 
-	interface PrefixedBuffBriefFact extends BasicFact<'PrefixedBuffBrief'>{
+	type PrefixedBuffBriefFact = BasicFact<'PrefixedBuffBrief'> & {
 		buff   : number
 		prefix : number
 	}
 
 	// Custom facts
-	interface RangeFact extends BasicFact<'Range'> {
+	type RangeFact = BasicFact<'Range'> & {
 		min?  : number
 		max   : number
 	}
 
-	interface StunBreakFact extends BasicFact<'StunBreak'> {
+	type StunBreakFact = BasicFact<'StunBreak'> & {
 		text : never
 	}
 
@@ -374,7 +350,7 @@ namespace API {
 
 	type ValueOrLutOffset = number | [number, number] //base index, mul
 
-	interface AttributeSet {
+	type AttributeSet = {
 		id         : number
 		name       : string
 		attributes : {
@@ -387,7 +363,7 @@ namespace API {
 		}
 	}
 
-	interface Pet {
+	type Pet = {
 		id               : number
 		name             : string
 		icon             : string
@@ -396,15 +372,42 @@ namespace API {
 		skills_ai        : number[] //not yet available
 		skills_soulbeast : number[]
 	}
+
+	type Specialization = {
+		id         : number
+		name       : string
+		icon       : string
+		background : string
+	}
+
+	type Profession =  {
+		id                : ProfessionId
+		name              : string
+		icon              : string
+		icon_big          : string
+		specializations   : number[]
+		skills_by_palette : [number, number][]
+		weapons           : { [k in WeaponDetailType]? : ProfessionWeaponData }
+	}
+
+	type ProfessionWeaponData = {
+		//flags           : ('Mainhand' | 'Offhand' | 'TwoHand' | 'Aquatic')[]
+		specialization? : number
+		skills          : {
+			id         : number
+			slot       : SkillSlot
+			offhand?   : Weapons1H
+			//source?    : ProfessionId
+			attunement :  'Fire' | 'Earth' | 'Water' | 'Air'
+		}[]
+	}
 }
+
+
 
 type Milliseconds = number;
 
-type ObjectDataStorage = {
-	[k in Endpoints] : Map<number, APIResponseTypeMap[k]>
-}
-
-interface HandlerParams<TFact = API.Fact> {
+type HandlerParams<TFact = API.Fact> = {
 	fact           : TFact
 	buff           : (TFact extends { buff : number } ? API.Skill : undefined) | undefined
 	weaponStrength : TFact extends API.DamageFact ? number : undefined
@@ -414,17 +417,19 @@ type APIResponseTypeMap = {
 	skills         : API.Skill;
 	traits         : API.Trait;
 	items          : API.Item;
-	specializations: OfficialAPI.Specialization;
+	specializations: API.Specialization;
 	pets           : API.Pet;
 	'pvp/amulets'  : API.ItemAmulet;
 	itemstats      : API.AttributeSet;
 	palettes       : API.Palette;
+	professions    : API.Profession;
 }
 
-type Endpoints = keyof APIResponseTypeMap;
+type APIEndpoint = keyof APIResponseTypeMap;
+type APIResponse = APIResponseTypeMap[keyof APIResponseTypeMap];
 
 interface APIImplementation {
-	bulkRequest<T extends Endpoints>(endpoint : T, ids : number[]) : Promise<APIResponseTypeMap[T][]>;
+	bulkRequest<E extends APIEndpoint>(endpoint : E, ids : APIResponseTypeMap[E]['id'][]) : Promise<APIResponseTypeMap[E][]>;
 }
 
 interface ScopeElement {

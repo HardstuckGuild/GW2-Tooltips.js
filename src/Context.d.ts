@@ -11,8 +11,6 @@ declare interface Window {
 
 type PartialContext = PartialR<Context>
 
-type PartialR<T> = { [P in keyof T]?: (T[P] extends string | number | StatSource | number[] ? T[P] : PartialR<T[P]>) | undefined; }
-
 //TODO(Rennorb): cloned marker in the context itself
 interface Context {
 	gameMode    : GameMode
@@ -21,18 +19,11 @@ interface Context {
 	character   : Character
 }
 
-//TODO(Rennorb) @cleanup: move down
-type GameMode      = 'Pve' | 'Pvp' | 'Wvw';
-type Profession    = 'Guardian' | 'Warrior' | 'Engineer' | 'Ranger' | 'Thief' | 'Elementalist' | 'Mesmer' | 'Necromancer' | 'Revenant'
-type BaseAttribute = 'Power' | 'Toughness' | 'Vitality' | 'Precision' | 'Ferocity' | 'ConditionDamage' | 'Expertise' | 'Concentration' | 'HealingPower' | 'AgonyResistance'
-type ComputedAttribute = 'Health' | 'Armor' | 'ConditionDuration' | 'BoonDuration' | 'CritChance' | 'CritDamage'
-type SyntheticAttributes =  'Damage' | 'LifeForce' | 'HealEffectiveness' | 'Stun'
-
 interface Character {
 	level             : number
 	isPlayer          : bool
 	sex               : 'Male' | 'Female'
-	profession?       : Profession
+	profession?       : ProfessionId
 	traits            : number[]
 	specializations   : number[]
 	stats             : BaseStats
@@ -57,7 +48,11 @@ interface StatSource {
 	count    : number
 }
 
-
+type GameMode            = 'Pve' | 'Pvp' | 'Wvw';
+type ProfessionId        = 'Guardian' | 'Warrior' | 'Engineer' | 'Ranger' | 'Thief' | 'Elementalist' | 'Mesmer' | 'Necromancer' | 'Revenant'
+type BaseAttribute       = 'Power' | 'Toughness' | 'Vitality' | 'Precision' | 'Ferocity' | 'ConditionDamage' | 'Expertise' | 'Concentration' | 'HealingPower' | 'AgonyResistance'
+type ComputedAttribute   = 'Health' | 'Armor' | 'ConditionDuration' | 'BoonDuration' | 'CritChance' | 'CritDamage'
+type SyntheticAttributes = 'Damage' | 'LifeForce' | 'HealEffectiveness' | 'Stun'
 
 interface Config {
 	autoInitialize             : bool
@@ -81,3 +76,7 @@ interface Config {
 	// path where the worker script is hosted
 	workerPath?                : string
 }
+
+
+
+type PartialR<T> = { [P in keyof T]?: (T[P] extends string | number | StatSource | number[] ? T[P] : PartialR<T[P]>) | undefined; }

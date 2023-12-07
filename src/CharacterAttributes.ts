@@ -168,7 +168,7 @@ export function getBaseHealth(character : Character) : number {
 				Revenant     : 5922,
 				Necromancer  : 9212,
 				Warrior      : 9212,
-			} as { [k in Profession] : number })[character.profession];
+			} as { [k in ProfessionId] : number })[character.profession];
 }
 
 function calculateConditionDuration(level : number, expertise : number) {

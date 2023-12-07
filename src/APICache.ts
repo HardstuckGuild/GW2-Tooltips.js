@@ -5,21 +5,22 @@ export default class APICache {
 		traits         : new Map<number, API.Trait>(),
 		pets           : new Map<number, API.Pet>(),
 		'pvp/amulets'  : new Map<number, API.ItemAmulet>(),
-		specializations: new Map<number, OfficialAPI.Specialization>(),
+		specializations: new Map<number, API.Specialization>(),
 		itemstats      : new Map<number, API.AttributeSet>(),
 		palettes       : new Map<number, API.Palette>(),
+		professions    : new Map<ProfessionId, API.Profession>(),
 	}
 
 	static apiImpl : APIImplementation
 
 	//TODO(Rennorb): add option to api to send hybrid request to get all related information for a page
 	/** This might actually fetch more data than just the ids specified and ensures that all data required to display the ids is available */
-	static async ensureExistence<T extends Endpoints>(endpoint : T, initialIds : IterableIterator<number>) : Promise<void> {
+	static async ensureExistence<T extends APIEndpoint>(endpoint : T, initialIds : IterableIterator<number>) : Promise<void> {
 		if(!this.apiImpl) {
 			this.apiImpl = new HSAPI()
 		}
 
-		let additionalIds : { [k in Endpoints] : Set<number> } = Object.assign({
+		let additionalIds : AdditionalIdSets = Object.assign({
 			skills         : new Set<number>(),
 			items          : new Set<number>(),
 			traits         : new Set<number>(),
@@ -28,6 +29,7 @@ export default class APICache {
 			specializations: new Set<number>(),
 			itemstats      : new Set<number>(),
 			palettes       : new Set<number>(),
+			professions    : new Set<ProfessionId>,
 		}, { [endpoint]: new Set(initialIds) })
 
 		const findNextRelevantEndpoint = () => {
@@ -38,14 +40,14 @@ export default class APICache {
 		}
 
 		let didCollectPalettes = false;
-		let currentEndpoint : Endpoints | undefined = endpoint
+		let currentEndpoint : APIEndpoint | undefined = endpoint
 		let i = 0
 		do {
 			if(currentEndpoint == 'palettes') didCollectPalettes = true;
 
-			const storageSet = this.storage[currentEndpoint]
+			const storageSet : Map<APIResponseTypeMap[typeof currentEndpoint]['id'], any> = this.storage[currentEndpoint]
 			//TODO(Rennorb): i really don't like this but it seems to be the most sensible way for now
-			const request = Array.from(additionalIds[currentEndpoint].values())
+			const request = Array.from<APIResponseTypeMap[typeof currentEndpoint]['id']>(additionalIds[currentEndpoint].values())
 			additionalIds[currentEndpoint].clear()
 
 			console.info(`[gw2-tooltips] [API cache] round #${i++} for a ${endpoint} request, currently fetching ${currentEndpoint}. Ids: `, request)
@@ -59,7 +61,7 @@ export default class APICache {
 				for(const datum of response) {
 					if(storageSet.has(datum.id)) continue
 
-					storageSet.set(datum.id, datum as any)
+					storageSet.set(datum.id, datum)
 					this.collectConnectedIds(datum, additionalIds, didCollectPalettes)
 				}
 			}
@@ -69,7 +71,7 @@ export default class APICache {
 		} while((currentEndpoint = findNextRelevantEndpoint()) && i < 100)
 	}
 
-	static collectConnectedIds(datum : APIResponseTypeMap[keyof APIResponseTypeMap], connectedIdsStorage : { [k in Endpoints] : Set<number> }, didCollectPalettes : boolean) : void {
+	static collectConnectedIds(datum : APIResponse, connectedIdsStorage : AdditionalIdSets, didCollectPalettes : boolean) : void {
 		const addFacts = (facts : API.Fact[]) => {
 			for(const fact of facts) {
 				if(fact.type == 'Buff' || fact.type == 'BuffBrief') {
@@ -160,5 +162,14 @@ export default class APICache {
 }
 
 (window as any).APICache = APICache; //@debug
+
+
+type ObjectDataStorage = {
+	[k in APIEndpoint] : Map<APIResponseTypeMap[k]['id'], APIResponseTypeMap[k]>
+}
+
+type AdditionalIdSets = {
+	[k in APIEndpoint] : Set<APIResponseTypeMap[k]['id']>
+}
 
 import { HSAPI } from './API';
