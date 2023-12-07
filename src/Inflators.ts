@@ -140,6 +140,17 @@ export function inflateAttribute(gw2Object : HTMLElement, attribute : BaseAttrib
 	gw2Object.replaceChildren(wikiLink);
 }
 
+export function inflateProfession(gw2Object : HTMLElement, profession : API.Profession) {
+	if(gw2Object.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
+
+	const wikiLink = newElm('a', newImg(profession.icon_big, undefined, profession.name));
+	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + profession.name;
+	wikiLink.target = '_blank';
+	if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(profession.name);
+	gw2Object.append(wikiLink);
+}
+
+//todo: put htis on the server and get rid off this in the client lib
 export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, error_store : Set<string>) : number {
 	const name = String(gw2Object.getAttribute('objId'));
 	let id = ({

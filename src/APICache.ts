@@ -15,7 +15,7 @@ export default class APICache {
 
 	//TODO(Rennorb): add option to api to send hybrid request to get all related information for a page
 	/** This might actually fetch more data than just the ids specified and ensures that all data required to display the ids is available */
-	static async ensureExistence<T extends APIEndpoint>(endpoint : T, initialIds : IterableIterator<number>) : Promise<void> {
+	static async ensureExistence<E extends APIEndpoint>(endpoint : E, initialIds : IterableIterator<APIResponseTypeMap[E]['id']>) : Promise<void> {
 		if(!this.apiImpl) {
 			this.apiImpl = new HSAPI()
 		}

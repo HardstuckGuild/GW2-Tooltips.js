@@ -302,6 +302,9 @@ gw2object.gw2objectembed img {
 	margin-right: 0.25ch;
 	vertical-align: bottom;
 }
+gw2object[type=profession].gw2objectembed img {
+	vertical-align: middle;
+}
 
 .pvp gw2object[type=item],
 .pvp gw2object[type="pvp/amulet"],

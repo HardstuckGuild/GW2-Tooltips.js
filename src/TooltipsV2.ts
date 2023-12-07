@@ -185,7 +185,7 @@ function positionTooltip(animate = false) {
 }
 
 type GW2ObjectMap = {
-	[k in `${Exclude<V2ObjectType, 'effect' | 'attribute'>}s`] : Map<number, HTMLElement[]>
+	[k in `${Exclude<V2ObjectType, 'effect' | 'attribute'>}s`] : Map<APIResponseTypeMap[k]['id'], HTMLElement[]>
 } & {
 	attributes : Map<string, HTMLElement[]>,
 }
@@ -200,6 +200,7 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 		pets           : new Map<number, HTMLElement[]>(),
 		'pvp/amulets'  : new Map<number, HTMLElement[]>(),
 		attributes     : new Map<string, HTMLElement[]>(),
+		professions    : new Map<ProfessionId, HTMLElement[]>(),
 	}
 	const statsToGet = new Set<number>();
 	const _legacy_effectErrorStore = new Set<string>();
@@ -208,20 +209,23 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 		const stats = +String(gw2Object.getAttribute('stats'));
 		if(!isNaN(stats)) statsToGet.add(stats);
 
-		let objId_raw = gw2Object.getAttribute('objId');
+		let objIdRaw = gw2Object.getAttribute('objId');
+		if(objIdRaw == null) continue;
+
 		//TODO(Rennorb) @cleanup @compat: this is literally just for naming 'convenience'.
 		// Figure out if we can just get rid of the +'s' or if that poses an issue with backwards compat
 		let type = (gw2Object.getAttribute('type') || 'skill') + 's' as `${V2ObjectType}s`;
 
+
 		if(type === 'attributes') {
-			if(typeof objId_raw === 'string') {
-				const elementsWithThisId = objectsToGet.attributes.get(objId_raw);
+			if(objIdRaw != null) {
+				const elementsWithThisId = objectsToGet.attributes.get(objIdRaw);
 				if(elementsWithThisId) elementsWithThisId.push(gw2Object);
-				else objectsToGet.attributes.set(objId_raw, [gw2Object]);
+				else objectsToGet.attributes.set(objIdRaw, [gw2Object]);
 			}
 		}
 		else {
-			let objId = +String(objId_raw);
+			let objId : number | string = +objIdRaw;
 
 			if(type === 'effects') {
 				//NOTE(Rennorb): weapon swaps are completely synthesized
@@ -234,10 +238,12 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 				}
 			}
 
-			if(!isNaN(objId) && type in objectsToGet) {
-				const elementsWithThisId = objectsToGet[type].get(objId);
+			const professions = ['Guardian', 'Warrior', 'Engineer', 'Ranger', 'Thief', 'Elementalist', 'Mesmer', 'Necromancer', 'Revenant'] as const;
+			if((!isNaN(objId) && type in objectsToGet) || (type == 'professions' && (objId = objIdRaw[0].toUpperCase() + objIdRaw.slice(1) /* TODO @cleanup */), professions.includes(objId))) {
+				const map : Map<APIObjectId, HTMLElement[]> = objectsToGet[type];
+				const elementsWithThisId = map.get(objId);
 				if(elementsWithThisId) elementsWithThisId.push(gw2Object);
-				else objectsToGet[type].set(objId, [gw2Object]);
+				else map.set(objId, [gw2Object]);
 			}
 			else {
 				continue;
@@ -255,7 +261,7 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 
 	await Promise.all(
 		(Object.entries(objectsToGet)
-		.filter(([key, _]) => key != 'attributes') as [Exclude<keyof typeof objectsToGet, 'attributes'>, Map<number, HTMLElement[]>][])
+		.filter(([key, _]) => key != 'attributes') as [Exclude<keyof typeof objectsToGet, 'attributes'>, Map<APIObjectId, HTMLElement[]>][])
 		.map(async ([key, values]) => {
 		if(values.size == 0) return;
 
@@ -264,9 +270,10 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 			case 'skills'         : inflator = inflateSkill;          break;
 			case 'items'          : inflator = inflateItem;           break;
 			case 'specializations': inflator = inflateSpecialization; break;
+			case 'professions'    : inflator = inflateProfession;     break;
 			default               : inflator = inflateGenericIcon;    break;
 		}
-		const cache = APICache.storage[key];
+		const cache : Map<APIObjectId, APIResponse> = APICache.storage[key];
 
 		await APICache.ensureExistence(key, values.keys())
 
@@ -292,20 +299,20 @@ export function attachMouseListeners(target : HTMLElement) {
 
 function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 	const type = ((gw2Object.getAttribute('type') || 'skill') + 's') as `${V2ObjectType}s`;
-	const objId = gw2Object.getAttribute('objId')
+	const objIdRaw = gw2Object.getAttribute('objId')
 	let   context = contexts[+String(gw2Object.getAttribute('contextSet')) || 0];
 	const statSetId = +String(gw2Object.getAttribute('stats')) || undefined;
 	const stackSize = +String(gw2Object.getAttribute('count')) || undefined;
 
-	if(type == 'specializations' || type == 'effects') return; //TODO(Rennorb) @completeness: inline objs
+	if(type == 'specializations' || type == 'effects' || type == 'professions') return;
 
 	lastTooltipTarget = gw2Object;
 
 	if(type == 'attributes') {
-		if(objId) {
+		if(objIdRaw) {
 			//TODO(Rennorb): should we actually reset this every time?
 			cyclePos = visibleIndex;
-			tooltip.replaceChildren(generateAttributeTooltip(objId as BaseAttribute | ComputedAttribute, context));
+			tooltip.replaceChildren(generateAttributeTooltip(objIdRaw as BaseAttribute | ComputedAttribute, context));
 
 			tooltip.style.display = ''; //empty value resets actual value to use stylesheet
 			for(const tt of tooltip.children) tt.classList.add('active');
@@ -314,7 +321,7 @@ function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 		return;
 	}
 
-	const data = APICache.storage[type].get(+String(objId));
+	const data = APICache.storage[type].get(+String(objIdRaw));
 	if(data) {
 		//TODO(Rennorb): should we actually reset this every time?
 		cyclePos = visibleIndex;
@@ -1568,6 +1575,6 @@ import * as APIs from './API';
 import APICache from './APICache';
 import { MISSING_SKILL, calculateModifier, generateFact, generateFacts } from './FactsProcessor';
 import * as Collect from './Collect'; //TODO(Rennorb) @cleanup
-import { _legacy_transformEffectToSkillObject, inferItemUpgrades, inflateAttribute, inflateGenericIcon, inflateItem, inflateSkill, inflateSpecialization } from './Inflators'
+import { _legacy_transformEffectToSkillObject, inferItemUpgrades, inflateAttribute, inflateGenericIcon, inflateItem, inflateProfession, inflateSkill, inflateSpecialization } from './Inflators'
 import { LUT_DEFENSE, LUT_POWER_MONSTER, LUT_POWER_PLAYER, getActiveAttributes, getAttributeInformation, recomputeAttributesFromMods } from './CharacterAttributes'
 

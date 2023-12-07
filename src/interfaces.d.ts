@@ -6,11 +6,14 @@ declare interface ObjectConstructor {
 interface Array<T> {
 	includes<T2>(searchElement : T | T2, fromIndex? : number) : searchElement is T;
 }
+interface ReadonlyArray<T> {
+	includes<T2>(searchElement : T | T2, fromIndex? : number) : searchElement is T;
+}
 
 type Undefined<T> = { [k in keyof T]?: undefined }
 
 namespace LegacyCompat {
-	type ObjectType = 'skill' | 'trait' | 'item' | 'specialization' | 'pet' | 'pvp/amulet' | 'specialization' | 'effect';
+	type ObjectType = 'skill' | 'trait' | 'item' | 'specialization' | 'pet' | 'pvp/amulet' | 'specialization' | 'effect' | 'profession';
 }
 
 type V2ObjectType = LegacyCompat.ObjectType | 'attribute'; //TODO @cleanup
@@ -427,6 +430,7 @@ type APIResponseTypeMap = {
 
 type APIEndpoint = keyof APIResponseTypeMap;
 type APIResponse = APIResponseTypeMap[keyof APIResponseTypeMap];
+type APIObjectId = APIResponse['id'];
 
 interface APIImplementation {
 	bulkRequest<E extends APIEndpoint>(endpoint : E, ids : APIResponseTypeMap[E]['id'][]) : Promise<APIResponseTypeMap[E][]>;
