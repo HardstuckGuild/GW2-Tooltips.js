@@ -7,10 +7,7 @@
 //TODO(Rennorb): Change anything percent related to use fractions instead of integers (0.2 instead of 20).
 // The only thing this is good for is to make drawing the facts easier. Since we do quite a few calculations this swap would reduce conversions quite a bit.
 //TODO(Rennorb) @correctness: Split up incoming / outgoing effects. Mostly relevant for healing.
-//TODO(Rennorb) @correctness: Change the lookup to first try to figure out the palette and then go from there. this is the way to move forward as this is the future-proof way to list skills.
 //TODO(Rennorb) @correctness: implement processing for trait / skill buffs to properly show certain flip skills and chains aswell as properly do trait overrides for skills
-
-//TODO(Rennorb): (maybe) add specific hs output command that produces files outside of the repo to preserve them inside of the parent.
 
 let tooltip : HTMLElement
 let lastTooltipTarget : HTMLElement | undefined
@@ -22,119 +19,6 @@ let lastMouseY  : number
 export const contexts : Context[] = []; //@debug
 export let config    : Config = null!;
 
-//TODO(Rennorb) @cleanup: get rid of this
-function _constructor() {
-	//TODO(Rennorb): Validate config. there are a few places this partially happens but its hard to keep track. Should just happen in one place.
-	if(window.GW2TooltipsContext instanceof Array) {
-		for(const partialContext of window.GW2TooltipsContext)
-			contexts.push(createCompleteContext(partialContext))
-	}
-	else if(window.GW2TooltipsContext) {
-		contexts.push(createCompleteContext(window.GW2TooltipsContext))
-	}
-	else{
-		contexts.push(createCompleteContext({}))
-	}
-
-	config = Object.assign({}, DEFAULT_CONFIG, window.GW2TooltipsConfig)
-	if(config.apiImpl) APICache.apiImpl = config.apiImpl(APIs);
-
-	
-	if("serviceWorker" in navigator && config.workerPath) {
-		//TODO(Rennorb): options, apparently server needs to set header for broader scope. `Service-Worker-Allowed : /`
-		// https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/register
-		// https://w3c.github.io/ServiceWorker/#service-worker-allowed
-		navigator.serviceWorker.register(config.workerPath, { scope: '/' }).then(
-			(s) => console.log('[gw2-tooltips] [worker] APICache ServiceWorker registered.', s),
-			(e) => console.error(`[gw2-tooltips] [worker] Failed to register APICache ServiceWorker: ${e}`)
-		);
-	}
-
-	tooltip = newElm('div.tooltipWrapper')
-	tooltip.style.display = 'none';
-	if(document.body)
-		document.body.appendChild(tooltip);
-	else
-		document.addEventListener('DOMContentLoaded', () => document.body.appendChild(tooltip));
-
-	const isMobile = /android|webos|iphone|ipad|ipod|blackberry|bb|playbook|mobile|windows phone|kindle|silk|opera mini/.test(navigator.userAgent.toLowerCase())
-	document.addEventListener('mousemove', event => {
-		if(isMobile && (Math.abs(event.pageX - lastMouseX) + Math.abs(event.pageY - lastMouseY) > 20)) {
-			tooltip.style.display = 'none';
-		}
-
-		lastMouseX = event.pageX
-		lastMouseY = event.pageY
-
-		if(tooltip.style.display != 'none')
-			positionTooltip()
-	})
-	document.addEventListener('contextmenu', event => {
-		const node = findSelfOrParent(event.target as Element, 'gw2object') as HTMLElement;
-		if(!node) return;
-
-		//NOTE(Rennorb): the style check is to prevent an initial cycle on mobile
-		if(node.classList.contains('cycler') && tooltip.style.display != 'none') {
-			event.preventDefault()
-
-			do {
-				cyclePos = (cyclePos + 1) % tooltip.childElementCount
-			} while(tooltip.children[cyclePos].classList.contains('not-collapsable'))
-			activateSubTooltip(cyclePos)
-			scrollSubTooltipIntoView(cyclePos, true)
-			positionTooltip(true)
-		}
-		if(isMobile && tooltip.style.display == 'none') {
-			event.preventDefault()
-			showTooltipFor(node);
-			positionTooltip()
-		}
-	})
-
-	//TODO(Rennorb): this sint very clean,  would like a better solution tbh
-	let touch : Touch;
-	const scrollHandler = (event : WheelEvent | TouchEvent | { detail : number, preventDefault: VoidFunction }) => {
-		if(tooltip.style.display == 'none') return;
-		const activeTT = tooltip.children[cyclePos];
-		if(activeTT.scrollHeight == activeTT.clientHeight) return;
-
-		event.preventDefault()
-		const deltaY = (event as WheelEvent).deltaY || event.detail || (event as TouchEvent).touches[0].clientY - touch.clientY;
-		activeTT.scrollBy(0, deltaY);
-	}
-	const passive = 'onwheel' in window ? { passive: false } : false;
-	
-	window.addEventListener('DOMMouseScroll', scrollHandler as any, false); // older FF
-	window.addEventListener('wheel', scrollHandler, passive)
-	window.addEventListener('touchstart', event => {
-		touch = event.touches[0];
-	})
-	window.addEventListener('touchmove', scrollHandler, passive)
-
-	//TODO(Rennorb) @ui
-	window.addEventListener('keydown', e => {
-		if(e.ctrlKey && e.altKey) {
-			if(e.key == 'd') {
-				e.preventDefault();
-				config.showFactComputationDetail = !config.showFactComputationDetail;
-				console.log(`[gw2-tooltips] [cfg] showFactComputationDetail is now ${config.showFactComputationDetail}`);
-				if(lastTooltipTarget && tooltip.style.display != 'none') {
-					showTooltipFor(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
-					positionTooltip();
-				}
-			}
-			else if(e.key == 't') {
-				e.preventDefault();
-				config.showPreciseAbilityTimings = !config.showPreciseAbilityTimings;
-				console.log(`[gw2-tooltips] [cfg] showPreciseAbilityTimings is now ${config.showPreciseAbilityTimings}`);
-				if(lastTooltipTarget && tooltip.style.display != 'none') {
-					showTooltipFor(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
-					positionTooltip();
-				}
-			}
-		}
-	});
-}
 
 function activateSubTooltip(tooltipIndex : number) {
 	const tooltips = tooltip.children as HTMLCollectionOf<HTMLLegendElement>;
@@ -1413,7 +1297,120 @@ const VALID_CHAIN_PALETTES = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard
 type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet | API.Pet | API.Item; //TODO(Rennorb): change pet
 
 
-_constructor();
+// "constructor"
+{
+	//TODO(Rennorb): Validate config. there are a few places this partially happens but its hard to keep track. Should just happen in one place.
+	if(window.GW2TooltipsContext instanceof Array) {
+		for(const partialContext of window.GW2TooltipsContext)
+			contexts.push(createCompleteContext(partialContext))
+	}
+	else if(window.GW2TooltipsContext) {
+		contexts.push(createCompleteContext(window.GW2TooltipsContext))
+	}
+	else{
+		contexts.push(createCompleteContext({}))
+	}
+
+	config = Object.assign({}, DEFAULT_CONFIG, window.GW2TooltipsConfig)
+	if(config.apiImpl) APICache.apiImpl = config.apiImpl(APIs);
+
+	
+	if("serviceWorker" in navigator && config.workerPath) {
+		//NOTE(Rennorb): options, apparently server needs to set header for broader scope. `Service-Worker-Allowed : /`
+		// https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/register
+		// https://w3c.github.io/ServiceWorker/#service-worker-allowed
+		navigator.serviceWorker.register(config.workerPath, { scope: '/' }).then(
+			(s) => console.log('[gw2-tooltips] [worker] APICache ServiceWorker registered.', s),
+			(e) => console.error(`[gw2-tooltips] [worker] Failed to register APICache ServiceWorker: ${e}`)
+		);
+	}
+
+	tooltip = newElm('div.tooltipWrapper')
+	tooltip.style.display = 'none';
+	if(document.body)
+		document.body.appendChild(tooltip);
+	else
+		document.addEventListener('DOMContentLoaded', () => document.body.appendChild(tooltip));
+
+	const isMobile = /android|webos|iphone|ipad|ipod|blackberry|bb|playbook|mobile|windows phone|kindle|silk|opera mini/.test(navigator.userAgent.toLowerCase())
+	document.addEventListener('mousemove', event => {
+		if(isMobile && (Math.abs(event.pageX - lastMouseX) + Math.abs(event.pageY - lastMouseY) > 20)) {
+			tooltip.style.display = 'none';
+		}
+
+		lastMouseX = event.pageX
+		lastMouseY = event.pageY
+
+		if(tooltip.style.display != 'none')
+			positionTooltip()
+	})
+	document.addEventListener('contextmenu', event => {
+		const node = findSelfOrParent(event.target as Element, 'gw2object') as HTMLElement;
+		if(!node) return;
+
+		//NOTE(Rennorb): the style check is to prevent an initial cycle on mobile
+		if(node.classList.contains('cycler') && tooltip.style.display != 'none') {
+			event.preventDefault()
+
+			do {
+				cyclePos = (cyclePos + 1) % tooltip.childElementCount
+			} while(tooltip.children[cyclePos].classList.contains('not-collapsable'))
+			activateSubTooltip(cyclePos)
+			scrollSubTooltipIntoView(cyclePos, true)
+			positionTooltip(true)
+		}
+		if(isMobile && tooltip.style.display == 'none') {
+			event.preventDefault()
+			showTooltipFor(node);
+			positionTooltip()
+		}
+	})
+
+	//TODO(Rennorb): this sint very clean,  would like a better solution tbh
+	let touch : Touch;
+	const scrollHandler = (event : WheelEvent | TouchEvent | { detail : number, preventDefault: VoidFunction }) => {
+		if(tooltip.style.display == 'none') return;
+		const activeTT = tooltip.children[cyclePos];
+		if(activeTT.scrollHeight == activeTT.clientHeight) return;
+
+		event.preventDefault()
+		const deltaY = (event as WheelEvent).deltaY || event.detail || (event as TouchEvent).touches[0].clientY - touch.clientY;
+		activeTT.scrollBy(0, deltaY);
+	}
+	const passive = 'onwheel' in window ? { passive: false } : false;
+	
+	window.addEventListener('DOMMouseScroll', scrollHandler as any, false); // older FF
+	window.addEventListener('wheel', scrollHandler, passive)
+	window.addEventListener('touchstart', event => {
+		touch = event.touches[0];
+	})
+	window.addEventListener('touchmove', scrollHandler, passive)
+
+	//TODO(Rennorb) @ui
+	window.addEventListener('keydown', e => {
+		if(e.ctrlKey && e.altKey) {
+			if(e.key == 'd') {
+				e.preventDefault();
+				config.showFactComputationDetail = !config.showFactComputationDetail;
+				console.log(`[gw2-tooltips] [cfg] showFactComputationDetail is now ${config.showFactComputationDetail}`);
+				if(lastTooltipTarget && tooltip.style.display != 'none') {
+					showTooltipFor(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
+					positionTooltip();
+				}
+			}
+			else if(e.key == 't') {
+				e.preventDefault();
+				config.showPreciseAbilityTimings = !config.showPreciseAbilityTimings;
+				console.log(`[gw2-tooltips] [cfg] showPreciseAbilityTimings is now ${config.showPreciseAbilityTimings}`);
+				if(lastTooltipTarget && tooltip.style.display != 'none') {
+					showTooltipFor(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
+					positionTooltip();
+				}
+			}
+		}
+	});
+}
+
 if(config.autoInitialize) {
 	const buildNodes = document.getElementsByClassName('gw2-build-wrapper');
 	if(config.autoCollectSelectedTraits) {
