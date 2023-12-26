@@ -5,7 +5,7 @@
 
 export class FakeAPI implements APIImplementation {
 	hsApi    = new HSAPI('http://localhost:3000');
-	fallback = new HSAPI(); // since we now have a public api running we can jsut fall back to that
+	fallback = new HSAPI(); // since we now have a public api running we can just fall back to that
 
 	async bulkRequest<T extends keyof APIResponseTypeMap>(endpoint: T, ids: number[]): Promise<APIResponseTypeMap[T][]> {
 		try {
