@@ -787,7 +787,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	const countPrefix = stackSize > 1 ? stackSize + ' ' : '';
 	const upgradeNameSource = slottedItems?.find(i => !['Infusion', 'Enrichment'].includes(i.subtype)) || slottedItems?.[0];
 	const name = countPrefix + formatItemName(item, context, statSet, upgradeNameSource, stackSize);
-	const parts = [newElm('tet.title', newImg(item.icon),  newElm('teb.gw2-color-rarity-'+item.rarity.toLowerCase(), name), newElm('div.flexbox-fill'))];
+	const parts = [newElm('tet.title', newImg(item.icon),  newElm('teb.gw2-color-rarity-'+item.rarity, name), newElm('div.flexbox-fill'))];
 
 	if('defense' in item && item.defense) {
 		const defense = (typeof item.defense  == "number")

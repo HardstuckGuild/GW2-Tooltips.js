@@ -34,7 +34,6 @@
 .gw2-color-traited-fact { color: #6699CCFF }
 .gw2-color-defiance-fact { color: #53A698FF !important }
 
-/*TODO(Rennorb): get rid of this*/
 .gw2-color-rarity-Junk { color: #A9A9A9FF }
 .gw2-color-rarity-Basic { color: #FFFFFFFF }
 .gw2-color-rarity-Common { color: #4F9DFEFF }
@@ -43,16 +42,6 @@
 .gw2-color-rarity-Exotic { color: #FDA500FF }
 .gw2-color-rarity-Ascended { color: #FB3E8DFF }
 .gw2-color-rarity-Legendary { color: #A02EF7FF }
-
-/* backwards compat */
-.gw2-color-rarity-junk { color: #A9A9A9FF }
-.gw2-color-rarity-basic { color: #FFFFFFFF }
-.gw2-color-rarity-common { color: #4F9DFEFF }
-.gw2-color-rarity-uncommon { color: #2DC50EFF }
-.gw2-color-rarity-rare { color: #FFE51FFF }
-.gw2-color-rarity-exotic { color: #FDA500FF }
-.gw2-color-rarity-ascended { color: #FB3E8DFF }
-.gw2-color-rarity-legendary { color: #A02EF7FF }
 
 /* probably not correct */
 .gw2-color-stat-green { color: #33e87bf5 }
