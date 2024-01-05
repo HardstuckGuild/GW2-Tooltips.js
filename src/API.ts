@@ -1,7 +1,6 @@
 //NOTE(Rennorb): The different API implementations exist to easily swap out the data source for a local one, or even the official api in theory.
 // If the API is not set on APICache it will set it to HSAPI on the first request to the cache.
-// This can be done by specifying the apiImpl config option.
-//TODO(Rennorb): readme
+// Setting the api can be done by specifying the apiImpl config option.
 
 export class FakeAPI implements APIImplementation {
 	hsApi    = new HSAPI('http://localhost:3000');

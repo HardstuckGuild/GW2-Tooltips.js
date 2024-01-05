@@ -57,7 +57,7 @@ type SyntheticAttributes = 'Damage' | 'LifeForce' | 'HealEffectiveness' | 'Stun'
 interface Config {
 	autoInitialize             : bool
 
-	// v-- these only work if auto initialize is turned on
+	// v-- these only work if auto initialize is turned on //TODO(Rennorb) @correctness
 	autoCollectRuneCounts            : bool
 	autoCollectStatSources           : bool
 	autoCollectSelectedTraits        : bool
