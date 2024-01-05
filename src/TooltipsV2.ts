@@ -140,7 +140,7 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 		console.error("[gw2-tooltips] [legacy-compat] Some effects could not be translated into skills: ", Array.from(_legacy_effectErrorStore));
 	}
 
-	if(statsToGet.size > 0) APICache.ensureExistence('itemstats', statsToGet.values());
+	if(statsToGet.size > 0) APICache.ensureExistence('itemstats', statsToGet.values(), config.validateApiResponses);
 
 	await Promise.all(
 		(Object.entries(objectsToGet)
@@ -158,7 +158,7 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 		}
 		const cache : Map<APIObjectId, APIResponse> = APICache.storage[key];
 
-		await APICache.ensureExistence(key, values.keys())
+		await APICache.ensureExistence(key, values.keys(), config.validateApiResponses)
 
 		for(const [id, objects] of values) {
 			const data = cache.get(id);
@@ -1276,6 +1276,7 @@ const DEFAULT_CONFIG : Config = {
 	legacyCompatibility             : true,
 	showPreciseAbilityTimings       : false,
 	showFactComputationDetail       : false,
+	validateApiResponses            : true,
 }
 
 enum Rarity { Junk, Basic, Common, Uncommon, Rare, Exotic, Ascended, Legendary }

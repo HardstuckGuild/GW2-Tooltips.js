@@ -15,7 +15,7 @@ export default class APICache {
 
 	//TODO(Rennorb): add option to api to send hybrid request to get all related information for a page
 	/** This might actually fetch more data than just the ids specified and ensures that all data required to display the ids is available */
-	static async ensureExistence<E extends APIEndpoint>(endpoint : E, initialIds : IterableIterator<APIResponseTypeMap[E]['id']>) : Promise<void> {
+	static async ensureExistence<E extends APIEndpoint>(endpoint : E, initialIds : IterableIterator<APIResponseTypeMap[E]['id']>, validateResponse : boolean) : Promise<void> {
 		if(!this.apiImpl) {
 			this.apiImpl = new HSAPI()
 		}
@@ -54,9 +54,10 @@ export default class APICache {
 
 			try {
 				const response = await this.apiImpl.bulkRequest(currentEndpoint, request)
-				//TODO(Rennorb) @perf: provide option to disable this
-				const unobtainable = request.filter(id => !response.some(obj => obj.id == id))
-				if(unobtainable.length) console.warn(`[gw2-tooltips] [API cache] Did not receive all requested ${currentEndpoint} ids. missing: `, unobtainable);
+				if(validateResponse) {
+					const unobtainable = request.filter(id => !response.some(obj => obj.id == id))
+					if(unobtainable.length) console.warn(`[gw2-tooltips] [API cache] Did not receive all requested ${currentEndpoint} ids. missing: `, unobtainable);
+				}
 
 				for(const datum of response) {
 					if(storageSet.has(datum.id)) continue

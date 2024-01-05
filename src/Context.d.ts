@@ -14,14 +14,14 @@ type PartialContext = PartialR<Context>
 //TODO(Rennorb): cloned marker in the context itself
 interface Context {
 	gameMode    : GameMode
-	underwater  : bool
+	underwater  : boolean
 	targetArmor : number
 	character   : Character
 }
 
 interface Character {
 	level             : number
-	isPlayer          : bool
+	isPlayer          : boolean
 	sex               : 'Male' | 'Female'
 	profession?       : ProfessionId
 	traits            : number[]
@@ -55,21 +55,23 @@ type ComputedAttribute   = 'Health' | 'Armor' | 'ConditionDuration' | 'BoonDurat
 type SyntheticAttributes = 'Damage' | 'LifeForce' | 'HealEffectiveness' | 'Stun'
 
 interface Config {
-	autoInitialize             : bool
+	autoInitialize             : boolean
 
 	// v-- these only work if auto initialize is turned on //TODO(Rennorb) @correctness
-	autoCollectRuneCounts            : bool
-	autoCollectStatSources           : bool
-	autoCollectSelectedTraits        : bool
-	autoInferEquipmentUpgrades       : bool
-	autoRecomputeCharacterAttributes : bool
-	autoInferWeaponSetAssociation    : bool
+	autoCollectRuneCounts            : boolean
+	autoCollectStatSources           : boolean
+	autoCollectSelectedTraits        : boolean
+	autoInferEquipmentUpgrades       : boolean
+	autoRecomputeCharacterAttributes : boolean
+	autoInferWeaponSetAssociation    : boolean
 	// ^---------------------------
 
-	adjustIncorrectStatIds     : bool
-	legacyCompatibility        : bool
-	showPreciseAbilityTimings  : bool
-	showFactComputationDetail  : bool
+	adjustIncorrectStatIds     : boolean
+	legacyCompatibility        : boolean
+	showPreciseAbilityTimings  : boolean
+	showFactComputationDetail  : boolean
+
+	validateApiResponses       : boolean
 
 	// for replacing the api source. Usually not relevant except for debugging
 	apiImpl?                   : (apis : any) => APIImplementation

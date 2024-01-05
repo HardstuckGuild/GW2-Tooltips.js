@@ -118,6 +118,8 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 			showPreciseAbilityTimings       : false,
 			showFactComputationDetail       : false,
 
+			validateApiResponses            : true,
+
 			// discouraged
 			apiImpl                         : undefined,
 			workerPath                      : undefined,
