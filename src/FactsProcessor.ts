@@ -47,6 +47,7 @@ export function generateFacts(blocks : API.FactBlock[], weaponStrength : number,
 		.map(fact => {
 			const { wrapper, defiance_break } = generateFact(fact, weaponStrength, context);
 			totalDefianceBreak += defiance_break;
+			if(wrapper) wrapper.dataset.order = String(fact.order); //used later on to insert a potential synthetic defiance break fact in the right place
 			return wrapper;
 		})
 		.filter(d => d) as HTMLElement[] // ts doesn't understand what the predicate does
@@ -70,13 +71,18 @@ export function generateFacts(blocks : API.FactBlock[], weaponStrength : number,
 
 	if(looseBlock) elements.push(...makeFactElements(looseBlock.facts));
 
-	//TODO(Rennorb): This should use order 1003
 	if(totalDefianceBreak > 0) {
 		const defianceWrap = newElm('div.fact',
 			newImg(ICONS.DEFIANCE_BREAK, 'iconmed'),
 			newElm('div.gw2-color-defiance-fact', `Defiance Break: ${withUpToNDigits(totalDefianceBreak, 2)}`)
 		);
-		elements.push(defianceWrap);
+
+		let i = 0;
+		for(; i < elements.length; i++) {
+			const s = elements[i].dataset.order;
+			if(s && parseInt(s) > 1003) break;
+		}
+		elements.splice(i, 0, defianceWrap);
 	}
 
 	return elements
