@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html class="no-js" style="scroll-behavior: smooth;" lang="en-US">
+<head>
+<script src="../out/tooltips.min.js" defer></script>
+<link rel="stylesheet" href="../out/tooltips.css" />
+
+<script>
+	var GW2TooltipsConfig = {
+		//apiImpl: (APIs) => new APIs.FakeAPI(),
+		//workerPath: '../out/worker.min.js',
+		autoInitialize                  : false,
+		autoCollectRuneCounts           : false,
+		autoCollectStatSources          : false,
+		autoCollectSelectedTraits       : false,
+		autoInferEquipmentUpgrades      : false,
+		autoRecomputeCharacterAttributes: false,
+		autoInferWeaponSetAssociation   : false,
+	}
+</script>
+<style>
+	gw2object:not(.gw2objectembed) { width: 64px; height: 64px; }
+	div.palette {
+		margin-top: 2em;
+	}
+	div.palette, div.palette div:not(.wrapper) {
+		border: solid black 1px;
+		padding: 2px;
+	}
+	div.group-candidates {
+		display: flex;
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 1em 4ch;
+		
+	}
+	div.candidate {
+		display: flex;
+		flex-direction: row;
+		flex-wrap: wrap;
+		position: relative;
+	}
+	div.candidate:not(:last-child)::after {
+		content: "\21DB";
+		position: absolute;
+		left: calc(100% + 1ch);
+		top: calc(50% - 0.5em);
+	}
+</style>
+</head>
+
+<body>
+	<div>
+		<input id="palette-id-input" type="number" autocomplete="off">
+		<button onclick="load_palette()">Load</button>
+	</div>
+	<div id="frame"></div>
+<script>
+	function newElm(spec, ...inner) {
+		const [tag, ...classes] = spec.split('.');
+		const el = document.createElement(tag);
+		if(classes.length) el.classList.add(...classes);
+		if(inner.length) el.append(...inner);
+		return el;
+	}
+	function newObjElm(type, id, inline = false) {
+		const elm = newElm('gw2object');
+		elm.setAttribute('type', type);
+		elm.setAttribute('objid', String(id));
+		if(inline) elm.classList.add('gw2objectembed')
+		return elm;
+	}
+
+	const input = document.getElementById("palette-id-input");
+	const frame = document.getElementById("frame");
+	async function load_palette()
+	{
+		let id = parseInt(input.value);
+		if(isNaN(id) || id === 0) return;
+
+		await APICache.ensureExistence('palettes', [id]);
+
+		const palette = APICache.storage.palettes.get(id);
+
+		let title = `id: ${palette.id}, type: ${palette.type}`;
+		if(palette.weapon_type) title += `, weapon type: ${palette.weapon_type}`;
+		const paletteElm = newElm('div.palette', newElm('h2', title));
+
+		const groupWrapperElm = newElm('div.wrapper');
+		for(const group of palette.groups) {
+			let groupTitle = `slot: ${group.slot}`;
+			if(group.profession) groupTitle += `, profession: ${group.profession}`;
+			const groupElm = newElm('div.group', newElm('h3', groupTitle));
+
+			const candidateWrapperElm = newElm('div.group-candidates.wrapper');
+			for(const candidate of group.candidates) {
+				let conditionsElm = newElm('div.conditions.wrapper',
+					newElm('div', `usability: ${candidate.usability.join(' | ')}`),
+				);
+
+				if(candidate.min_level)                  conditionsElm.append(newElm('div', `min level: ${candidate.min_level}`));
+				if(candidate.weapon_mainhand)            conditionsElm.append(newElm('div', `mainhand weapon: ${candidate.weapon_mainhand}`));
+				if(candidate.weapon_offhand)             conditionsElm.append(newElm('div', `offhand weapon: ${candidate.weapon_offhand}`));
+				if(candidate.profession_state)           conditionsElm.append(newElm('div', `profession state 1: ${candidate.profession_state}`));
+				if(candidate.profession_state_2)         conditionsElm.append(newElm('div', `profession state 2: ${candidate.profession_state_2}`));
+				if(candidate.specialization)             conditionsElm.append(newElm('div', `specialization: [${candidate.specialization}] `, newObjElm('specialization', candidate.specialization, true)));
+				if(candidate.trait)                      conditionsElm.append(newElm('div', `trait: [${candidate.trait}] `, newObjElm('trait', candidate.trait, true)));
+				if(candidate.buff)                       conditionsElm.append(newElm('div', `buff: [${candidate.buff}] `, newObjElm('skill', candidate.buff, true)));
+				if(candidate.previous_chain_skill_index) conditionsElm.append(newElm('div', `prev. chain index: ${candidate.previous_chain_skill_index}`));
+
+				candidateWrapperElm.append(newElm('div.candidate',
+					conditionsElm,
+					newElm('div.skill', 
+						newElm('div', `[${candidate.skill}] ${APICache.storage.skills.get(candidate.skill)?.name}`),
+						newObjElm('skill', candidate.skill),
+					)
+				));
+			}
+			groupElm.append(candidateWrapperElm);
+
+			groupWrapperElm.append(groupElm);
+		}
+		paletteElm.append(groupWrapperElm);
+
+		GW2TooltipsV2.hookDocument(paletteElm);
+
+		frame.prepend(paletteElm);
+	}
+</script>
+</body>
+</html>
