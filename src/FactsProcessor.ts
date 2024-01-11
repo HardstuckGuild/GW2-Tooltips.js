@@ -74,7 +74,7 @@ export function generateFacts(blocks : API.FactBlock[], weaponStrength : number,
 	if(totalDefianceBreak > 0) {
 		const defianceWrap = newElm('div.fact',
 			newImg(ICONS.DEFIANCE_BREAK, 'iconmed'),
-			newElm('div.gw2-color-defiance-fact', `Defiance Break: ${withUpToNDigits(totalDefianceBreak, 2)}`)
+			newElm('div.gw2-color-defiance-fact', `Total Defiance Break: ${withUpToNDigits(totalDefianceBreak, 2)}`)
 		);
 
 		let i = 0;
