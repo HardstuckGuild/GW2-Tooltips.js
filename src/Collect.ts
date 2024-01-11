@@ -95,8 +95,8 @@ export function specificStatSources(contextIndex : number, scope : ScopeElement,
 }
 function _statSources(contextIndex : number, contexts : Context[], elements : Iterable<Element>, mode : CollectMode) {
 	const context = contexts[contextIndex];
-	const sources : BaseStats['sources'] = structuredClone(DEFAULT_CONTEXT.character.stats.sources);
-	const weaponSetSources : BaseAndComputedStats['sources'][] = [];
+	const baseSources : SourceMap = structuredClone(DEFAULT_CONTEXT.character.stats.sources);
+	const weaponSetSources : SourceMap[] = [];
 
 	//NOTE(Rennorb): Cant really use the existing upgrade counts since we want to add tiers individually.
 	//TODO(Rennorb) @cleanup: Get rid of the count functions and just put them in here.
@@ -240,7 +240,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 			} as API.Modifier)
 		}
 
-		let targetSources = sources;
+		let targetSources = baseSources;
 
 		const weaponSetId = +String(element.getAttribute('weaponSet'));
 		if(isNaN(weaponSetId) && item && item.type == "UpgradeComponent") {
@@ -274,11 +274,12 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 
 	const character = context.character;
 	const overwriteWeaponStatSources = () => {
-		for(const [i, sources] of weaponSetSources.entries()) {
+		for(let [i, w_sources] of weaponSetSources.entries()) {
+			mergeSources(w_sources, baseSources, true);
 			const target = character.statsWithWeapons[i];
-			if(target) target.sources = sources;
+			if(target) target.sources = w_sources;
 			else character.statsWithWeapons[i] = {
-				sources,
+				sources: w_sources,
 				values   : Object.assign({}, DEFAULT_CONTEXT.character.statsWithWeapons[0].values),
 				htmlParts: structuredClone(DEFAULT_CONTEXT.character.statsWithWeapons[0].htmlParts),
 			};
@@ -287,57 +288,55 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 	
 	switch(mode) {
 		case CollectMode.IgnoreGlobal:
-			character.stats.sources = sources;
+			character.stats.sources = baseSources;
 			overwriteWeaponStatSources();
 			break;
 
 		case CollectMode.Append: {
-			for(const [k, values] of Object.entries(sources)) {
-				((character.stats.sources as any)[k] || ((character.stats.sources as any)[k] = []))
-					.push(...values);
-			}
+			mergeSources(character.stats.sources, baseSources);
 			for(const [i, sources] of weaponSetSources.entries()) {
-				const target = character.statsWithWeapons[i];
-				if(target) {
-					for(const [k, values] of Object.entries(sources)) {
-						((target.sources as any)[k] || ((target.sources as any)[k] = []))
-							.push(...values);
-					}			
+				const wTarget = character.statsWithWeapons[i];
+				if(wTarget) {
+					mergeSources(wTarget.sources, baseSources, true);
+					mergeSources(wTarget.sources, sources);
 				}
-				else character.statsWithWeapons[i] = {
-					sources,
-					values   : Object.assign({}, DEFAULT_CONTEXT.character.statsWithWeapons[0].values),
-					htmlParts: structuredClone(DEFAULT_CONTEXT.character.statsWithWeapons[0].htmlParts),
-				};
+				else {
+					mergeSources(sources, character.stats.sources, true)
+					character.statsWithWeapons[i] = {
+						sources,
+						values   : Object.assign({}, DEFAULT_CONTEXT.character.statsWithWeapons[0].values),
+						htmlParts: structuredClone(DEFAULT_CONTEXT.character.statsWithWeapons[0].htmlParts),
+					};
+				}
 			}
 		} break;
 
 		case CollectMode.PrioritizeGlobal: {
 			if(window.GW2TooltipsContext instanceof Array) {
-				character.stats.sources = Object.assign(sources, window.GW2TooltipsContext[contextIndex].character?.stats?.sources);
+				character.stats.sources = Object.assign(baseSources, window.GW2TooltipsContext[contextIndex].character?.stats?.sources);
 				console.assert(false && "todo weaponStats");
 			}
 			else if(window.GW2TooltipsContext) {
-				character.stats.sources = Object.assign(sources, window.GW2TooltipsContext.character?.stats?.sources);
+				character.stats.sources = Object.assign(baseSources, window.GW2TooltipsContext.character?.stats?.sources);
 				console.assert(false && "todo weaponStats");
 			}
 			else {
-				character.stats.sources = sources;
+				character.stats.sources = baseSources;
 				overwriteWeaponStatSources();
 			}
 		} break
 
 		case CollectMode.OverwriteGlobal: {
 			if(window.GW2TooltipsContext instanceof Array) {
-				character.stats.sources = Object.assign({}, window.GW2TooltipsContext[contextIndex].character?.stats?.sources, sources);
+				character.stats.sources = Object.assign({}, window.GW2TooltipsContext[contextIndex].character?.stats?.sources, baseSources);
 				console.assert(false && "todo weaponStats");
 			}
 			else if(window.GW2TooltipsContext) {
-				character.stats.sources = Object.assign({}, window.GW2TooltipsContext.character?.stats?.sources, sources);
+				character.stats.sources = Object.assign({}, window.GW2TooltipsContext.character?.stats?.sources, baseSources);
 				console.assert(false && "todo weaponStats");
 			}
 			else {
-				character.stats.sources = sources;
+				character.stats.sources = baseSources;
 				overwriteWeaponStatSources();
 			}
 		} break
@@ -506,6 +505,14 @@ export function traitEffects(contexts : Context[]) {
 				}
 			}
 		}
+	}
+}
+
+function mergeSources(prependOnto : SourceMap, copySource : SourceMap, prepend = false) {
+	for(const [k, v] of Object.entries(copySource)) {
+		let t = prependOnto[k as keyof SourceMap];
+		if(t !== undefined) { if(prepend) t.splice(0, 0, ...v); else t.push(...v) }
+		else prependOnto[k as keyof SourceMap] = v.slice(); //clone
 	}
 }
 

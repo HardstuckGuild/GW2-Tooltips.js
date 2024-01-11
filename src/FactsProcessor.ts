@@ -234,7 +234,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		baseDuration *= durMod;
 
 		if(buff.name.includes('Regeneration')) {
-			let valueModStack = context.character.stats.sources.HealEffectiveness;
+			let valueModStack = sumUpModifiers(context.character, 'HealEffectiveness');
 			if(valueModStack.length) {
 				//TODO(Rennorb)
 				if(config.showFactComputationDetail)

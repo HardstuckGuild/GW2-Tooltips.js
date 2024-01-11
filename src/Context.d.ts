@@ -34,13 +34,15 @@ interface Character {
 
 type BaseStats = {
 	values  : { [k in BaseAttribute] : number }
-	sources : { [k in BaseAttribute | ComputedAttribute | SyntheticAttributes | number]: StatSource[] }
+	sources : SourceMap
 }
 type BaseAndComputedStats = {
 	values   : { [k in BaseAttribute | ComputedAttribute] : number }
-	sources  : { [k in BaseAttribute | ComputedAttribute | SyntheticAttributes | number]: StatSource[] }
+	sources  : SourceMap
 	htmlParts: { [k in BaseAttribute | ComputedAttribute] : HTMLElement[] }
 }
+type SourceMap = SourceMapStrict & { [k in string]: StatSource[] }
+type SourceMapStrict = { [k in BaseAttribute | ComputedAttribute | SyntheticAttributes]: StatSource[] }
 
 interface StatSource {
 	source   : string

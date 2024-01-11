@@ -990,26 +990,21 @@ function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute,
 
 	if(['ConditionDuration', 'BoonDuration'].includes(attribute)) {
 		parts = parts.slice(); //clone array
-		const target_type = attribute === 'ConditionDuration' ? 'Condition' : 'Boon';
-		const completeSources = structuredClone(context.character.stats.sources); //todo @cleanup
-		for(const [key, mods] of Object.entries(weaponStats.sources)) {
-			if(isNaN(+key)) continue;
-			((completeSources as any)[key] || ((completeSources as any)[key] = [])).push(...mods);
-		}
+		const targetType = attribute === 'ConditionDuration' ? 'Condition' : 'Boon';
 
 		//NOTE(Rennorb): -1 because the cap is 200% for duration, but the displayed value is the _additional_ duration, so its a max of +100%.
 		const modCap = (getAttributeInformation(attribute, context.character).cap - 1) * 100;
 		const activeAttributes = getActiveAttributes(context.character);
 
-		for(const [effect_id, sources] of Object.entries(completeSources)) {
+		for(const [effectId, sources] of Object.entries(weaponStats.sources)) {
 			//NOTE(Rennorb): For simplicity of the remaining library we just eat the performance hit of iterating over the additional props here.
-			if(isNaN(+effect_id)) continue;
-			const effect = APICache.storage.skills.get(+effect_id);
+			if(isNaN(+effectId)) continue;
+			const effect = APICache.storage.skills.get(+effectId);
 			if(!effect) {
-				console.error(`[gw2-tooltips] [tooltip engine] effect #${effect_id} is missing in cache.`);
+				console.error(`[gw2-tooltips] [tooltip engine] effect #${effectId} is missing in cache.`);
 				continue;
 			}
-			if(effect.buff_type !== target_type) continue;
+			if(effect.buff_type !== targetType) continue;
 
 			let specificMod = value * 100;
 			let specificParts = [];

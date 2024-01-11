@@ -19,7 +19,7 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 		const displayMul = suffix ? 100 : 1;
 
 		const parts : HTMLElement[] = [];
-		const sources = stats.sources[attribute].concat(weaponStats.sources[attribute]); //todo cleanup
+		const sources = weaponStats.sources[attribute];
 		allParts[attribute] = { parts, sources };
 
 		{
@@ -187,8 +187,8 @@ export function getActiveAttributes(character : Character) : BaseAndComputedStat
 	return character.statsWithWeapons[character.selectedWeaponSet].values;
 }
 
-export function sumUpModifiers(character : Character, attribute : keyof BaseAndComputedStats['sources']) : StatSource[] {
-	return [...(character.stats.sources[attribute] || []), ...(character.statsWithWeapons[character.selectedWeaponSet].sources[attribute] || [])];
+export function sumUpModifiers(character : Character, attribute : keyof SourceMapStrict | number) : StatSource[] { // todo
+	return character.statsWithWeapons[character.selectedWeaponSet].sources[attribute] || [];
 }
 
 export const LUT_CRITICAL_DEFENSE = [
