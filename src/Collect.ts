@@ -48,32 +48,8 @@ function _upgradeCounts(contextIndex : number, targetContext : Context, elements
 	}
 
 	switch(mode) {
-		case CollectMode.IgnoreGlobal: targetContext.character.upgradeCounts = counts; break
+		case CollectMode.Overwrite: targetContext.character.upgradeCounts = counts; break
 		case CollectMode.Append: targetContext.character.upgradeCounts = Object.assign(targetContext.character.upgradeCounts, counts); break;
-
-		case CollectMode.PrioritizeGlobal: {
-			if(window.GW2TooltipsContext instanceof Array) {
-				targetContext.character.upgradeCounts = Object.assign(counts, window.GW2TooltipsContext[contextIndex].character?.upgradeCounts);
-			}
-			else if(window.GW2TooltipsContext) {
-				targetContext.character.upgradeCounts = Object.assign(counts, window.GW2TooltipsContext.character?.upgradeCounts);
-			}
-			else {
-				targetContext.character.upgradeCounts = counts;
-			}
-		} break
-
-		case CollectMode.OverwriteGlobal: {
-			if(window.GW2TooltipsContext instanceof Array) {
-				targetContext.character.upgradeCounts = Object.assign({}, window.GW2TooltipsContext[contextIndex].character?.upgradeCounts, counts);
-			}
-			else if(window.GW2TooltipsContext) {
-				targetContext.character.upgradeCounts = Object.assign({}, window.GW2TooltipsContext.character?.upgradeCounts, counts);
-			}
-			else {
-				targetContext.character.upgradeCounts = counts;
-			}
-		} break
 	}
 }
 
@@ -259,7 +235,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 
 		if(tiersToProcess) for(const [i, tier] of tiersToProcess.entries()) {
 			if(tier.modifiers) for(const mod of tier.modifiers!) {
-				if(!mod.target_attribute_or_skill || (mod.mode && mod.mode !== context.gameMode) || (mod.source_trait_req && !context.character.traits.includes(mod.source_trait_req)) || (mod.target_trait_req && !context.character.traits.includes(mod.target_trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
+				if(!mod.target_attribute_or_skill || (mod.mode && mod.mode !== context.gameMode) || (mod.source_trait_req && !context.character.traits.has(mod.source_trait_req)) || (mod.target_trait_req && !context.character.traits.has(mod.target_trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
 
 				let source = formatItemName(item!, context, attributeSet, undefined, -1);
 				if(sourceRuneSuffix) {
@@ -287,7 +263,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 	}
 	
 	switch(mode) {
-		case CollectMode.IgnoreGlobal:
+		case CollectMode.Overwrite:
 			character.stats.sources = baseSources;
 			overwriteWeaponStatSources();
 			break;
@@ -310,36 +286,6 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 				}
 			}
 		} break;
-
-		case CollectMode.PrioritizeGlobal: {
-			if(window.GW2TooltipsContext instanceof Array) {
-				character.stats.sources = Object.assign(baseSources, window.GW2TooltipsContext[contextIndex].character?.stats?.sources);
-				console.assert(false && "todo weaponStats");
-			}
-			else if(window.GW2TooltipsContext) {
-				character.stats.sources = Object.assign(baseSources, window.GW2TooltipsContext.character?.stats?.sources);
-				console.assert(false && "todo weaponStats");
-			}
-			else {
-				character.stats.sources = baseSources;
-				overwriteWeaponStatSources();
-			}
-		} break
-
-		case CollectMode.OverwriteGlobal: {
-			if(window.GW2TooltipsContext instanceof Array) {
-				character.stats.sources = Object.assign({}, window.GW2TooltipsContext[contextIndex].character?.stats?.sources, baseSources);
-				console.assert(false && "todo weaponStats");
-			}
-			else if(window.GW2TooltipsContext) {
-				character.stats.sources = Object.assign({}, window.GW2TooltipsContext.character?.stats?.sources, baseSources);
-				console.assert(false && "todo weaponStats");
-			}
-			else {
-				character.stats.sources = baseSources;
-				overwriteWeaponStatSources();
-			}
-		} break
 	}
 }
 
@@ -385,12 +331,17 @@ export function specificTraits(contextIndex : number, targetContext : Context, s
 	_traits(contextIndex, targetContext, scope.getElementsByTagName('gw2object'), mode);
 }
 function _traits(contextIndex : number, targetContext : Context, elements : Iterable<Element>, mode : CollectMode) {
-	const traits : number[] = [];
-	const specializations : number[] = [];
+	if(mode === CollectMode.Overwrite) {
+		targetContext.character.traits          = new Set<number>();
+		targetContext.character.specializations = new Set<number>();
+	}
+	const traits          = targetContext.character.traits;
+	const specializations = targetContext.character.specializations;
+
 	for(const specialization of elements) {
 		const specId = +String(specialization.getAttribute('objid'));
 		if(!isNaN(specId)) {
-			specializations.push(specId);
+			specializations.add(specId);
 		}
 
 		const selectedPositions = String(specialization.getAttribute('selected_traits')).split(',').map(i => +i).filter(i => !isNaN(i) && 0 <= i && i <= 2);
@@ -416,7 +367,7 @@ function _traits(contextIndex : number, targetContext : Context, elements : Iter
 					console.warn("[gw2-tooltips] [collect] Trait object ", traitEl, " is selected but does not exist or does not have an objid set. Add the attribute as `objid=\"1234\"`. Will not assume anything and just ignore the element.");
 					continue;
 				}
-				traits.push(id);
+				traits.add(id);
 			}
 			
 			//now abuse the iterator to also add minors
@@ -427,46 +378,9 @@ function _traits(contextIndex : number, targetContext : Context, elements : Iter
 					console.warn("[gw2-tooltips] [collect] Minor trait object ", traitEl, " does not have an objid set. Add the attribute as `objid=\"1234\"`. Will not assume anything and just ignore the element.");
 					continue;
 				}
-				traits.push(id);
+				traits.add(id);
 			}
 		}
-	}
-
-	//TODO(Rennorb) @cleanup: move this out?
-	switch(mode) {
-		case CollectMode.IgnoreGlobal:
-			// It doest actually make sense to 'overwrite' here, so its just the same as IgnoreGlobal.
-		case CollectMode.OverwriteGlobal: 
-			targetContext.character.traits = traits;
-			targetContext.character.specializations = specializations;
-			break
-
-		// It doest actually make sense to 'append' here, so its just the same as PrioritizeGlobal.
-		case CollectMode.Append:
-		case CollectMode.PrioritizeGlobal: {
-			if(window.GW2TooltipsContext instanceof Array) {
-				const set = new Set(window.GW2TooltipsContext[contextIndex].character?.traits);
-				traits.forEach(t => set.add(t));
-				targetContext.character.traits = Array.from(set);
-
-				const set2 = new Set(window.GW2TooltipsContext[contextIndex].character?.specializations);
-				specializations.forEach(t => set2.add(t));
-				targetContext.character.specializations = Array.from(set2);
-			}
-			else if(window.GW2TooltipsContext) {
-				const set = new Set(window.GW2TooltipsContext.character?.traits);
-				traits.forEach(t => set.add(t));
-				targetContext.character.traits = Array.from(set);
-
-				const set2 = new Set(window.GW2TooltipsContext.character?.specializations);
-				specializations.forEach(t => set2.add(t));
-				targetContext.character.specializations = Array.from(set2);
-			}
-			else {
-				targetContext.character.traits = traits;
-				targetContext.character.specializations = specializations;
-			}
-		} break
 	}
 }
 
@@ -481,7 +395,7 @@ export function traitEffects(contexts : Context[]) {
 
 			const addModifiers = (modifiers : API.Modifier[]) => {
 				for(const mod of modifiers) {
-					if(!mod.target_attribute_or_skill || (mod.mode && mod.mode !== context.gameMode) || (mod.source_trait_req && !context.character.traits.includes(mod.source_trait_req)) || (mod.target_trait_req && !context.character.traits.includes(mod.target_trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
+					if(!mod.target_attribute_or_skill || (mod.mode && mod.mode !== context.gameMode) || (mod.source_trait_req && !context.character.traits.has(mod.source_trait_req)) || (mod.target_trait_req && !context.character.traits.has(mod.target_trait_req))) continue; //TODO(Rennorb): probably extract this into a fn similar to the other resolver
 
 					(context.character.stats.sources[mod.target_attribute_or_skill] || (context.character.stats.sources[mod.target_attribute_or_skill] = []))
 						.push({source: `trait '<span class="gw2-color-traited-fact">${trait.name}</span>'`, modifier: mod, count: 1});
@@ -516,11 +430,8 @@ function mergeSources(prependOnto : SourceMap, copySource : SourceMap, prepend =
 	}
 }
 
-//TODO(RennorB) @cleanup: this was an idead i head, its uselsee. just get rid of it.
 const enum CollectMode {
-	IgnoreGlobal,
-	PrioritizeGlobal,
-	OverwriteGlobal,
+	Overwrite,
 	Append,
 }
 

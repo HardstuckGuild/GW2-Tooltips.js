@@ -412,7 +412,7 @@ export function resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { block
 				
 				const facts = result.blocks[blockId].facts = baseBlock.facts ?? []; // No need to clone here, we already structure cloned the whole thing.
 				for(const fact of overrideBlock.facts) {
-					if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
+					if(fact.requires_trait?.some(t => !context.character.traits.has(t))) continue;
 
 					if(fact.insert_before !== undefined) {
 						//this marker is to later on disambiguate between trait and gamemode overrides
@@ -428,7 +428,7 @@ export function resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { block
 
 	const finalBlocks = [];
 	for(const block of result.blocks) {
-		if(block.trait_requirements?.some(t => !context.character.traits.includes(t))) continue;
+		if(block.trait_requirements?.some(t => !context.character.traits.has(t))) continue;
 		
 		if(block.facts) {
 			const finalFacts = [];
@@ -436,7 +436,7 @@ export function resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { block
 			for(let i = 0; i < block.facts.length; i++) {
 				const fact = block.facts[i];
 
-				if(fact.requires_trait?.some(t => !context.character.traits.includes(t))) continue;
+				if(fact.requires_trait?.some(t => !context.character.traits.has(t))) continue;
 				if(to_skip-- > 0) continue;
 
 				finalFacts.push(fact);
@@ -594,7 +594,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 	if('ambush_skills' in initialAPIObject) {
 		for(const { id: subSkillId, spec } of initialAPIObject.ambush_skills!) {
 			const subSkillInChain = APICache.storage.skills.get(subSkillId);
-			if(subSkillInChain && canBeUsedOnCurrentTerrain(subSkillInChain, context) && (!spec || context.character.specializations.includes(spec))) {
+			if(subSkillInChain && canBeUsedOnCurrentTerrain(subSkillInChain, context) && (!spec || context.character.specializations.has(spec))) {
 				if(!slot) {
 					[palette, group] = guessGroupAndContext(subSkillInChain, context);
 					slot = refineSlotName(palette!, group?.slot);
@@ -627,7 +627,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 		if(slot_name) slot_name = 'ai '+slot_name;
 		tooltipChain.push(generateToolTip(petSkill, slot_name, subiconRenderMode, context, weaponSet));
 	}
-	if(context.character.specializations.includes(Specializations.SOULBEAST) && 'skills_soulbeast' in initialAPIObject) for(const petSkillId of initialAPIObject.skills_soulbeast) {
+	if(context.character.specializations.has(Specializations.SOULBEAST) && 'skills_soulbeast' in initialAPIObject) for(const petSkillId of initialAPIObject.skills_soulbeast) {
 		let petSkill = APICache.storage.skills.get(petSkillId);
 		if(!petSkill) {
 			console.warn(`[gw2-tooltips] pet skill #${petSkillId} is missing from the cache. The query was caused by `, gw2Object);
@@ -715,19 +715,17 @@ function guessGroupAndContext(skill : API.Skill, context : Context) : [API.Palet
 function transmuteContext(targetCandidate : API.SkillInfo, context : Context, clone = true) : Context {
 	//cannot structured clone because of the custom elements
 	if(clone) {
-		const character = Object.assign({}, context.character, { specializations: context.character.specializations.slice(), traits: context.character.traits.slice() });
+		const character = Object.assign({}, context.character, { specializations: structuredClone(context.character.specializations), traits: structuredClone(context.character.traits) });
 		context = Object.assign({}, context, { character });
 	}
-	if(targetCandidate.specialization && !context.character.specializations.includes(targetCandidate.specialization))
-		context.character.specializations.push(targetCandidate.specialization);
-	if(targetCandidate.trait && !context.character.traits.includes(targetCandidate.trait))
-		context.character.traits.push(targetCandidate.trait);
+	if(targetCandidate.specialization) context.character.specializations.add(targetCandidate.specialization);
+	if(targetCandidate.trait) context.character.traits.add(targetCandidate.trait);
 	return context;
 };
 
 function canBeSelected(info : API.SkillInfo, context : Context) : boolean {
-	return (info.specialization === undefined || context.character.specializations.includes(info.specialization)) &&
-		(info.trait === undefined || context.character.traits.includes(info.trait)) &&
+	return (info.specialization === undefined || context.character.specializations.has(info.specialization)) &&
+		(info.trait === undefined || context.character.traits.has(info.trait)) &&
 		(context.underwater ? info.usability.includes('UsableUnderWater') : info.usability.includes('UsableLand')) &&
 		(context.character.level >= (info.min_level || 0))
 }
@@ -754,7 +752,7 @@ export function findTraitedOverride(skill : API.Skill, context : Context) : API.
 				const candidate = group.candidates[i];
 				if(candidate.trait) {
 					//TODO(Rennorb): use buffs here
-					if(!context.character.traits.includes(candidate.trait)) continue;
+					if(!context.character.traits.has(candidate.trait)) continue;
 
 					const replacementSkill = APICache.storage.skills.get(candidate.skill);
 					if(!replacementSkill) {
@@ -1076,11 +1074,11 @@ export function specializeContextFromInlineAttribs(context : Context, gw2Object 
 		context = Object.assign({}, context);
 		context.character = Object.assign({}, context.character);
 		const invalid : string[] = [];
-		context.character.traits = traitOverrides.split(',').map(t => {
+		context.character.traits = new Set(traitOverrides.split(',').map(t => {
 			const v = +t;
 			if(!v) invalid.push(t);
 			return v;
-		}).filter(t => t);
+		}).filter(t => t));
 		if(invalid.length) console.warn("[gw2-tooltips] [tooltip engine] Inline trait-override for element ", gw2Object, " has misformed overrides: ", invalid)
 	}
 	return context;
@@ -1132,8 +1130,8 @@ export const DEFAULT_CONTEXT : Context = {
 		level            : 80,
 		isPlayer         : true,
 		sex              : "Male",
-		traits           : [],
-		specializations  : [],
+		traits           : new Set(),
+		specializations  : new Set(),
 		stats: {
 			values:  {
 				Power            : 0,
@@ -1243,7 +1241,7 @@ function createCompleteContext(partialContext : PartialContext) : Context {
 	const stats = createCompletedBaseStats(partialContext.character?.stats);
 	const upgradeCounts = Object.assign({}, partialContext.character?.upgradeCounts);
 	const statsWithWeapons = partialContext.character?.statsWithWeapons?.map(s => createCompletedStats(s)) || [createCompletedStats()];
-	const character = Object.assign({}, DEFAULT_CONTEXT.character, { traits: [], specializations: [] }, partialContext.character, { stats, upgradeCounts, statsWithWeapons });
+	const character = Object.assign({}, DEFAULT_CONTEXT.character, { traits: new Set(), specializations: new Set() }, partialContext.character, { stats, upgradeCounts, statsWithWeapons });
 	return Object.assign({}, DEFAULT_CONTEXT, partialContext, { character });
 }
 

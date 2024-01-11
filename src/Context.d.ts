@@ -24,8 +24,8 @@ interface Character {
 	isPlayer          : boolean
 	sex               : 'Male' | 'Female'
 	profession?       : ProfessionId
-	traits            : number[]
-	specializations   : number[]
+	traits            : Set<number>
+	specializations   : Set<number>
 	stats             : BaseStats
 	statsWithWeapons  : BaseAndComputedStats[]
 	selectedWeaponSet : number

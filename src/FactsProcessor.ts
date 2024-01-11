@@ -101,7 +101,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		if(buff.modifiers && !buff.description_brief && !itemMode) { // early bail to not have to do the work if we use the description anyways
 			//TODO(Rennorb) @consistency: gamemode splitting for mods (?)
 			const relevantModifiers = buff.modifiers.filter(modifier => (
-				   (!modifier.source_trait_req || context.character.traits.includes(modifier.source_trait_req))
+				   (!modifier.source_trait_req || context.character.traits.has(modifier.source_trait_req))
 				//NOTE(Rennorb): We ignore this on purpose. See https://github.com/HardstuckGuild/Tooltips.js/issues/81 for context
 				//&& (!modifier.target_trait_req || context.character.traits.includes(modifier.target_trait_req))
 				&& (!modifier.mode || modifier.mode === context.gameMode)
