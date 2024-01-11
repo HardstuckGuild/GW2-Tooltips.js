@@ -1561,6 +1561,10 @@ if(config.autoInitialize) {
 				}
 			}
 
+			for(const { character } of contexts) {
+				Collect.hoistGeneralSources(character);
+			}
+
 			if(config.autoRecomputeCharacterAttributes) {
 				for(const context of contexts) {
 					for(const weaponSetId of context.character.statsWithWeapons.keys()) {

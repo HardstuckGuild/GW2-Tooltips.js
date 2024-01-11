@@ -248,14 +248,16 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 		}
 	}
 
+
+	//NOTE(Rennorb): We only add the specific / general sources to themselves here, we hoist the general ones into specifics later on.
+
 	const character = context.character;
 	const overwriteWeaponStatSources = () => {
-		for(let [i, w_sources] of weaponSetSources.entries()) {
-			mergeSources(w_sources, baseSources, true);
+		for(let [i, specificSources] of weaponSetSources.entries()) {
 			const target = character.statsWithWeapons[i];
-			if(target) target.sources = w_sources;
+			if(target) target.sources = specificSources;
 			else character.statsWithWeapons[i] = {
-				sources: w_sources,
+				sources: specificSources,
 				values   : Object.assign({}, DEFAULT_CONTEXT.character.statsWithWeapons[0].values),
 				htmlParts: structuredClone(DEFAULT_CONTEXT.character.statsWithWeapons[0].htmlParts),
 			};
@@ -273,11 +275,9 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 			for(const [i, sources] of weaponSetSources.entries()) {
 				const wTarget = character.statsWithWeapons[i];
 				if(wTarget) {
-					mergeSources(wTarget.sources, baseSources, true);
 					mergeSources(wTarget.sources, sources);
 				}
 				else {
-					mergeSources(sources, character.stats.sources, true)
 					character.statsWithWeapons[i] = {
 						sources,
 						values   : Object.assign({}, DEFAULT_CONTEXT.character.statsWithWeapons[0].values),
@@ -419,6 +419,12 @@ export function traitEffects(contexts : Context[]) {
 				}
 			}
 		}
+	}
+}
+
+export function hoistGeneralSources(character : Character) {
+	for(const specializedStats of character.statsWithWeapons) {
+		mergeSources(specializedStats.sources, character.stats.sources, true);
 	}
 }
 

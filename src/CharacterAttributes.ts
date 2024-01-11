@@ -5,8 +5,7 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 		'Health', 'Armor', 'ConditionDuration', 'BoonDuration', 'CritChance', 'CritDamage',
 	];
 
-	const stats = context.character.stats;
-	const weaponStats = context.character.statsWithWeapons[weaponSet ?? context.character.selectedWeaponSet];
+	const stats = context.character.statsWithWeapons[weaponSet ?? context.character.selectedWeaponSet];
 
 	const allParts : { [k in BaseAttribute | ComputedAttribute]: { parts : HTMLElement[], sources : StatSource[] } } = { } as any;
 	const stage1Attributes : { [k in BaseAttribute | ComputedAttribute]: number } = { } as any;
@@ -19,7 +18,7 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 		const displayMul = suffix ? 100 : 1;
 
 		const parts : HTMLElement[] = [];
-		const sources = weaponStats.sources[attribute];
+		const sources = stats.sources[attribute];
 		allParts[attribute] = { parts, sources };
 
 		{
@@ -112,8 +111,8 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 	}
 
 	for(const attribute of attributeOrder) {
-		weaponStats.values[attribute] = stage2Attributes[attribute];
-		weaponStats.htmlParts[attribute] = allParts[attribute].parts;
+		stats.values[attribute] = stage2Attributes[attribute];
+		stats.htmlParts[attribute] = allParts[attribute].parts;
 	}
 }
 
