@@ -148,7 +148,7 @@ namespace API {
 		value : number
 	}
 
-	type PercentFact = BasicFact<'Percent' | 'PercentDamage' | 'PercentHealth' | 'PercentLifeForceCost' | 'PercentLifeForceGain'> & {
+	type PercentFact = BasicFact<'Percent' | 'PercentHpSelfDamage' | 'PercentHealth' | 'PercentLifeForceCost' | 'PercentLifeForceGain'> & {
 		percent : number
 	}
 
@@ -215,7 +215,7 @@ namespace API {
 		Distance                         : DistanceFact
 		Number                           : NumberFact
 		Percent                          : PercentFact
-		PercentDamage                    : PercentFact
+		PercentHpSelfDamage              : PercentFact
 		PercentHealth                    : PercentFact
 		PercentLifeForceCost             : PercentFact
 		PercentLifeForceGain             : PercentFact

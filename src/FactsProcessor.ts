@@ -372,7 +372,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		Percent : ({fact}) => {
 			return [`${GW2Text2HTML(fact.text)}: ${drawFractional(fact.percent, config)}%`];
 		},
-		PercentDamage : ({fact}) => {
+		PercentHpSelfDamage : ({fact}) => {
 			// TODO(mithos) game shows an actual raw number here. to implement this we need to get the characters damage
 			//NOTE(Rennorb): this is going to be verry difficult if not impossible
 			return [`${GW2Text2HTML(fact.text)}: ${drawFractional(fact.percent, config)}%`];
