@@ -77,9 +77,9 @@
 		let id = parseInt(input.value);
 		if(isNaN(id) || id === 0) return;
 
-		await APICache.ensureExistence('palettes', [id]);
+		await GW2TooltipsV2.APICache.ensureExistence('palettes', [id]);
 
-		const palette = APICache.storage.palettes.get(id);
+		const palette = GW2TooltipsV2.APICache.storage.palettes.get(id);
 
 		let title = `id: ${palette.id}, type: ${palette.type}`;
 		if(palette.weapon_type) title += `, weapon type: ${palette.weapon_type}`;
@@ -110,7 +110,7 @@
 				candidateWrapperElm.append(newElm('div.candidate',
 					conditionsElm,
 					newElm('div.skill', 
-						newElm('div', `[${candidate.skill}] ${APICache.storage.skills.get(candidate.skill)?.name}`),
+						newElm('div', `[${candidate.skill}] ${GW2TooltipsV2.APICache.storage.skills.get(candidate.skill)?.name}`),
 						newObjElm('skill', candidate.skill),
 					)
 				));

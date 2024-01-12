@@ -132,10 +132,10 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 				if(modifier.flags.includes('MulByDuration')) {
 					let this_duration = duration / 1000;
-					if(modifier.flags.includes('DivDurationBy3')) { //TODO(Rennorb): move to api side and remove this
+					if(modifier.flags.includes('DivDurationBy3')) {
 						this_duration /= 3;
 					}
-					if(modifier.flags.includes('DivDurationBy10')) { //TODO(Rennorb): move to api side and remove this
+					if(modifier.flags.includes('DivDurationBy10')) {
 						this_duration /= 10;
 					}
 

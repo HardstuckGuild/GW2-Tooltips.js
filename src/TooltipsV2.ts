@@ -2,7 +2,6 @@
 //TODO(Rennorb): Provide a clean way to construct custom tooltips. Currently with the old version we manipulate the cache before the hook function gets called, which really isn't the the best.
 //TODO(Rennorb): Option to show whole skill-chain (maybe on button hold)?
 //TODO(Rennorb): Stop using these jank custom tags. There is no reason to do so and its technically not legal per html spec.
-//TODO(Rennorb): Link minion skills to minion summon skill. might be doable via the species def
 //TODO(Rennorb): Defiance break on single effect tooltips.
 //TODO(Rennorb): Change anything percent related to use fractions instead of integers (0.2 instead of 20).
 // The only thing this is good for is to make drawing the facts easier. Since we do quite a few calculations this swap would reduce conversions quite a bit.
@@ -1585,9 +1584,11 @@ if(config.autoInitialize) {
 }
 
 const enum Specializations { SOULBEAST = 55 }
+
 import { newElm, newImg, GW2Text2HTML, mapLocale, drawFractional, fromHTML, findSelfOrParent, n3, resolveInflections, IconRenderMode, IsDevIcon } from './TUtilsV2';
 import * as APIs from './API';
 import APICache from './APICache';
+export { APICache }
 import { MISSING_SKILL, calculateModifier, generateFact, generateFacts } from './FactsProcessor';
 import * as Collect from './Collect'; //TODO(Rennorb) @cleanup
 import { _legacy_transformEffectToSkillObject, inferItemUpgrades, inflateAttribute, inflateGenericIcon, inflateItem, inflateProfession, inflateSkill, inflateSpecialization } from './Inflators'

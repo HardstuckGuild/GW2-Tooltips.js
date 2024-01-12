@@ -139,6 +139,9 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 	By including the script it wil automatically hook the whole document of the current page (as long as the auto initialize config option is set to `true`). Use the `defer` keyword when loading the script to run it after the page has finished laoding, or put the script tag at the end of your html body.
 	You may also call `GW2TooltipsV2.hookDocument(targetNode)` to specifically only process a target root node and its descendants.
 
+## Manual Usage
+If you need a simple example on how to manually invoke the library, have a look at `test/palette_visualizer.htm`. The page shows how to interact with the api to fetch information, and how to use that information manually as well as how to inflate objects and hook the tooltips into them.
+
 ## Keybinds
 Currently there are two hard-coded keybinds available:
 - `ctrl + alt + D`: toggle `showFactComputationDetail`

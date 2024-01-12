@@ -162,9 +162,6 @@ export default class APICache {
 	}
 }
 
-(window as any).APICache = APICache; //@debug
-
-
 type ObjectDataStorage = {
 	[k in APIEndpoint] : Map<APIResponseTypeMap[k]['id'], APIResponseTypeMap[k]>
 }
