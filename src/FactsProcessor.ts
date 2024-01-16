@@ -112,13 +112,15 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			for (let i = 0; i < relevantModifiers.length; i++) {
 				const modifier = relevantModifiers[i];
 
-				let entry = modsMap.get(modifier.id) || modsMap.set(modifier.id, { modifier: modifier, value: 0 }).get(modifier.id);
+				let entry = modsMap.get(modifier.id);
+				if(!entry) modsMap.set(modifier.id, entry = { modifier: modifier, value: 0 });
+
 				let value = calculateModifier(modifier, context.character.level, activeStats);
 				if (modifier.source_attribute) { //TODO(Rennorb) @cleanup 'force of will'
 					value *= activeStats[modifier.source_attribute];
 				}
 
-				entry!.value += value;
+				entry.value += value;
 
 				if(modifier.flags.includes('SkipNextEntry')) {
 					i++;
@@ -190,7 +192,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				detailStack.push(`+ ${n3(baseDuration / 1000 * attribVal / div)}s (${n3(attribVal / div * 100)}%) from ${n3(attribVal)} ${baseAttribute}`);
 			}
 
-			for(const source of sumUpModifiers(context.character, durationAttr)) {
+			for(const source of getAttributeSources(context.character, durationAttr)) {
 				let mod = calculateModifier(source.modifier, context.character.level, activeStats) * source.count;
 				const innerSuffix = source.modifier.flags.includes('FormatPercent') ? '%' : '';
 				const displayMul = innerSuffix ? 100 : 1;
@@ -210,7 +212,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		}
 
 		//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
-		let durModStack = sumUpModifiers(context.character, buff.id);
+		let durModStack = getAttributeSources(context.character, buff.id);
 		if(durModStack.length) {
 			//NOTE(Rennorb): Just in case we didn't have a stat duration increase. Im aware that this is jank, but i cant think of a better way rn.
 			if(durMod === 1 && config.showFactComputationDetail)
@@ -234,7 +236,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		baseDuration *= durMod;
 
 		if(buff.name.includes('Regeneration')) {
-			let valueModStack = sumUpModifiers(context.character, 'HealEffectiveness');
+			let valueModStack = getAttributeSources(context.character, 'HealEffectiveness');
 			if(valueModStack.length) {
 				//TODO(Rennorb)
 				if(config.showFactComputationDetail)
@@ -282,7 +284,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 			if(fact.text?.includes('Heal')) { //TODO(Rennorb) @cleanup @correctness
 				let percentMod = 100;
-				for(const { source, modifier, count } of sumUpModifiers(context.character, 'HealEffectiveness')) {
+				for(const { source, modifier, count } of getAttributeSources(context.character, 'HealEffectiveness')) {
 					let mod = calculateModifier(modifier, context.character.level, activeStats);
 					if(modifier.source_attribute) mod *= 100; // @cleanup
 
@@ -315,8 +317,10 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			return parts;
 		},
 		Buff : ({fact, buff}) =>  {
-			if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-			buff = buff || MISSING_BUFF; // in case we didn't get the buff we wanted from the api
+			if(!buff) {
+				console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
+				buff = MISSING_BUFF;
+			}
 			iconSlug = buff.icon || iconSlug;
 
 			const parts : (string | Node)[] = [];
@@ -336,8 +340,10 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			return parts;
 		},
 		BuffBrief : ({fact, buff}) =>  {
-			if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-			buff = buff || MISSING_BUFF;
+			if(!buff) {
+				console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
+				buff = MISSING_BUFF;
+			}
 			iconSlug = buff.icon || iconSlug;
 
 			return [`${GW2Text2HTML(fact.text, buff.name)}`];
@@ -349,7 +355,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			const lines : (string|Node)[] = [];
 
 			if(defiance_break_per_s && text && text.includes('Defiance')) {
-				const modifiers = sumUpModifiers(context.character, 'Stun');
+				const modifiers = getAttributeSources(context.character, 'Stun');
 				if(modifiers.length) {
 					if(config.showFactComputationDetail)
 						lines.push(`${n3(value)} base value`);
@@ -401,7 +407,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				lines.push(`${n3(percent * 0.01 * hpPool * 0.69)} from ${n3(percent)}% * (${n3(hpPool)} HP * 0.69) pool (${n3(getBaseHealth(context.character))} base pool modified by ${n3(getAttributeValue(context.character, 'Vitality'))} Vitality)`);
 			}
 
-			const modifiers = sumUpModifiers(context.character, 'LifeForce');
+			const modifiers = getAttributeSources(context.character, 'LifeForce');
 			if(modifiers.length) {
 				let percentMod = 100;
 				for(const { source, modifier, count } of modifiers) {
@@ -440,7 +446,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				lines.push(`+ ${n3(moreDmgFromCrit)} (${n3(critChance * (critDamage - 1) * 100)}%) from ${n3(critChance * 100)}% crit chance and ${n3(critDamage * 100)}% damage on crit (${n3(precision)} precision and ${n3(ferocity)} ferocity)`);
 			}
 
-			const modifiers = sumUpModifiers(context.character, 'Damage');
+			const modifiers = getAttributeSources(context.character, 'Damage');
 			if(modifiers.length) {
 				let percentMod = 100;
 				for(const { source, modifier, count } of modifiers) {
@@ -462,10 +468,11 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 			//TODO(Rennorb) @cleanup
 			if(defiance_break_per_s && text && (text.includes('Stun') || text.includes('Daze') 
-				//NOTE(Rennorb): This filters for '{Bonus|Additional} Defiance {Damage|Break}' which apparently is also affected by stun mods like paralyzation sigil
+				//NOTE(Rennorb): This filters for '{Bonus|Additional} Defiance {Damage|Break}' which apparently is also affected by stun mods like paralyzation sigil.
+				// This will not modify the 'total defiance break' synthetic fact as that one gets generated after all others are done.
 				|| text.includes('Defiance'))
 			) {
-				const modifiers = sumUpModifiers(context.character, 'Stun');
+				const modifiers = getAttributeSources(context.character, 'Stun');
 				if(modifiers.length) {
 					if(config.showFactComputationDetail)
 						lines.push(`${n3(buffDuration / 1000)}s base duration`);
@@ -498,12 +505,16 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		},
 		PrefixedBuff : ({fact, buff}) => {
 			let prefix = APICache.storage.skills.get(fact.prefix);
-			if(!prefix) console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
-			prefix = prefix || MISSING_BUFF;
+			if(!prefix) {
+				console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
+				prefix = MISSING_BUFF;
+			}
 			iconSlug = prefix.icon || iconSlug;
 
-			if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-			buff = buff || MISSING_BUFF; // in case we didn't get the buff we wanted from the api
+			if(!buff) {
+				console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
+				buff = MISSING_BUFF;
+			}
 
 			let {duration, apply_count, text} = fact;
 
@@ -528,12 +539,16 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		},
 		PrefixedBuffBrief : ({fact, buff}) => {
 			let prefix = APICache.storage.skills.get(fact.prefix)
-			if(!prefix) console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
-			prefix = prefix || MISSING_BUFF;
+			if(!prefix) {
+				console.error('[gw2-tooltips] [facts processor] prefix #', fact.prefix, ' is apparently missing in the cache');
+				prefix = MISSING_BUFF;
+			}
 			iconSlug = prefix.icon || iconSlug
 
-			if(!buff) console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
-			buff = buff || MISSING_BUFF; // in case we didn't get the buff we wanted from the api
+			if(!buff) {
+				console.error('[gw2-tooltips] [facts processor] buff #', fact.buff, ' is apparently missing in the cache');
+				buff = MISSING_BUFF;
+			}
 
 			let node = newElm('div.fact', // class is just for styling
 				newImg(buff.icon),
@@ -617,4 +632,4 @@ export const MISSING_SKILL : API.Skill = {
 import { newElm, newImg, drawFractional, GW2Text2HTML, withUpToNDigits, mapLocale, joinWordList, fromHTML, n3, resolveInflections, formatDuration, n3s, n3ss } from './TUtilsV2';
 import APICache from './APICache';
 import { ICONS, config } from './TooltipsV2';
-import { getActiveAttributes, getAttributeInformation, getAttributeValue, getBaseHealth, sumUpModifiers } from './CharacterAttributes';
+import { getActiveAttributes, getAttributeInformation, getAttributeValue, getBaseHealth, getAttributeSources } from './CharacterAttributes';

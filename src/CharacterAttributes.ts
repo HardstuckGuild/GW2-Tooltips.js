@@ -186,7 +186,7 @@ export function getActiveAttributes(character : Character) : BaseAndComputedStat
 	return character.statsWithWeapons[character.selectedWeaponSet].values;
 }
 
-export function sumUpModifiers(character : Character, attribute : keyof SourceMapStrict | number) : StatSource[] { // todo
+export function getAttributeSources(character : Character, attribute : keyof SourceMapStrict | number) : StatSource[] {
 	return character.statsWithWeapons[character.selectedWeaponSet].sources[attribute] || [];
 }
 
