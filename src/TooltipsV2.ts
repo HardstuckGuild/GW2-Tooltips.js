@@ -245,7 +245,7 @@ function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 function generateToolTip(apiObject : SupportedTTTypes, slotName : string | undefined, iconMode : IconRenderMode, context : Context, weaponSet? : number) : HTMLElement {
 	const headerElements = [];
 
-	if(iconMode == IconRenderMode.SHOW || (iconMode == IconRenderMode.FILTER_DEV_ICONS && !IsDevIcon(apiObject.icon as string | undefined)))
+	if(iconMode == IconRenderMode.SHOW || (iconMode == IconRenderMode.FILTER_DEV_ICONS && !IsDevIcon(apiObject.icon)))
 		headerElements.push(newImg(apiObject.icon));
 
 	headerElements.push(

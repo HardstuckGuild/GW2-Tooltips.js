@@ -11,14 +11,15 @@ export function newElm<T extends keyof HTMLElementMap>(spec : T, ...inner : (str
 	return el as HTMLElementMap[T]
 }
 
-export const IMAGE_CDN = 'https://assets.gw2dat.com/'
+export function formatImageUrl(id : number) : string {
+	return `https://assets.gw2dat.com/${id}.png`;
+} 
+
 const missingImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHEAAABuCAIAAACfnGvJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMCSURBVHhe7ZjpkeowEAaJywERD9GQDMGwumyPLj+2XssH+/UPyjMjjVBjUWXf3oJGTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSU51inr8d0u02PVwp/xf/MHQvt9Hm/Be7PlMgIHhyzCjn9hNlpc7ebxe9hhNPp8QifpTdfuz9Oe3thjHH6Cndkfv7DWb0/syNbnN8QJuzkZr5q5K+Xk2C6BtbCTDEAZJDTuIfKi0tUKuZgHhBx89P1Zj5rtK4YQzspL43z6RnltFBR5DMVKVhGFPTy3UYBO6vo0GuIMcxpvs1O2gbhei0tbOazRusvmCe+x6nddDtbBA4/LmEFNfN1o57TOD0F5ZIDGOh0CbL91SrqDYZ07iiQ5etGdrxNpGkz9XowQ53GG2Sa7H5rFc095n1W1nzdqOPUXzbXGMVYp1FqlqlVxMCNXEd9kG806t2n87cw2KE4g53mO/fUKrJgxkzp5Ou5Paf//E4wtNPzUelupki+32k8+cZgMDpQ6V9w6ij+UAeee8/fcLovcsojpzxyyiOnPHLKI6c8csqDOx39MH0B5JRHTnmGO00v2uKLi0B8e7E8ghf+7aP5RimyDrC1ga9HPmIXp2ajy95tvEhwUaHJlpaouUandgD7OF3MpHijbrAlf13MmsOwoulQxruzu9NfGLClvtO6QTF2d87mNISWuWT7ZGtUMwJy2nLVKK2YBcqGx3Mmp+XUomQqGUcf9YpT3afZ2BBUoWFpElqYnm7ooY5P9n8a9QRcDz83lfylFdVcJnGoUAfudAjlD+FopM7CNZy27/aTKr2KU4c93Y6jD/gG13F6HeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklEdOeeSUR0555JRHTnnklOb9/gEv6oxxwmIw6QAAAABJRU5ErkJggg==';
-export function newImg(src? : string | number, className? : string, alt? : string) : HTMLImageElement {
-	if(typeof src == 'number') src = src + '.png'
-	
+export function newImg(src? : number, className? : string, alt? : string) : HTMLImageElement {
 	const img = document.createElement('img')
 	//NOTE(Rennorb): Full urls specify a protocol which is delilited by a colon. Not perferct but good enough for now.  https_:_ , data_:_image
-	img.src = src ? (src.includes(':') ? src : IMAGE_CDN + src) : missingImage;
+	img.src = src ? formatImageUrl(src) : missingImage;
 	if(className) img.classList.add(className)
 	img.alt = alt ? alt+' icon' : 'icon';
 	return img;
@@ -104,7 +105,7 @@ export function formatDuration(value : number, config : Config) : string {
 	else return drawFractional(value, config) + 's';
 }
 
-//TODO(rennorb) @cleanup: rename
+//TODO(rennorb) @cleanup: rename -> localizeInternalNames
 export function mapLocale<T_ extends string>(type : BaseAttribute | ComputedAttribute | API.ComboFinisherType | API.ComboFieldType | API.Palette['weapon_type'] | T_) {
 	switch (type) {
 		case 'ConditionDuration': return 'Condition Duration';
@@ -145,9 +146,8 @@ export const enum IconRenderMode {
 	FILTER_DEV_ICONS,
 }
 
-//NOTE(Rennorb): this does not neeed to catch all dev icons, just hte ones taht actualyl come up.
+//NOTE(Rennorb): this does not neeed to catch all dev icons, just the ones that actually come up.
 // https://github.com/HardstuckGuild/Tooltips.js/issues/55
-//TODO(Rennorb) @cleanup: make icons be numbers
-export function IsDevIcon(ico? : string) {
-	return ['2141735.png', '2141736.png', '2141737.png'].includes(ico!);
+export function IsDevIcon(ico? : number) {
+	return [2141735, 2141736, 2141737].includes(ico!);
 }

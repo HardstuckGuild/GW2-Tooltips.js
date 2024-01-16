@@ -26,7 +26,7 @@ namespace API {
 		name_brief?        : string
 		description?       : string
 		description_brief? : string
-		icon?              : string | number // TODO: move to using numbers
+		icon?              : number
 		categories         : any[]
 		palettes           : number[]
 		related_skills?    : number[]
@@ -103,7 +103,7 @@ namespace API {
 
 	type BasicFact<Type extends keyof FactMap> = {
 		type            : Type
-		icon            : string
+		icon            : number
 		text?           : string
 		order           : number
 		requires_trait? : number[]
@@ -236,7 +236,7 @@ namespace API {
 
 	type Trait = ContextInformation & {
 		id                 : number
-		icon               : string
+		icon               : number
 		name               : string
 		name_brief?        : string
 		description?       : string
@@ -273,7 +273,7 @@ namespace API {
 	type ItemBase = {
 		id             : number
 		name           : string
-		icon           : string
+		icon?          : number
 		rarity         : 'Junk' | 'Basic' | 'Common' | 'Uncommon' | 'Rare' | 'Exotic' | 'Ascended' | 'Legendary'
 		flags          : ItemFlag[]
 		level          : number
@@ -369,7 +369,7 @@ namespace API {
 	type Pet = {
 		id               : number
 		name             : string
-		icon             : string
+		icon             : number
 		description      : string
 		skills           : number[]
 		skills_ai        : number[] //not yet available
@@ -379,15 +379,15 @@ namespace API {
 	type Specialization = {
 		id         : number
 		name       : string
-		icon       : string
-		background : string
+		icon       : number
+		background : number
 	}
 
 	type Profession =  {
 		id                : ProfessionId
 		name              : string
-		icon              : string
-		icon_big          : string
+		icon              : number
+		icon_big          : number
 		specializations   : number[]
 		skills_by_palette : [number, number][]
 		weapons           : { [k in WeaponDetailType]? : ProfessionWeaponData }
