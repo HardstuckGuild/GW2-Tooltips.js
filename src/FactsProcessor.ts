@@ -90,7 +90,7 @@ export function generateFacts(blocks : API.FactBlock[], weaponStrength : number,
 
 /** @param fact should already be context resolved */
 export function generateFact(fact : API.Fact, weapon_strength : number, context : Context, itemMode : boolean = false) : { wrapper? : HTMLElement, defiance_break : number } {
-	let iconSlug : Parameters<typeof newImg>[0] = fact.icon;
+	let iconSlug = fact.icon;
 	let buffStackSize = 1;
 	let buffDuration = (fact as API.BuffFact).duration;
 	let defiance_break_per_s = fact.defiance_break;
@@ -152,7 +152,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 					value *= valueMod;
 
 				let strValue = modifier.flags.includes('FormatFraction')
-					? drawFractional(value, config)
+					? formatFraction(value, config)
 					: Math.floor(Math.fround(value)).toString();
 
 				if(modifier.flags.includes('FormatPercent')) {
@@ -168,7 +168,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 					if(computedAttribute) {
 						const { div, suffix } = getAttributeInformation(computedAttribute, context.character);
 						const displayMul = suffix ? 100 : 1;
-						strValue += ` <span class="detail">(converts to ${n3(value / div * displayMul)}${suffix} ${mapLocale(computedAttribute)})</span>`;
+						strValue += ` <span class="detail">(converts to ${n3(value / div * displayMul)}${suffix} ${localizeInternalName(computedAttribute)})</span>`;
 					}
 				}
 
@@ -238,17 +238,16 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		if(buff.name.includes('Regeneration')) {
 			let valueModStack = getAttributeSources(context.character, 'HealEffectiveness');
 			if(valueModStack.length) {
-				//TODO(Rennorb)
 				if(config.showFactComputationDetail)
 					detailStack.push('regeneration value mods:');
 				let percentMod = 0;
 				for(const { source, modifier, count } of valueModStack) {
 					let mod = calculateModifier(modifier, context.character.level, activeStats);
-					if(modifier.source_attribute) mod *= 100; // @cleanup
+					if(modifier.source_attribute) mod *= 100; //TODO(Rennorb) @cleanup
 
 					if(config.showFactComputationDetail) {
 						const conversion = modifier.source_attribute
-							? `${n3ss(mod)}% from ${n3(modifier.base_amount)} * ${n3(activeStats[modifier.source_attribute])} ${mapLocale(modifier.source_attribute)}`
+							? `${n3ss(mod)}% from ${n3(modifier.base_amount)} * ${n3(activeStats[modifier.source_attribute])} ${localizeInternalName(modifier.source_attribute)}`
 							: `${n3ss(mod)}%`;
 						// TODO(Rennorb): @completeness: Show the amount this percent mod results in.
 						detailStack.push(newElm('span.detail', `${conversion} from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character))));
@@ -278,7 +277,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			if(config.showFactComputationDetail) {
 				lines.push(`${n3(fact.value)} base value`);
 				if(fact.level_multiplier) lines.push(`+ ${n3(context.character.level ** fact.level_exponent * fact.level_multiplier)} from lvl ${context.character.level} ^ ${n3(fact.level_exponent)} lvl exp. * ${n3(fact.level_multiplier)} lvl mul.`);
-				if(fact.attribute) lines.push(`+ ${n3(attributeVal * fact.attribute_multiplier)} from ${n3(attributeVal)} ${mapLocale(fact.attribute)} * ${n3(fact.attribute_multiplier)} attrib. mod.`);
+				if(fact.attribute) lines.push(`+ ${n3(attributeVal * fact.attribute_multiplier)} from ${n3(attributeVal)} ${localizeInternalName(fact.attribute)} * ${n3(fact.attribute_multiplier)} attrib. mod.`);
 				if(fact.hit_count != 1) lines.push(` * ${fact.hit_count} hits`);
 			}
 
@@ -290,7 +289,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 					if(config.showFactComputationDetail) {
 						const conversion = modifier.source_attribute
-							? `${n3(mod)}% from ${n3(modifier.base_amount)} * ${n3(activeStats[modifier.source_attribute])} ${mapLocale(modifier.source_attribute)}`
+							? `${n3(mod)}% from ${n3(modifier.base_amount)} * ${n3(activeStats[modifier.source_attribute])} ${localizeInternalName(modifier.source_attribute)}`
 							: `${n3(mod)}%`;
 						lines.push(newElm('span.detail', `${n3ss(mod / 100 * value)} (${conversion}) from ${count > 1 ? `${count} `: ''}`, fromHTML(resolveInflections(source, count, context.character))));
 					}
@@ -299,19 +298,19 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				value *= percentMod / 100;
 			}
 
-			lines.unshift(`${GW2Text2HTML(fact.text) || mapLocale(fact.attribute)}: ${Math.round(value)}`);
+			lines.unshift(`${GW2Text2HTML(fact.text) || localizeInternalName(fact.attribute)}: ${Math.round(value)}`);
 
 			return lines;
 		},
 		AttributeAdjust : ({fact}) => {
 			const value = Math.round((fact.range[1] - fact.range[0]) / (context.character.level / 80) + fact.range[0]);
-			const parts = [`${GW2Text2HTML(fact.text) || mapLocale(fact.target)}: ${n3s(value)}`];
+			const parts = [`${GW2Text2HTML(fact.text) || localizeInternalName(fact.target)}: ${n3s(value)}`];
 			
 			const { computedAttribute } = getAttributeInformation(fact.target, context.character);
 			if(computedAttribute) {
 				const { div, suffix } = getAttributeInformation(computedAttribute, context.character);
 				const displayMul = suffix ? 100 : 1;
-				parts.push(`(converts to ${n3(value / div * displayMul)}${suffix} ${mapLocale(computedAttribute)})`);
+				parts.push(`(converts to ${n3(value / div * displayMul)}${suffix} ${localizeInternalName(computedAttribute)})`);
 			}
 			
 			return parts;
@@ -372,16 +371,15 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				}
 			}
 
-			lines.unshift(`${GW2Text2HTML(text)}: ${drawFractional(value, config)}`);
+			lines.unshift(`${GW2Text2HTML(text)}: ${formatFraction(value, config)}`);
 			return lines;
 		},
 		Percent : ({fact}) => {
-			return [`${GW2Text2HTML(fact.text)}: ${drawFractional(fact.percent, config)}%`];
+			return [`${GW2Text2HTML(fact.text)}: ${formatFraction(fact.percent, config)}%`];
 		},
 		PercentHpSelfDamage : ({fact}) => {
-			// TODO(mithos) game shows an actual raw number here. to implement this we need to get the characters damage
-			//NOTE(Rennorb): this is going to be verry difficult if not impossible
-			return [`${GW2Text2HTML(fact.text)}: ${drawFractional(fact.percent, config)}%`];
+			const hpPool = getAttributeValue(context.character, 'Health'); //NOTE(Rennorb): Does not include barrier.
+			return [`${GW2Text2HTML(fact.text)}: ${Math.floor(hpPool * fact.percent / 100)} (${formatFraction(fact.percent, config)}% HP pool)`];
 		},
 		PercentLifeForceCost : ({fact: {percent, text}}) => {
 			const hpPool = getBaseHealth(context.character);
@@ -397,7 +395,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		},
 		PercentHealth : ({fact: {percent, text}}) => {
 			const raw = Math.round(getAttributeValue(context.character, 'Health') * percent * 0.01);
-			return [`${GW2Text2HTML(text)}: ${drawFractional(percent, config)}% (${raw} HP)`];
+			return [`${GW2Text2HTML(text)}: ${formatFraction(percent, config)}% (${raw} HP)`];
 		},
 		PercentLifeForceGain : ({fact: {percent, text}}) => {
 			const hpPool = getAttributeValue(context.character, 'Health');
@@ -420,7 +418,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			}
 
 			//NOTE(Rennorb): The LifeForce pool is 69% of the hp pool.
-			lines.unshift(`${GW2Text2HTML(text)}: ${drawFractional(percent, config)}% (${Math.round(hpPool * 0.69 * percent * 0.01)})`);
+			lines.unshift(`${GW2Text2HTML(text)}: ${formatFraction(percent, config)}% (${Math.round(hpPool * 0.69 * percent * 0.01)})`);
 			
 			return lines;
 		},
@@ -487,18 +485,20 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				}
 			}
 
+			//NOTE(Rennorb): No need to modify the defiance damage since we already modify the duration wich gets multiplied with the DDPS.
+
 			const time = buffDuration != 1000 ? 'seconds' : 'second';
-			lines.unshift(`${GW2Text2HTML(text)}: ${drawFractional(buffDuration / 1000, config)} ${time}`);
+			lines.unshift(`${GW2Text2HTML(text)}: ${formatFraction(buffDuration / 1000, config)} ${time}`);
 			return lines;
 		},
 		ComboField : ({fact}) =>  {
-			return [`${GW2Text2HTML(fact.text)}: ${mapLocale(fact.field_type)}`];
+			return [`${GW2Text2HTML(fact.text)}: ${localizeInternalName(fact.field_type)}`];
 		},
 		ComboFinisher : ({fact}) => {
-			return [`${GW2Text2HTML(fact.text)}: ${mapLocale(fact.finisher_type)}`];
+			return [`${GW2Text2HTML(fact.text)}: ${localizeInternalName(fact.finisher_type)}`];
 		},
 		AttributeConversion : ({fact}) => {
-			return [`Gain ${mapLocale(fact.target)} Based on a Percentage of ${mapLocale(fact.source)}: ${fact.percent}%`];
+			return [`Gain ${localizeInternalName(fact.target)} Based on a Percentage of ${localizeInternalName(fact.source)}: ${fact.percent}%`];
 		},
 		NoData : ({fact}) => {
 			return [GW2Text2HTML(fact.text)];
@@ -590,7 +590,6 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	}
 
 	if(fact.requires_trait) {
-		//NOTE(Rennorb): If the trait is manually set on the object then we don't have it cached, so we just use the id if we don't have a name.
 		const trait_names = joinWordList(fact.requires_trait.map(id => `'<span class="gw2-color-traited-fact">${APICache.storage.traits.get(id)?.name || id}</span>'`))
 		remainingDetail.unshift(fromHTML(`<span class="detail">${(fact.skip_next && (fact.skip_next > 1 || !fact.__gamemode_override_marker)) ? 'overridden' : 'exists'} because of trait${fact.requires_trait.length == 1 ? '' : 's'} ${trait_names}</span>`));
 	}
@@ -629,7 +628,7 @@ export const MISSING_SKILL : API.Skill = {
 	categories : [], palettes   : [], modifiers  : [], flags: [],
 }
 
-import { newElm, newImg, drawFractional, GW2Text2HTML, withUpToNDigits, mapLocale, joinWordList, fromHTML, n3, resolveInflections, formatDuration, n3s, n3ss } from './TUtilsV2';
+import { newElm, newImg, formatFraction, GW2Text2HTML, withUpToNDigits, localizeInternalName, joinWordList, fromHTML, n3, resolveInflections, formatDuration, n3s, n3ss } from './TUtilsV2';
 import APICache from './APICache';
 import { ICONS, config } from './TooltipsV2';
 import { getActiveAttributes, getAttributeInformation, getAttributeValue, getBaseHealth, getAttributeSources } from './CharacterAttributes';

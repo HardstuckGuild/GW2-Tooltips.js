@@ -59,8 +59,7 @@ export function s(v : number) { return v >= 0 ? '+'+v : v }
 export function n3s(v : number) { return v >= 0 ? '+'+n3(v) : n3(v) }
 export function n3ss(v : number) { return v >= 0 ? '+ '+n3(v) : '- '+-n3(v) }
 
-//TODO(Rennorb) @cleanup @rename
-export function drawFractional(value : number, config : Config) {
+export function formatFraction(value : number, config : Config) {
 	if (!config.showPreciseAbilityTimings) {
 		const sign = value < 0 ? '-' : '';
 		value = Math.abs(value);
@@ -100,13 +99,12 @@ export function drawFractional(value : number, config : Config) {
 
 export function formatDuration(value : number, config : Config) : string {
 	value /= 1000;
-	if(value >= 3600) return drawFractional(value / 3600, config) + 'h';
-	else if(value > 60) return drawFractional(value / 60, config) + 'min';
-	else return drawFractional(value, config) + 's';
+	if(value >= 3600) return formatFraction(value / 3600, config) + 'h';
+	else if(value > 60) return formatFraction(value / 60, config) + 'min';
+	else return formatFraction(value, config) + 's';
 }
 
-//TODO(rennorb) @cleanup: rename -> localizeInternalNames
-export function mapLocale<T_ extends string>(type : BaseAttribute | ComputedAttribute | API.ComboFinisherType | API.ComboFieldType | API.Palette['weapon_type'] | T_) {
+export function localizeInternalName<T_ extends string>(type : BaseAttribute | ComputedAttribute | API.ComboFinisherType | API.ComboFieldType | API.Palette['weapon_type'] | T_) {
 	switch (type) {
 		case 'ConditionDuration': return 'Condition Duration';
 		case 'ConditionDamage'  : return 'Condition Damage';

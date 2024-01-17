@@ -5,11 +5,11 @@ export function inflateGenericIcon(gw2Object : HTMLElement, data : { name : stri
 	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + resolveInflections(GW2Text2HTML(data.name), 1, { sex: "Male" });
 	wikiLink.target = '_blank';
 	if(gw2Object.classList.contains('gw2objectembed') && !gw2Object.classList.contains('icononly')) {
-		//TODO(Rennorb) @correctness: this should probably take into account the plural form
-		const cleanName = GW2Text2HTML(data.name).replaceAll(/\[.*?\]/g, ''); //remove plural forms ([s] and similar)
-		wikiLink.append(cleanName);
+		const stackSize = +String(gw2Object.getAttribute('count')) || 1;
+		const context = contexts[+String(gw2Object.getAttribute('contextSet')) || 0];
+		wikiLink.append(resolveInflections(GW2Text2HTML(data.name), stackSize, context.character));
 	}
-	gw2Object[force ? 'replaceChildren' : 'append'](wikiLink);
+	gw2Object.replaceChildren(wikiLink);
 }
 
 export function inflateSkill(gw2Object : HTMLElement, skill : API.Skill) {
@@ -17,13 +17,10 @@ export function inflateSkill(gw2Object : HTMLElement, skill : API.Skill) {
 	const context = specializeContextFromInlineAttribs(contexts[contextSet], gw2Object);
 
 	let force = false;
-	//NOTE(Rennorb): doing this here might not be the best idea, as this wil prevent us form hot swapping traits.
-	// The issue is that this is the place where the icon gets selected and inflated, so its somewhat required to change the skill before this point.
-	// Maybe this is still the best place to do this and for cases were we need hot swapping (e.g. build editor) we just have to manually re-process skills after swapping traits.
-	// Maybe we should move the original id to another attribute for savekeeping so we can revert it later on if we need to?
 	if(gw2Object.classList.contains('auto-transform')) {
 		const replacementSkill = findTraitedOverride(skill, context);
 		if(replacementSkill) {
+			gw2Object.setAttribute('og-objid', String(skill.id)); // in case we want to reflow after changing traits (e.g. a build editor)
 			gw2Object.setAttribute('objid', String(replacementSkill.id));
 			skill = replacementSkill;
 			force = true;
@@ -81,7 +78,7 @@ export function inflateSpecialization(gw2Object : HTMLElement, spec: API.Special
 			for(const [i, traitEl] of Array.prototype.entries.call(column.children)) {
 				traitEl.classList.toggle('trait_unselected', i !== y);
 			}
-			//TODO(Rennorb): can probably merge trait collection into here since its basically the same code
+			//TODO(Rennorb): can probably merge trait collection into here since its basically the same code. maybe not? Do we need traits beforehand?
 		}
 	}
 }
@@ -118,7 +115,7 @@ export function inflateAttribute(gw2Object : HTMLElement, attribute : BaseAttrib
 
 	const displayMul = suffix ? 100 : 1;
 
-	let search = mapLocale(attribute);
+	let search = localizeInternalName(attribute);
 	if(attribute == 'Profession') {
 		search = "Attribute#Profession_Attributes";
 	}
@@ -149,7 +146,6 @@ export function inflateProfession(gw2Object : HTMLElement, profession : API.Prof
 	gw2Object.append(wikiLink);
 }
 
-//todo: put htis on the server and get rid off this in the client lib
 export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, error_store : Set<string>) : number {
 	const name = String(gw2Object.getAttribute('objId'));
 	let id = ({
@@ -252,11 +248,12 @@ export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, er
 		xeras_embrace           : 34979,
 	} as any)[name]
 
+	//TODO(Rennorb) @cleanup: This is basically just about the descriptions. We could add those in the api, I don't see why not.
 	if(!id) {
 		//NOTE(Rennorb): these don't actually exist and need to be synthesized.
 		const hardCoded = ({
 			barrier: {
-				id: 1,
+				id: Number.MAX_SAFE_INTEGER - 1,
 				name: 'Barrier',
 				icon: ICONS.BARRIER,
 				description: "Creates a health barrier that takes damage prior to the health bar. Barrier disappears 5s after being applied. Applying a barrier while one is already active will add to it, but the previously-existing barrier will still disappear 5s after it was originally applied. The amount of barrier generated is based on the source's healing power, and is capped at 50% of the recipient's maximum health.",
@@ -264,49 +261,49 @@ export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, er
 				categories: [], palettes: [], flags: [],
 			},
 			stunbreak: {
-				id: 2,
+				id: Number.MAX_SAFE_INTEGER - 2,
 				name: 'Stun Break',
 				description: 'Cancel control effects such as stuns.',
 				icon: ICONS.STUN_BREAK,
 				categories: [], palettes: [], flags: [],
 			},
 			knockdown: {
-				id: 3,
+				id: Number.MAX_SAFE_INTEGER - 3,
 				name: 'Knockdown',
 				description: 'Knocks the target on ground, preventing movement and actions for a short duration.',
 				icon: ICONS.KNOCKDOWN,
 				categories: [], palettes: [], flags: [],
 			},
 			pull: {
-				id: 4,
+				id: Number.MAX_SAFE_INTEGER - 4,
 				name: 'Pull',
 				description: 'Pulls the caster to the target or the target to a specific location and disables them for a short duration.',
 				icon: ICONS.PULL,
 				categories: [], palettes: [], flags: [],
 			},
 			knockback: {
-				id: 5,
+				id: Number.MAX_SAFE_INTEGER - 5,
 				name: 'Knockback',
 				description: 'Knocks back the target away and on the ground, preventing movement and actions for a short duration.',
 				icon: ICONS.KNOCKBACK,
 				categories: [], palettes: [], flags: [],
 			},
 			launch: {
-				id: 6,
+				id: Number.MAX_SAFE_INTEGER - 6,
 				name: 'Launch',
 				description: 'Throws the target in the air over a short distance, preventing movement and actions for a short duration. Can move Downed targets.',
 				icon: ICONS.LAUNCH,
 				categories: [], palettes: [], flags: [],
 			},
 			float: {
-				id: 7,
+				id: Number.MAX_SAFE_INTEGER - 7,
 				name: 'Float',
 				description: 'Causes the target to float in the air, preventing movement and actions for a short duration. Causes underwater targets to move up.',
 				icon: ICONS.FLOAT,
 				categories: [], palettes: [], flags: [],
 			},
 			sink: {
-				id: 8,
+				id: Number.MAX_SAFE_INTEGER - 8,
 				name: 'Sink',
 				description: 'Causes the underwater target to move downwards.',
 				icon: ICONS.SINK,
@@ -316,7 +313,6 @@ export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, er
 
 		if(hardCoded) {
 			id = hardCoded.id;
-			//TODO(Rennorb) @cleanup: could probably move this out
 			APICache.storage.skills.set(id, hardCoded);
 		}
 	}
@@ -396,5 +392,5 @@ export function inferItemUpgrades(wrappers : Iterable<Element>) {
 
 import APICache from "./APICache";
 import { getAttributeValue } from "./CharacterAttributes";
-import { GW2Text2HTML, formatImageUrl, mapLocale, newElm, newImg, resolveInflections, withUpToNDigits } from "./TUtilsV2";
+import { GW2Text2HTML, formatImageUrl, localizeInternalName, newElm, newImg, resolveInflections, withUpToNDigits } from "./TUtilsV2";
 import { ICONS, contexts, findTraitedOverride, formatItemName, specializeContextFromInlineAttribs } from "./TooltipsV2";

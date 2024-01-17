@@ -36,7 +36,7 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 				value += statBonus;
 
 				if(statBonus) {
-					text = ` +${n3(statBonus * displayMul) + suffix} from ${n3(baseAttrValue)} ${mapLocale(baseAttribute)}`
+					text = ` +${n3(statBonus * displayMul) + suffix} from ${n3(baseAttrValue)} ${localizeInternalName(baseAttribute)}`
 					if(div != 1) text += ` / ${div / displayMul} (attrib. specific conv. factor)`
 					parts.push(newElm('div.detail', text!));
 				}
@@ -107,7 +107,7 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 
 		if(uncappedValue != value)
 			parts.push(newElm('span.detail.capped', `(Capped to ${n3(value * displayMul)}${suffix}! Uncapped value would be ${n3(uncappedValue * displayMul)}${suffix})`));
-		parts.unshift(newElm('tet.title', newElm('teb', ' +' + n3(value * displayMul) + suffix + ' ' + mapLocale(attribute))));
+		parts.unshift(newElm('tet.title', newElm('teb', ' +' + n3(value * displayMul) + suffix + ' ' + localizeInternalName(attribute))));
 	}
 
 	for(const attribute of attributeOrder) {
@@ -207,4 +207,4 @@ export const LUT_POWER_MONSTER = [
 ];
 
 import { calculateModifier } from "./FactsProcessor";
-import { fromHTML, mapLocale, n3, newElm, resolveInflections } from "./TUtilsV2";
+import { fromHTML, localizeInternalName, n3, newElm, resolveInflections } from "./TUtilsV2";

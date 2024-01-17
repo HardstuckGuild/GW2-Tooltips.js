@@ -444,6 +444,15 @@ const enum CollectMode {
 	Append,
 }
 
+declare global {
+	interface Context {
+		cloned? : true
+	}
+	interface BaseAndComputedStats {
+		htmlParts: { [k in BaseAttribute | ComputedAttribute] : HTMLElement[] }
+	}
+}
+
 import APICache from "./APICache";
 import { LUT_DEFENSE } from "./CharacterAttributes";
 import { resolveTraitsAndOverrides, config, formatItemName, contexts, findCorrectAttributeSet, DEFAULT_CONTEXT } from './TooltipsV2';

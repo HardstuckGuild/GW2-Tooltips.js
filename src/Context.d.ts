@@ -11,7 +11,6 @@ declare interface Window {
 
 type PartialContext = PartialR<Context>
 
-//TODO(Rennorb): cloned marker in the context itself
 interface Context {
 	gameMode    : GameMode
 	underwater  : boolean
@@ -29,6 +28,7 @@ interface Character {
 	stats             : BaseStats
 	statsWithWeapons  : BaseAndComputedStats[]
 	selectedWeaponSet : number
+	// mainly used for highting slotted rune tiers in other items
 	upgradeCounts     : { [k : number]: number }
 }
 
@@ -36,10 +36,9 @@ type BaseStats = {
 	values  : { [k in BaseAttribute] : number }
 	sources : SourceMap
 }
-type BaseAndComputedStats = {
+interface BaseAndComputedStats {
 	values   : { [k in BaseAttribute | ComputedAttribute] : number }
 	sources  : SourceMap
-	htmlParts: { [k in BaseAttribute | ComputedAttribute] : HTMLElement[] }
 }
 type SourceMap = SourceMapStrict & { [k in string]: StatSource[] }
 type SourceMapStrict = { [k in BaseAttribute | ComputedAttribute | SyntheticAttributes]: StatSource[] }

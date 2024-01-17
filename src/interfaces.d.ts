@@ -75,7 +75,7 @@ namespace API {
 		previous_chain_skill_index? : number
 	}
 
-	type ProfessionState = 'todo';
+	type ProfessionState = 'todo'; //TODO(Rennorb): cleanup on api first
 
 	type ModifierDescriptionOverride = {
 		profession  : Profession

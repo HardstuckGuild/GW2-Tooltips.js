@@ -1,4 +1,3 @@
-//TODO(Rennorb) @issues:
 //TODO(Rennorb): Provide a clean way to construct custom tooltips. Currently with the old version we manipulate the cache before the hook function gets called, which really isn't the the best.
 //TODO(Rennorb): Option to show whole skill-chain (maybe on button hold)?
 //TODO(Rennorb): Stop using these jank custom tags. There is no reason to do so and its technically not legal per html spec.
@@ -7,6 +6,7 @@
 // The only thing this is good for is to make drawing the facts easier. Since we do quite a few calculations this swap would reduce conversions quite a bit.
 //TODO(Rennorb) @correctness: Split up incoming / outgoing effects. Mostly relevant for healing.
 //TODO(Rennorb) @correctness: implement processing for trait / skill buffs to properly show certain flip skills and chains aswell as properly do trait overrides for skills
+//TODO(Rennorb) @completeness: Relic facts
 
 let tooltip : HTMLElement
 let lastTooltipTarget : HTMLElement | undefined
@@ -17,6 +17,9 @@ let lastMouseY  : number
 
 export const contexts : Context[] = []; //@debug
 export let config    : Config = null!;
+
+
+const PROFESSIONS : API.Profession['id'][] = ['Guardian', 'Warrior', 'Engineer', 'Ranger', 'Thief', 'Elementalist', 'Mesmer', 'Necromancer', 'Revenant'];
 
 
 function activateSubTooltip(tooltipIndex : number) {
@@ -33,8 +36,8 @@ function scrollSubTooltipIntoView(tooltipIndex : number, animate = false) {
 	tooltip.style.transform = `translate(0, -${tooltips.offsetTop + tooltips.offsetHeight}px)`;
 }
 
-//TODO(Rennorb); If the tooltip doesn't fit on screen its probably because we have many and they don't fit even if collapsed.
-// In that case we want to fit the currently active one on screen instead of the whole list.
+//NOTE(Rennorb): If the tooltip doesn't fit on screen its probably because we have many and they don't fit even if collapsed.
+// In that case we fit the currently active one on screen instead of the whole list.
 function positionTooltip(animate = false) {
 	const wpadminbar = document.getElementById('wpadminbar'); //TODO(Rennorb) @hardcoded: this accounts for the wordpress bar that might exist.
 	const topBarHeight = wpadminbar ? wpadminbar.offsetHeight : 0;
@@ -94,8 +97,8 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 		let objIdRaw = gw2Object.getAttribute('objId');
 		if(objIdRaw == null) continue;
 
-		//TODO(Rennorb) @cleanup @compat: this is literally just for naming 'convenience'.
-		// Figure out if we can just get rid of the +'s' or if that poses an issue with backwards compat
+		//TODO(Rennorb) @cleanup: this is literally just for naming 'convenience'. 
+		// Unfortunately i don't think we can get rid of this as the api eps use plural forms. allow singular forms on the api side to get rid of this? 
 		let type = (gw2Object.getAttribute('type') || 'skill') + 's' as `${V2ObjectType}s`;
 
 
@@ -120,12 +123,23 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 				}
 			}
 
-			const professions = ['Guardian', 'Warrior', 'Engineer', 'Ranger', 'Thief', 'Elementalist', 'Mesmer', 'Necromancer', 'Revenant'] as const;
-			if((!isNaN(objId) && type in objectsToGet) || (type == 'professions' && (objId = objIdRaw[0].toUpperCase() + objIdRaw.slice(1) /* TODO @cleanup */), professions.includes(objId))) {
+			if((!isNaN(objId) && type in objectsToGet) || (type == 'professions' && (objId = objIdRaw[0].toUpperCase() + objIdRaw.slice(1) /* TODO @cleanup */), PROFESSIONS.includes(objId))) {
 				const map : Map<APIObjectId, HTMLElement[]> = objectsToGet[type];
 				const elementsWithThisId = map.get(objId);
 				if(elementsWithThisId) elementsWithThisId.push(gw2Object);
 				else map.set(objId, [gw2Object]);
+
+				const inlineTraits = gw2Object.getAttribute('with-traits');
+				if(inlineTraits) {
+					for(const traitStr of inlineTraits.split(',')) {
+						const traitId = +traitStr;
+						if(!traitId) continue;
+
+						const elementsWithThisId = objectsToGet.traits.get(traitId);
+						//NOTE(Rennorb): Don't add the element for inflating, just create the key so it gets cached.
+						if(!elementsWithThisId) objectsToGet.traits.set(traitId, []);
+					}
+				}
 			}
 			else {
 				continue;
@@ -205,19 +219,18 @@ function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
 
 	const data = APICache.storage[type].get(+String(objIdRaw));
 	if(data) {
-		const ogContext = context;
 		context = specializeContextFromInlineAttribs(context, gw2Object);
 		if('palettes' in data) {
 			//NOTE(Rennorb): This is here so we can look at underwater skills from a land context and vice versa.
 			if(context.underwater) {
 				if(!data.flags.includes('UsableUnderWater') && data.flags.includes('UsableLand')) {
-					if(context == ogContext) context = Object.assign({}, context);
+					if(!context.cloned) context = Object.assign({}, context);
 					context.underwater = false;
 				}
 			}
 			else if(!context.underwater) {
 				if(!data.flags.includes('UsableLand') && data.flags.includes('UsableUnderWater')) {
-					if(context == ogContext) context = Object.assign({}, context);
+					if(!context.cloned) context = Object.assign({}, context);
 					context.underwater = true;
 				}
 			}
@@ -260,7 +273,7 @@ function generateToolTip(apiObject : SupportedTTTypes, slotName : string | undef
 	}
 
 	if(currentContextInformation.activation) {
-		const value = drawFractional(currentContextInformation.activation / 1000, config);
+		const value = formatFraction(currentContextInformation.activation / 1000, config);
 		if (value != '0') { //in case we rounded down a fractional value just above 0
 			headerElements.push(newElm('ter',
 				value,
@@ -292,7 +305,7 @@ function generateToolTip(apiObject : SupportedTTTypes, slotName : string | undef
 	}
 
 	if(currentContextInformation.recharge) {
-		const value = drawFractional(currentContextInformation.recharge / 1000, config);
+		const value = formatFraction(currentContextInformation.recharge / 1000, config);
 		if (value != '0') {
 			headerElements.push(newElm('ter',
 				value,
@@ -491,9 +504,8 @@ function getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) :
 function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTMLElement, context : Context, statSetId? : number, stackSize? : number) : [HTMLElement[], number] {
 	let subiconRenderMode = IconRenderMode.SHOW;
 	//NOTE(Rennorb): This is a bit sad, but we have to hide or at least filter icons for skills attached to traits and relics, as those often don't come with actual icons because they never were meant to be seen (they don't show in game).
-	if((gw2Object.getAttribute('type') || 'skill') == 'trait') subiconRenderMode = IconRenderMode.FILTER_DEV_ICONS;
-	//TODO(Rennorb) @cleanup @stability
-	else if(initialAPIObject.name.includes('Relic[s] of')) subiconRenderMode = IconRenderMode.HIDE_ICON;
+	if(String(gw2Object.getAttribute('type')) === 'trait') subiconRenderMode = IconRenderMode.FILTER_DEV_ICONS;
+	else if((initialAPIObject as API.Item).type === 'Relic') subiconRenderMode = IconRenderMode.HIDE_ICON;
 
 	let initialActiveIndex = 0;
 	const tooltipChain : HTMLElement[] = []
@@ -648,7 +660,7 @@ function refineSlotName(palette : API.Palette, slot : string | undefined) : stri
 	}
 
 	if(slot.startsWith('Weapon') && palette.weapon_type) {
-		return mapLocale(palette.weapon_type) + ' ' + slot.substring(slot.lastIndexOf('_') + 1);
+		return localizeInternalName(palette.weapon_type) + ' ' + slot.substring(slot.lastIndexOf('_') + 1);
 	}
 
 	return slot.replace(/(\S+?)_(\d)/, "$1 $2");
@@ -834,7 +846,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	if(statSet && 'attribute_base' in item) {
 		parts.push(...statSet.attributes.map(({attribute, base_value, scaling}) => {
 			const computedValue = Math.round(base_value + item.attribute_base! * scaling);
-			return newElm('te', newElm('tem.gw2-color-stat-green', `+${computedValue} ${mapLocale(attribute)}`));
+			return newElm('te', newElm('tem.gw2-color-stat-green', `+${computedValue} ${localizeInternalName(attribute)}`));
 		}));
 	}
 
@@ -961,9 +973,9 @@ function generateUpgradeItemGroup(item : API.ItemUpgradeComponent, context : Con
 
 				let text;
 				if(modifier.flags.includes('FormatPercent')) {
-					text = `+${Math.round(modifierValue)}% ${mapLocale(modifier.description as any)}`;
+					text = `+${Math.round(modifierValue)}% ${localizeInternalName(modifier.description as any)}`;
 				} else {
-					text = `+${Math.round(modifierValue)} ${mapLocale(modifier.description as any)}`;
+					text = `+${Math.round(modifierValue)} ${localizeInternalName(modifier.description as any)}`;
 				}
 				tier_wrap.append(newElm('te', text));
 			}
@@ -1064,13 +1076,13 @@ export function formatItemName(item : API.Item, context : Context, statSet? : AP
 	return name;
 }
 
-//TODO(Rennorb): @docs
 export function specializeContextFromInlineAttribs(context : Context, gw2Object : HTMLElement) : Context {
 	let traitOverrides = gw2Object.getAttribute('with-traits');
 	if(traitOverrides) {
 		//NOTE(Rennorb): Cannot use structured clone here because it will fail with the html chunks as those are invalid objects.
 		//TODO(Rennorb) @cleanup: get rid of those jank custom tags.
 		context = Object.assign({}, context);
+		context.cloned = true; //NOTE(Rennorb) @correctness: might be dangerous, since its not fully cloned. but not more dangerous than before
 		context.character = Object.assign({}, context.character);
 		const invalid : string[] = [];
 		context.character.traits = new Set(traitOverrides.split(',').map(t => {
@@ -1529,7 +1541,6 @@ if(config.autoInitialize) {
 				}
 			}
 
-			//TODO(Rennorb) @cleanup: those routines could probably be combined into one when both options are active
 			if(config.autoCollectRuneCounts) {
 				//TODO(Rennorb) @correctness: this might not work properly with multiple builds on one page
 				if(buildNodes.length) for(const target of buildNodes)
@@ -1585,12 +1596,12 @@ if(config.autoInitialize) {
 
 const enum Specializations { SOULBEAST = 55 }
 
-import { newElm, newImg, GW2Text2HTML, mapLocale, drawFractional, fromHTML, findSelfOrParent, n3, resolveInflections, IconRenderMode, IsDevIcon } from './TUtilsV2';
+import { newElm, newImg, GW2Text2HTML, localizeInternalName, formatFraction, fromHTML, findSelfOrParent, n3, resolveInflections, IconRenderMode, IsDevIcon } from './TUtilsV2';
 import * as APIs from './API';
 import APICache from './APICache';
 export { APICache }
 import { MISSING_SKILL, calculateModifier, generateFact, generateFacts } from './FactsProcessor';
-import * as Collect from './Collect'; //TODO(Rennorb) @cleanup
+import * as Collect from './Collect';
 import { _legacy_transformEffectToSkillObject, inferItemUpgrades, inflateAttribute, inflateGenericIcon, inflateItem, inflateProfession, inflateSkill, inflateSpecialization } from './Inflators'
 import { LUT_DEFENSE, LUT_POWER_MONSTER, LUT_POWER_PLAYER, getActiveAttributes, getAttributeInformation, recomputeAttributesFromMods } from './CharacterAttributes'
 
