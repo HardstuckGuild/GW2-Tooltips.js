@@ -186,7 +186,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 			if(!item) continue;
 		}
 
-		let attributeSet = item && findCorrectAttributeSet(item, +String(element.getAttribute('stats')) || undefined);
+		let attributeSet = item && (context.gameMode !== 'Pvp' || (item.type === 'Trinket' && item.subtype === 'Amulet')) && findCorrectAttributeSet(item, +String(element.getAttribute('stats')) || undefined);
 
 		if(attributeSet) {
 			tiersToProcess = [{

@@ -784,7 +784,7 @@ export function findTraitedOverride(skill : API.Skill, context : Context) : API.
 }
 
 function generateItemTooltip(item : API.Item, context : Context, target : HTMLElement, statSetId? : number, stackSize = 1) : HTMLElement {
-	let statSet = findCorrectAttributeSet(item, statSetId);
+	let statSet = (context.gameMode !== 'Pvp' || (item.type === 'Trinket' && item.subtype === 'Amulet')) && findCorrectAttributeSet(item, statSetId); // pvp builds use an amulet for stats, equipment itself doesn't provide any
 
 	let slottedItems : API.ItemUpgradeComponent[] | undefined;
 	if('slots' in item) {
@@ -864,7 +864,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 			if(slottedItemIdx > -1) {
 				const slottedItem = slottedItems!.splice(slottedItemIdx, 1)[0];
 				const group = generateUpgradeItemGroup(slottedItem, context);
-				const name = formatItemName(slottedItem, context, statSet);
+				const name = formatItemName(slottedItem, context);
 				group.prepend(newElm('tet', newImg(slottedItem.icon, 'iconsmall'),  newElm('teb.gw2-color-rarity-'+slottedItem.rarity, name), newElm('div.flexbox-fill')));
 				return group;
 			}
@@ -928,7 +928,7 @@ export function findCorrectAttributeSet(item : API.Item, statSetId? : number) : 
 	let statSet : API.AttributeSet | undefined = undefined;
 	if(item.type == "Armor" || item.type == "Trinket" || item.type == "Weapon") {
 		statSetId = statSetId || item.attribute_set;
-		if(statSetId === undefined) console.warn(`[gw2-tooltips] [tooltip engine] Hovering on item without specified or innate stats. Specify the stats by adding 'stats="<stat_set_id>" to the html element.' `);
+		if(statSetId === undefined) console.warn(`[gw2-tooltips] [tooltip engine] Resolving stats for item without specified or innate attributes. Specify the stats by adding 'stats="<stat_set_id>" to the html element.' `);
 		else {
 			statSet = APICache.storage.itemstats.get(statSetId);
 			if(!statSet) console.error(`[gw2-tooltips] [tooltip engine] itemstat #${statSetId} is missing in cache.`);
@@ -1040,7 +1040,7 @@ function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute,
 
 //TODO(Rennorb): have another look at the suffix. might still be missing in the export
 /** Does not format inflections if stackSize is < 0. */
-export function formatItemName(item : API.Item, context : Context, statSet? : API.AttributeSet, upgradeComponent? : any, stackSize = 1) : string {
+export function formatItemName(item : API.Item, context : Context, statSet? : API.AttributeSet | false, upgradeComponent? : any, stackSize = 1) : string {
 	let name;
 	if(item.type == 'TraitGuide') {
 		name = item.trait;
