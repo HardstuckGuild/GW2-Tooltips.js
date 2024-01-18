@@ -3,16 +3,23 @@
 // Setting the api can be done by specifying the apiImpl config option.
 
 export class FakeAPI implements APIImplementation {
-	hsApi    = new HSAPI('http://localhost:3000');
-	fallback = new HSAPI(); // since we now have a public api running we can just fall back to that
+	localAPI    = new HSAPI('http://localhost:3000');
+	fallbackAPI = new HSAPI(); // since we now have a public api running we can just fall back to that
+	localApiOffline = false;
 
 	async bulkRequest<T extends keyof APIResponseTypeMap>(endpoint: T, ids: number[]): Promise<APIResponseTypeMap[T][]> {
 		try {
-			return await this.hsApi.bulkRequest(endpoint, ids);
+			return await (this.localApiOffline ? this.fallbackAPI : this.localAPI).bulkRequest(endpoint, ids);
 		}
-		catch(ex) {
-			console.warn(`[gw2-tooltips] [FakeAPI] error trying to get ep '${endpoint}' from localhost, will try to use the fallback API.\n${ex}`);
-			return await this.fallback.bulkRequest(endpoint, ids);
+		catch(ex : any) {
+			if(ex?.message.includes("NetworkError")) {
+				this.localApiOffline = true;
+				console.warn(`[gw2-tooltips] [FakeAPI] Local api seems to be offline, swapping to the real one.\n${ex}`);
+			}
+			else {
+				console.warn(`[gw2-tooltips] [FakeAPI] Error trying to get ep '${endpoint}' from localhost, will try to use the fallback API.\n${ex}`);
+			}
+			return await this.fallbackAPI.bulkRequest(endpoint, ids);
 		}
 	}
 }
