@@ -387,6 +387,7 @@ function pushFacts(destinationArray : Node[], sourceObject : SupportedTTTypes, s
 		//NOTE(Rennorb): 690.5 is the midpoint weapon strength for slot skills (except bundles).
 		//TODO(Rennorb) @hardcoded @correctness: This value is hardcoded for usage with traits as they currently don't have any pointer that would provide weapon strength information.
 		// This will probably fail in some cases where damage facts on traits reference bundle skills (e.g. kits).
+		//TODO(Rennorb) @correctness: is this even correct for relics?
 		let weaponStrength = 690.5;
 		if('palettes' in sourceObject) for(const pid of sourceObject.palettes) {
 			const palette = APICache.storage.palettes.get(pid);
