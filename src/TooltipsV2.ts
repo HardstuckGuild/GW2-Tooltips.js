@@ -268,76 +268,96 @@ function generateToolTip(apiObject : SupportedTTTypes, slotName : string | undef
 
 	const currentContextInformation = resolveTraitsAndOverrides(apiObject, context);
 
-	if('flags' in apiObject && (apiObject as API.Item).flags.includes('DisallowUnderwater')) {
-		headerElements.push(newImg(ICONS.NO_UNDERWATER, 'iconsmall'));
+	pushCostAndRestrictionLabels(headerElements, apiObject, currentContextInformation, context);
+
+	const secondHeaderRow = [];
+	if(slotName) secondHeaderRow.push(newElm('tes', `( ${slotName} )`));
+	if(weaponSet !== undefined) secondHeaderRow.push(newElm('tes', `( Weapon Set ${weaponSet + 1} )`));
+
+	secondHeaderRow.push(newElm('div.flexbox-fill')); // split, now the right side
+
+	pushGamemodeSplitLabels(secondHeaderRow, apiObject, context);
+
+	const parts : HTMLElement[] = [newElm('tet.title', ...headerElements)];
+	if(secondHeaderRow.length > 1) parts.push(newElm('tet.detail', ...secondHeaderRow));
+
+	if('description' in apiObject && apiObject.description) {
+		parts.push(newElm('p.description', fromHTML(GW2Text2HTML(apiObject.description))))
 	}
 
-	if(currentContextInformation.activation) {
-		const value = formatFraction(currentContextInformation.activation / 1000, config);
+	pushFacts(parts, apiObject, currentContextInformation, context);
+
+	const tooltip = newElm('div.tooltip', ...parts)
+	tooltip.dataset.id = String(apiObject.id)
+
+	return tooltip;
+}
+
+function pushCostAndRestrictionLabels(destinationArray : Node[], sourceObject : SupportedTTTypes, specializedContextInformation : API.ContextInformation, context : Context) {
+	if('flags' in sourceObject && sourceObject.flags!.includes('DisallowUnderwater')) {
+		destinationArray.push(newImg(ICONS.NO_UNDERWATER, 'iconsmall'));
+	}
+
+	if(specializedContextInformation.activation) {
+		const value = formatFraction(specializedContextInformation.activation / 1000, config);
 		if (value != '0') { //in case we rounded down a fractional value just above 0
-			headerElements.push(newElm('ter',
+			destinationArray.push(newElm('ter',
 				value,
 				newImg(ICONS.ACTIVATION, 'iconsmall')
 			));
 		}
 	}
 
-	if(currentContextInformation.resource_cost) {
-		headerElements.push(newElm('ter',
-			String(currentContextInformation.resource_cost),
+	if(specializedContextInformation.resource_cost) {
+		destinationArray.push(newElm('ter',
+			String(specializedContextInformation.resource_cost),
 			//TODO(Rennorb) @correctness: see reaper shroud
 			newImg(context.character.profession == 'Revenant' ? ICONS.RESOURCE_REV : ICONS.RESOURCE_THIEF, 'iconsmall')
 		));
 	}
 
-	if(currentContextInformation.endurance_cost) {
-		headerElements.push(newElm('ter',
-			String(Math.round(currentContextInformation.endurance_cost)),
+	if(specializedContextInformation.endurance_cost) {
+		destinationArray.push(newElm('ter',
+			String(Math.round(specializedContextInformation.endurance_cost)),
 			newImg(ICONS.ENDURANCE_COST, 'iconsmall')
 		));
 	}
 
-	if(currentContextInformation.upkeep_cost) {
-		headerElements.push(newElm('ter',
-			String(currentContextInformation.upkeep_cost),
+	if(specializedContextInformation.upkeep_cost) {
+		destinationArray.push(newElm('ter',
+			String(specializedContextInformation.upkeep_cost),
 			newImg(ICONS.UPKEEP_COST, 'iconsmall')
 		));
 	}
 
-	if(currentContextInformation.recharge) {
-		const value = formatFraction(currentContextInformation.recharge / 1000, config);
+	if(specializedContextInformation.recharge) {
+		const value = formatFraction(specializedContextInformation.recharge / 1000, config);
 		if (value != '0') {
-			headerElements.push(newElm('ter',
+			destinationArray.push(newElm('ter',
 				value,
 				newImg(ICONS.RECHARGE, 'iconsmall')
 			));
 		}
 	}
 
-	if(currentContextInformation.supply_cost) {
-		headerElements.push(newElm('ter',
-			String(currentContextInformation.supply_cost),
+	if(specializedContextInformation.supply_cost) {
+		destinationArray.push(newElm('ter',
+			String(specializedContextInformation.supply_cost),
 			newImg(ICONS.SUPPLY_COST, 'iconsmall')
 		));
 	}
+}
 
-	const secondHeaderRow = [];
-	{
-		if(slotName) secondHeaderRow.push(newElm('tes', `( ${slotName} )`));
-		if(weaponSet !== undefined) secondHeaderRow.push(newElm('tes', `( Weapon Set ${weaponSet + 1} )`));
-	}
-
-	secondHeaderRow.push(newElm('div.flexbox-fill')); // split, now the right side
-
-	if('override_groups' in apiObject && apiObject.override_groups) {
+function pushGamemodeSplitLabels(destinationArray : Node[], SourceObject : SupportedTTTypes, context : Context) {
+	if('override_groups' in SourceObject && SourceObject.override_groups) {
 		const baseContext = new Set<GameMode>(['Pve', 'Pvp', 'Wvw']);
-		for(const override of apiObject.override_groups) {
+		for(const override of SourceObject.override_groups) {
 			for(const context of override.context) {
 				baseContext.delete(context as GameMode);
 			}
 		}
 
-		const splits = [Array.from(baseContext), ...apiObject.override_groups.map(o => o.context)]
+		const splits = [Array.from(baseContext), ...SourceObject.override_groups.map(o => o.context)]
 
 		const splits_html : string[] = [];
 		for(const mode of ['Pve', 'Pvp', 'Wvw'] as GameMode[]) { //loop to keep sorting vaguely correct
@@ -358,22 +378,17 @@ function generateToolTip(apiObject : SupportedTTTypes, slotName : string | undef
 				splits_html.push(text);
 		}
 
-		secondHeaderRow.push(newElm('tes', '( ', fromHTML(splits_html.join(' | ')), ' )'));
+		destinationArray.push(newElm('tes', '( ', fromHTML(splits_html.join(' | ')), ' )'));
 	}
+}
 
-	const parts : HTMLElement[] = [newElm('tet.title', ...headerElements)];
-	if(secondHeaderRow.length > 1) parts.push(newElm('tet.detail', ...secondHeaderRow));
-
-	if('description' in apiObject && apiObject.description) {
-		parts.push(newElm('p.description', fromHTML(GW2Text2HTML(apiObject.description))))
-	}
-
-	if(currentContextInformation.blocks) {
+function pushFacts(destinationArray : Node[], sourceObject : SupportedTTTypes, specializedContextInformation : API.ContextInformation, context : Context) {
+	if(specializedContextInformation.blocks) {
 		//NOTE(Rennorb): 690.5 is the midpoint weapon strength for slot skills (except bundles).
 		//TODO(Rennorb) @hardcoded @correctness: This value is hardcoded for usage with traits as they currently don't have any pointer that would provide weapon strength information.
 		// This will probably fail in some cases where damage facts on traits reference bundle skills (e.g. kits).
 		let weaponStrength = 690.5;
-		if('palettes' in apiObject) for(const pid of apiObject.palettes) {
+		if('palettes' in sourceObject) for(const pid of sourceObject.palettes) {
 			const palette = APICache.storage.palettes.get(pid);
 			if(!palette) continue;
 
@@ -386,13 +401,8 @@ function generateToolTip(apiObject : SupportedTTTypes, slotName : string | undef
 				break;
 			}
 		}
-		parts.push(...generateFacts(currentContextInformation.blocks, weaponStrength, context))
+		destinationArray.push(...generateFacts(specializedContextInformation.blocks, weaponStrength, context))
 	}
-
-	const tooltip = newElm('div.tooltip', ...parts)
-	tooltip.dataset.id = String(apiObject.id)
-
-	return tooltip;
 }
 
 export function resolveTraitsAndOverrides(apiObject : SupportedTTTypes & { blocks? : API.ContextGroup['blocks'], override_groups? : API.ContextInformation['override_groups'] }, context : Context) : API.ContextInformation {
@@ -880,6 +890,29 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	if('applies_buff' in item) {
 		parts.push(newElm('span', fromHTML(GW2Text2HTML(item.description))));
 		parts.push(newElm('div.group', generateFact(item.applies_buff, -1, context, true).wrapper!));
+		descriptionAlreadyShown = true;
+	}
+
+	if('facts_from_skill' in item) {
+		let factsSkill = APICache.storage.skills.get(item.facts_from_skill);
+		if(!factsSkill) {
+			console.warn(`[gw2-tooltips] Relic facts skill #${item.facts_from_skill} is missing from the cache. The query was caused by `, item, target);
+			factsSkill = MISSING_SKILL;
+		}
+		const contextInfo = resolveTraitsAndOverrides(factsSkill, context);
+
+		const headerElements : Node[] = [];
+		pushGamemodeSplitLabels(headerElements, factsSkill, context);
+
+		headerElements.push(newElm('div.flexbox-fill')); // now push elements to the right
+		
+		pushCostAndRestrictionLabels(headerElements, factsSkill, contextInfo, context);
+		const innerParts = [newElm('tet.title', ...headerElements)];
+
+		pushFacts(innerParts, factsSkill, contextInfo, context);
+
+		parts.push(newElm('span', fromHTML(GW2Text2HTML(item.description))));
+		parts.push(newElm('div.group', ...innerParts));
 		descriptionAlreadyShown = true;
 	}
 

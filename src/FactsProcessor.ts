@@ -333,7 +333,8 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			}
 
 			const seconds = buffDuration > 0 ? ` (${formatDuration(buffDuration, config)})`: '';
-			parts.unshift(`${GW2Text2HTML(fact.text) || buff.name_brief || buff.name}${seconds}${buffDescription}`);
+			//NOTE(Rennorb): Relics have buffs with the same name as the relic, that also has the plural [s] so we need to resolve that here
+			parts.unshift(`${GW2Text2HTML(resolveInflections(fact.text || buff.name_brief || buff.name, -1, context.character))}${seconds}${buffDescription}`);
 
 			buffStackSize = fact.apply_count;
 			return parts;

@@ -159,6 +159,11 @@ export default class APICache {
 			if(!this.storage.skills.has(datum.applies_buff.buff))
 				connectedIdsStorage.skills.add(datum.applies_buff.buff);
 		}
+
+		if('facts_from_skill' in datum) {
+			if(!this.storage.skills.has(datum.facts_from_skill))
+				connectedIdsStorage.skills.add(datum.facts_from_skill);
+		}
 	}
 }
 
