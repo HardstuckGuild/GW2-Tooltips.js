@@ -435,6 +435,8 @@ type APIObjectId = APIResponse['id'];
 
 interface APIImplementation {
 	bulkRequest<E extends APIEndpoint>(endpoint : E, ids : APIResponseTypeMap[E]['id'][]) : Promise<APIResponseTypeMap[E][]>;
+	requestId<T extends keyof APIResponseTypeMap>(endpoint : T, id : APIResponseTypeMap[T]['id']) : Promise<APIResponseTypeMap[T]>;
+	requestByName<T extends keyof APIResponseTypeMap>(endpoint : T, search : string) : Promise<APIResponseTypeMap[T][]>;
 }
 
 interface ScopeElement {

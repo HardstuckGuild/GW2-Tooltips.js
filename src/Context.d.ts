@@ -58,7 +58,7 @@ type SyntheticAttributes = 'Damage' | 'LifeForce' | 'HealEffectiveness' | 'Stun'
 interface Config {
 	autoInitialize             : boolean
 
-	// v-- these only work if auto initialize is turned on //TODO(Rennorb) @correctness
+	// v-- these only run with `hookDocument`
 	autoCollectRuneCounts            : boolean
 	autoCollectStatSources           : boolean
 	autoCollectSelectedTraits        : boolean

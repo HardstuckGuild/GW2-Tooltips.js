@@ -283,7 +283,7 @@ gw2object.error {
 }
 
 gw2object.gw2objectembed {
-	height: 1.25em; /* todo use text size */
+	height: 1.25em;
 	vertical-align: baseline;
 	background-color: unset;
 }

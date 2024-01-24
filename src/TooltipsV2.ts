@@ -76,6 +76,167 @@ type GW2ObjectMap = {
 }
 
 export async function hookDocument(scope : ScopeElement, _unused? : any) : Promise<GW2ObjectMap> {
+	const buildNodes = document.getElementsByClassName('gw2-build-wrapper');
+	if(config.autoCollectSelectedTraits) {
+		if(buildNodes.length) for(const target of buildNodes)
+			Collect.allTraits(target)
+		else {
+			console.warn("[gw2-tooltips] [collect] `config.autoCollectSelectedTraits` is active, but no element with class `gw2-build` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
+		}
+	}
+
+	const gw2Objects = await hookDOMSubtreeSlim(scope);
+
+	if(config.autoInferWeaponSetAssociation) {
+		for(const buildNode of buildNodes) {
+			for(const [i, setNode] of buildNode.querySelectorAll('.weapon-set').entries()) {
+				for(const objNode of setNode.getElementsByTagName('GW2OBJECT'))
+					objNode.setAttribute('weaponSet', String(i));
+			}
+			
+			const skillIdsBySet = [];
+			for(const [i, setSkillsNode] of buildNode.querySelectorAll('.skills-weapon-set').entries()) {
+				const skillIds : number[] = [];
+				const chainIds = (skill : API.Skill, context : Context, adjustTraitedSkillIds : boolean) => {
+					if(adjustTraitedSkillIds) {
+						const replacementSkill = findTraitedOverride(skill, context);
+						if(replacementSkill) skill = replacementSkill;
+					}
+
+					skillIds.push(skill.id);
+
+					let palette, group, i;
+					[palette, group, i, context] = guessGroupAndContext(skill, context);
+					if(group) {
+						let candidate = group.candidates[i];
+		
+						//in case we catch a chain in the middle
+						while(candidate.previous_chain_skill_index) {
+							const otherCandidate = group.candidates[candidate.previous_chain_skill_index];
+							if(!canBeSelected(otherCandidate, context)) break;
+
+							skillIds.push(otherCandidate.skill);
+
+							candidate = otherCandidate;
+						}
+						//remaining chain
+						for(let j = 0; j < i; j++) {
+							const otherCandidate = group.candidates[j];
+							if(otherCandidate.previous_chain_skill_index != i) continue;
+							if(!canBeSelected(otherCandidate, context)) continue;
+		
+							skillIds.push(otherCandidate.skill);
+		
+							i = j;
+							j = -1;
+						}
+					}
+
+					if(skill.bundle_skills) for(const subSkillId of skill.bundle_skills) {
+						const subSkillInChain = APICache.storage.skills.get(subSkillId);
+						if(subSkillInChain)
+							skillIds.push(subSkillId);
+					}
+					if(skill.related_skills) for(const subSkillId of skill.related_skills) {
+						const subSkillInChain = APICache.storage.skills.get(subSkillId);
+						if(subSkillInChain && subSkillInChain.palettes.some(pid => {
+							const palette = APICache.storage.palettes.get(pid);
+							return palette && VALID_CHAIN_PALETTES.includes(palette.type);
+						})) {
+							skillIds.push(subSkillId);
+						}
+					}
+					if(skill.ambush_skills) for(const { id: subSkillId } of skill.ambush_skills) {
+						const subSkillInChain = APICache.storage.skills.get(subSkillId);
+						if(subSkillInChain)
+							skillIds.push(subSkillId);
+					}
+				}
+
+				for(const objNode of setSkillsNode.children) {
+					objNode.setAttribute('weaponSet', String(i));
+
+					const skill = APICache.storage.skills.get(+String(objNode.getAttribute('objid'))!);
+					const context = contexts[+String(objNode.getAttribute('contextSet')) || 0];
+					const adjustTraitedSkillIds = objNode.classList.contains('auto-transform');
+					if(skill) chainIds(skill, context, adjustTraitedSkillIds);
+					else {
+						console.warn("[gw2-tooltips] [collect] failed to find skill for object ", objNode);
+					}
+				}
+				skillIdsBySet.push(skillIds);
+			}
+
+			//only run do this charade if there are actually multiple different weapon sets
+			if(skillIdsBySet.length > 1 && (skillIdsBySet[0][0] != skillIdsBySet[1][0] || skillIdsBySet[0][skillIdsBySet[0].length - 1] != skillIdsBySet[1][skillIdsBySet[1].length - 1])) {
+				console.info("[gw2-tooltips] [collect] Will mark the following skills as belonging to weapon sets: ", skillIdsBySet);
+				const descriptionNode = buildNode.parentElement!.nextElementSibling?.nextElementSibling as HTMLElement;
+				if(descriptionNode) for(const skillNode of descriptionNode.querySelectorAll('gw2object[type=skill]')) {
+					const id = +String(skillNode.getAttribute('objid')) || 0;
+					if(id) for(const [i, skills] of skillIdsBySet.entries()) {
+						if(skills.includes(id)) skillNode.setAttribute('weaponSet', String(i));
+					}
+				}
+			}
+		}
+	}
+
+	if(config.autoCollectRuneCounts) {
+		//TODO(Rennorb) @correctness: this might not work properly with multiple builds on one page
+		if(buildNodes.length) for(const target of buildNodes)
+			Collect.allUpgradeCounts(target)
+		else {
+			console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `gw2-build` could be found to use as source. Upgrades will not be collected as there is no way to tell which upgrades belongs to the build and which ones are just in some arbitrary text.");
+		}
+	}
+
+	if(config.autoCollectStatSources) {
+		if(buildNodes.length) for(const target of buildNodes)
+			Collect.allStatSources(target)
+		else {
+			console.warn("[gw2-tooltips] [collect] `config.autoCollectStatSources` is active, but no element with class `gw2-build` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
+		}
+	}
+
+	if(config.autoCollectSelectedTraits) {
+		Collect.traitEffects(contexts);
+	}
+
+	if(config.autoInferEquipmentUpgrades) {
+		const targets = document.querySelectorAll('.weapon, .armor, .trinket');
+		if(targets.length)
+			inferItemUpgrades(targets)
+		else {
+			console.warn("[gw2-tooltips] [collect] `config.autoInferEquipmentUpgrades` is active, but no wrapper elements element with class `'weapon`, `armor` or `trinket` could be found to use as source. No elements will be updated");
+		}
+	}
+
+	for(const { character } of contexts) {
+		Collect.hoistGeneralSources(character);
+	}
+
+	if(config.autoRecomputeCharacterAttributes) {
+		for(const context of contexts) {
+			for(const weaponSetId of context.character.statsWithWeapons.keys()) {
+				recomputeAttributesFromMods(context, weaponSetId);
+			}
+		}
+	}
+
+	for(const [attribute, elements] of gw2Objects.attributes) {
+		for(const element of elements) {
+			inflateAttribute(element, attribute as BaseAttribute | ComputedAttribute);
+		}
+	}
+
+	return gw2Objects;
+}
+
+/**
+ * Does **NOT** run any auto-processing functions. Also does not inflate attribute elements, as those might depend on attribute recalculation.
+ * Use `hookDocument` if you want a convenient way to hook large trees and apply all auto-procs, or run the procs you want yourself. 
+ */
+export async function hookDOMSubtreeSlim(scope : ScopeElement) : Promise<GW2ObjectMap> {
 	//NOTE(Rennorb): need to use an array since there might be multiple occurrences of the same id in a given scope
 	const objectsToGet : GW2ObjectMap = {
 		skills         : new Map<number, HTMLElement[]>(),
@@ -155,11 +316,8 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 
 	if(statsToGet.size > 0) APICache.ensureExistence('itemstats', statsToGet.values(), config.validateApiResponses);
 
-	await Promise.all(
-		(Object.entries(objectsToGet)
-		.filter(([key, _]) => key != 'attributes') as [Exclude<keyof typeof objectsToGet, 'attributes'>, Map<APIObjectId, HTMLElement[]>][])
-		.map(async ([key, values]) => {
-		if(values.size == 0) return;
+	await Promise.all(Object.entries(objectsToGet as Omit<typeof objectsToGet, 'attributes'>).map(async ([key, values]) => {
+		if(values.size === 0 || key as any === 'attributes') return;
 
 		let inflator;
 		switch(key) {
@@ -1424,7 +1582,7 @@ type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet | API.Pet | API.I
 		}
 	})
 
-	//TODO(Rennorb): this sint very clean,  would like a better solution tbh
+	//TODO(Rennorb): This isn't very clean, I would like a better solution tbh
 	let touch : Touch;
 	const scrollHandler = (event : WheelEvent | TouchEvent | { detail : number, preventDefault: VoidFunction }) => {
 		if(tooltip.style.display == 'none') return;
@@ -1470,163 +1628,10 @@ type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet | API.Pet | API.I
 }
 
 if(config.autoInitialize) {
-	const buildNodes = document.getElementsByClassName('gw2-build-wrapper');
-	if(config.autoCollectSelectedTraits) {
-		if(buildNodes.length) for(const target of buildNodes)
-			Collect.allTraits(target)
-		else {
-			console.warn("[gw2-tooltips] [collect] `config.autoCollectSelectedTraits` is active, but no element with class `gw2-build` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
-		}
-	}
-
-	hookDocument(document)
-		.then(gw2Objects => {
-			if(config.autoInferWeaponSetAssociation) {
-				for(const buildNode of buildNodes) {
-					for(const [i, setNode] of buildNode.querySelectorAll('.weapon-set').entries()) {
-						for(const objNode of setNode.getElementsByTagName('GW2OBJECT'))
-							objNode.setAttribute('weaponSet', String(i));
-					}
-					
-					const skillIdsBySet = [];
-					for(const [i, setSkillsNode] of buildNode.querySelectorAll('.skills-weapon-set').entries()) {
-						const skillIds : number[] = [];
-						const chainIds = (skill : API.Skill, context : Context, adjustTraitedSkillIds : boolean) => {
-							if(adjustTraitedSkillIds) {
-								const replacementSkill = findTraitedOverride(skill, context);
-								if(replacementSkill) skill = replacementSkill;
-							}
-
-							skillIds.push(skill.id);
-
-							let palette, group, i;
-							[palette, group, i, context] = guessGroupAndContext(skill, context);
-							if(group) {
-								let candidate = group.candidates[i];
-				
-								//in case we catch a chain in the middle
-								while(candidate.previous_chain_skill_index) {
-									const otherCandidate = group.candidates[candidate.previous_chain_skill_index];
-									if(!canBeSelected(otherCandidate, context)) break;
-
-									skillIds.push(otherCandidate.skill);
-
-									candidate = otherCandidate;
-								}
-								//remaining chain
-								for(let j = 0; j < i; j++) {
-									const otherCandidate = group.candidates[j];
-									if(otherCandidate.previous_chain_skill_index != i) continue;
-									if(!canBeSelected(otherCandidate, context)) continue;
-				
-									skillIds.push(otherCandidate.skill);
-				
-									i = j;
-									j = -1;
-								}
-							}
-
-							if(skill.bundle_skills) for(const subSkillId of skill.bundle_skills) {
-								const subSkillInChain = APICache.storage.skills.get(subSkillId);
-								if(subSkillInChain)
-									skillIds.push(subSkillId);
-							}
-							if(skill.related_skills) for(const subSkillId of skill.related_skills) {
-								const subSkillInChain = APICache.storage.skills.get(subSkillId);
-								if(subSkillInChain && subSkillInChain.palettes.some(pid => {
-									const palette = APICache.storage.palettes.get(pid);
-									return palette && VALID_CHAIN_PALETTES.includes(palette.type);
-								})) {
-									skillIds.push(subSkillId);
-								}
-							}
-							if(skill.ambush_skills) for(const { id: subSkillId } of skill.ambush_skills) {
-								const subSkillInChain = APICache.storage.skills.get(subSkillId);
-								if(subSkillInChain)
-									skillIds.push(subSkillId);
-							}
-						}
-		
-						for(const objNode of setSkillsNode.children) {
-							objNode.setAttribute('weaponSet', String(i));
-		
-							const skill = APICache.storage.skills.get(+String(objNode.getAttribute('objid'))!);
-							const context = contexts[+String(objNode.getAttribute('contextSet')) || 0];
-							const adjustTraitedSkillIds = objNode.classList.contains('auto-transform');
-							if(skill) chainIds(skill, context, adjustTraitedSkillIds);
-							else {
-								console.warn("[gw2-tooltips] [collect] failed to find skill for object ", objNode);
-							}
-						}
-						skillIdsBySet.push(skillIds);
-					}
-		
-					//only run do this charade if there are actually multiple different weapon sets
-					if(skillIdsBySet.length > 1 && (skillIdsBySet[0][0] != skillIdsBySet[1][0] || skillIdsBySet[0][skillIdsBySet[0].length - 1] != skillIdsBySet[1][skillIdsBySet[1].length - 1])) {
-						console.info("[gw2-tooltips] [collect] Will mark the following skills as belonging to weapon sets: ", skillIdsBySet);
-						const descriptionNode = buildNode.parentElement!.nextElementSibling?.nextElementSibling as HTMLElement;
-						if(descriptionNode) for(const skillNode of descriptionNode.querySelectorAll('gw2object[type=skill]')) {
-							const id = +String(skillNode.getAttribute('objid')) || 0;
-							if(id) for(const [i, skills] of skillIdsBySet.entries()) {
-								if(skills.includes(id)) skillNode.setAttribute('weaponSet', String(i));
-							}
-						}
-					}
-				}
-			}
-
-			if(config.autoCollectRuneCounts) {
-				//TODO(Rennorb) @correctness: this might not work properly with multiple builds on one page
-				if(buildNodes.length) for(const target of buildNodes)
-					Collect.allUpgradeCounts(target)
-				else {
-					console.warn("[gw2-tooltips] [collect] `config.autoCollectRuneCounts` is active, but no element with class `gw2-build` could be found to use as source. Upgrades will not be collected as there is no way to tell which upgrades belongs to the build and which ones are just in some arbitrary text.");
-				}
-			}
-
-			if(config.autoCollectStatSources) {
-				if(buildNodes.length) for(const target of buildNodes)
-					Collect.allStatSources(target)
-				else {
-					console.warn("[gw2-tooltips] [collect] `config.autoCollectStatSources` is active, but no element with class `gw2-build` could be found to use as source. Build information will not be collected as there is no way to tell which objects belong to the build definition and which ones are just in some arbitrary text.");
-				}
-			}
-
-			if(config.autoCollectSelectedTraits) {
-				Collect.traitEffects(contexts);
-			}
-
-			if(config.autoInferEquipmentUpgrades) {
-				const targets = document.querySelectorAll('.weapon, .armor, .trinket');
-				if(targets.length)
-					inferItemUpgrades(targets)
-				else {
-					console.warn("[gw2-tooltips] [collect] `config.autoInferEquipmentUpgrades` is active, but no wrapper elements element with class `'weapon`, `armor` or `trinket` could be found to use as source. No elements will be updated");
-				}
-			}
-
-			for(const { character } of contexts) {
-				Collect.hoistGeneralSources(character);
-			}
-
-			if(config.autoRecomputeCharacterAttributes) {
-				for(const context of contexts) {
-					for(const weaponSetId of context.character.statsWithWeapons.keys()) {
-						recomputeAttributesFromMods(context, weaponSetId);
-					}
-				}
-			}
-
-			//TODO(Rennorb) @cleanup: this will not be triggered by hook document which is technically not correct.
-			// But for this to work is has to happen after the collect logic, which is not quite as easy to do.
-			// Maybe a good approach would be to slice hook document into stages that can be enabled / disabled. This would also fix some config options only working with autoInit = true.
-			for(const [attribute, elements] of gw2Objects.attributes) {
-				for(const element of elements) {
-					inflateAttribute(element, attribute as BaseAttribute | ComputedAttribute);
-				}
-			}
-		})
+	hookDocument(document);
 }
+
+
 
 const enum Specializations { SOULBEAST = 55 }
 

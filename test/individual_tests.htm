@@ -188,9 +188,7 @@
 	<div id="relic-frame"></div>
 	<script>
 		window.addEventListener('load', () => {
-			fetch((GW2TooltipsV2.APICache.apiImpl.localAPI?.baseUrl || GW2TooltipsV2.APICache.apiImpl.baseUrl)+'/items/by-name/Relic[s] of')
-			.then(r => r.json())
-			.then(j => {
+			GW2TooltipsV2.APICache.apiImpl.requestByName('items', 'Relic[s] of').then(j => {
 				const container = document.getElementById("relic-frame");
 				for(const { id } of j) {
 					const obj = document.createElement('gw2object');
@@ -198,7 +196,7 @@
 					obj.setAttribute('objid', String(id));
 					container.append(obj)
 				}
-				GW2TooltipsV2.hookDocument(container)
+				GW2TooltipsV2.hookDOMSubtreeSlim(container)
 			})
 		})
 	</script>

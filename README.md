@@ -99,8 +99,8 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 		var GW2TooltipsConfig = {
 			autoInitialize                  : true,
 
-			//    These only work properly if auto initialize is turned on,
-			// v- you need to explicitly call the related functions otherwise.
+			//    These only run inside calls to `hookDocument`. If you dont call that function for everything,
+			// v- you need to explicitly call the related functions if you want the associated effects.
 			autoCollectRuneCounts           : true,
 			autoCollectStatSources          : true,
 			autoCollectSelectedTraits       : true,
@@ -115,12 +115,13 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 			legacyCompatibility             : true,
 
 			// Toggelable at runtime (key-binds)
-			showPreciseAbilityTimings       : false,
-			showFactComputationDetail       : false,
+			showPreciseAbilityTimings       : false, // CTRL + ALT + t
+			showFactComputationDetail       : false, // CTRL + ALT + d
 
+			// Debug option to show warnings in case the api does not respond with all requested items.
 			validateApiResponses            : true,
 
-			// discouraged
+			// Discouraged / Debug options
 			apiImpl                         : undefined,
 			workerPath                      : undefined,
 		}
