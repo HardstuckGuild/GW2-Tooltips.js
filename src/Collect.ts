@@ -53,7 +53,6 @@ function _upgradeCounts(contextIndex : number, targetContext : Context, elements
 	}
 }
 
-//TODO(Rennorb) @correctness @incomplete: +x to all stats not working right now
 export function allStatSources(scope : ScopeElement, mode : CollectMode = CollectMode.Append) {
 	const elements = scope.getElementsByTagName('gw2object');
 	for(const contextIndex of contexts.keys()) {
@@ -75,7 +74,8 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 	const weaponSetSources : SourceMap[] = [];
 
 	//NOTE(Rennorb): Cant really use the existing upgrade counts since we want to add tiers individually.
-	let upgrades = {} as { [k : number] : number };
+	const baseUpgrades = {} as Record<number, number>;
+	const weaponSetUpgrades = [] as Record<number, number>[];
 
 	//NOTE(Rennorb): its common to specify both weapon sets of infusions. The issue becomes that those are too many and therefore we need to be able to reduce them in a sensible way.
 	const actualInfusionCounts = contexts.map(ctx => {
@@ -107,8 +107,10 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 	});
 
 	for(const element of elements) {
-		let id, type = element.getAttribute('type');
-		if(!(id = +String(element.getAttribute('objid')))) continue;
+		const id = +String(element.getAttribute('objid'));
+		if(!id) continue;
+		const type = element.getAttribute('type');
+		const weaponSetId = +String(element.getAttribute('weapon-set'));
 
 		let amountToAdd = 1;
 		let tiersToProcess : { modifiers? : API.Modifier[] }[] | undefined, item : API.Item | undefined, tierNumber, sourceRuneSuffix;
@@ -126,6 +128,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 
 				//NOTE(Rennorb): We count additional runes, but ignore those over the sensible amount.
 				//NOTE(Rennorb): For pvp runes we get the wrong tier number here, it doesn't matter tho because we need to treat it differently anyways.
+				const upgrades = isNaN(weaponSetId) ? baseUpgrades : (weaponSetUpgrades[weaponSetId] || (weaponSetUpgrades[weaponSetId] = {}));
 				tierNumber = upgrades[item.id] = (upgrades[item.id] || 0) + tiersToAdd;
 
 				if(item.subtype === 'Rune') {
@@ -171,9 +174,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 					}
 					else if(item.subtype === 'Sigil' && tierNumber > 1) {
 						//NOTE(Rennorb): We only process one sigil, since sigils are unique, but we start complaining at the third identical one since there might be the same sigil twice for different sets.
-						//TODO(Rennorb) @correctness: how to handle asymmetric sets? Right now we would assume all unique sigils are active at once, so if you do [A, B] [B, C] then A, B, C would be considered active.
-						if(tierNumber > 2)
-							console.warn("[gw2-tooltips] [collect] Found more than 2 sigils of the same type. Here is the 3th sigil element: ", element);
+						console.warn("[gw2-tooltips] [collect] Found more than 1 sigils of the same type on the same weapon set. Here is the 2nd sigil element: ", element);
 						continue;
 					}
 
@@ -217,7 +218,6 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 
 		let targetSources = baseSources;
 
-		const weaponSetId = +String(element.getAttribute('weaponSet'));
 		if(isNaN(weaponSetId) && item && item.type == "UpgradeComponent") {
 			const override = actualInfusionCounts[contextIndex][item.id];
 			if(override) {

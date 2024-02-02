@@ -91,7 +91,7 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 		for(const buildNode of buildNodes) {
 			for(const [i, setNode] of buildNode.querySelectorAll('.weapon-set').entries()) {
 				for(const objNode of setNode.getElementsByTagName('GW2OBJECT'))
-					objNode.setAttribute('weaponSet', String(i));
+					objNode.setAttribute('weapon-set', String(i));
 			}
 			
 			const skillIdsBySet = [];
@@ -154,7 +154,7 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 				}
 
 				for(const objNode of setSkillsNode.children) {
-					objNode.setAttribute('weaponSet', String(i));
+					objNode.setAttribute('weapon-set', String(i));
 
 					const skill = APICache.storage.skills.get(+String(objNode.getAttribute('objid'))!);
 					const context = contexts[+String(objNode.getAttribute('contextSet')) || 0];
@@ -174,7 +174,7 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 				if(descriptionNode) for(const skillNode of descriptionNode.querySelectorAll('gw2object[type=skill]')) {
 					const id = +String(skillNode.getAttribute('objid')) || 0;
 					if(id) for(const [i, skills] of skillIdsBySet.entries()) {
-						if(skills.includes(id)) skillNode.setAttribute('weaponSet', String(i));
+						if(skills.includes(id)) skillNode.setAttribute('weapon-set', String(i));
 					}
 				}
 			}
@@ -443,7 +443,7 @@ function generateToolTip(apiObject : SupportedTTTypes, slotName : string | undef
 		parts.push(newElm('p.description', fromHTML(GW2Text2HTML(apiObject.description))))
 	}
 
-	pushFacts(parts, apiObject, currentContextInformation, context);
+	pushFacts(parts, apiObject, currentContextInformation, context, weaponSet === undefined ? context.character.selectedWeaponSet : weaponSet);
 
 	const tooltip = newElm('div.tooltip', ...parts)
 	tooltip.dataset.id = String(apiObject.id)
@@ -540,7 +540,7 @@ function pushGamemodeSplitLabels(destinationArray : Node[], SourceObject : Suppo
 	}
 }
 
-function pushFacts(destinationArray : Node[], sourceObject : SupportedTTTypes, specializedContextInformation : API.ContextInformation, context : Context) {
+function pushFacts(destinationArray : Node[], sourceObject : SupportedTTTypes, specializedContextInformation : API.ContextInformation, context : Context, weaponSet : number) {
 	if(specializedContextInformation.blocks) {
 		//NOTE(Rennorb): 690.5 is the midpoint weapon strength for slot skills (except bundles).
 		//TODO(Rennorb) @hardcoded @correctness: This value is hardcoded for usage with traits as they currently don't have any pointer that would provide weapon strength information.
@@ -560,7 +560,7 @@ function pushFacts(destinationArray : Node[], sourceObject : SupportedTTTypes, s
 				break;
 			}
 		}
-		destinationArray.push(...generateFacts(specializedContextInformation.blocks, weaponStrength, context))
+		destinationArray.push(...generateFacts(specializedContextInformation.blocks, weaponStrength, context, weaponSet))
 	}
 }
 
@@ -679,7 +679,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 	let initialActiveIndex = 0;
 	const tooltipChain : HTMLElement[] = []
 	const adjustTraitedSkillIds = gw2Object.classList.contains('auto-transform');
-	let weaponSet : number | undefined = +String(gw2Object.getAttribute('weaponSet')); if(isNaN(weaponSet)) weaponSet = undefined;
+	let weaponSet : number | undefined = +String(gw2Object.getAttribute('weapon-set')); if(isNaN(weaponSet)) weaponSet = undefined;
 	let palette, group, slot : string | undefined = undefined;
 
 	if('palettes' in initialAPIObject) {
@@ -737,7 +737,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 	}
 	else {
 		if('type' in initialAPIObject) {
-			tooltipChain.push(generateItemTooltip(initialAPIObject, context, gw2Object, statSetId, stackSize));
+			tooltipChain.push(generateItemTooltip(initialAPIObject, context, weaponSet === undefined ? context.character.selectedWeaponSet : weaponSet, gw2Object, statSetId, stackSize));
 		}
 		else {
 			let slotName = undefined;
@@ -952,7 +952,7 @@ export function findTraitedOverride(skill : API.Skill, context : Context) : API.
 	return;
 }
 
-function generateItemTooltip(item : API.Item, context : Context, target : HTMLElement, statSetId? : number, stackSize = 1) : HTMLElement {
+function generateItemTooltip(item : API.Item, context : Context, weaponSet : number, target : HTMLElement, statSetId? : number, stackSize = 1) : HTMLElement {
 	let statSet = (context.gameMode !== 'Pvp' || (item.type === 'Trinket' && item.subtype === 'Amulet')) && findCorrectAttributeSet(item, statSetId); // pvp builds use an amulet for stats, equipment itself doesn't provide any
 
 	let slottedItems : API.ItemUpgradeComponent[] | undefined;
@@ -1009,7 +1009,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	}
 
 	if('tiers' in item) {
-		parts.push(generateUpgradeItemGroup(item, context));
+		parts.push(generateUpgradeItemGroup(item, context, weaponSet));
 	}
 
 	if(statSet && 'attribute_base' in item) {
@@ -1032,7 +1032,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 
 			if(slottedItemIdx > -1) {
 				const slottedItem = slottedItems!.splice(slottedItemIdx, 1)[0];
-				const group = generateUpgradeItemGroup(slottedItem, context);
+				const group = generateUpgradeItemGroup(slottedItem, context, weaponSet);
 				const name = formatItemName(slottedItem, context);
 				group.prepend(newElm('tet', newImg(slottedItem.icon, 'iconsmall'),  newElm('teb.gw2-color-rarity-'+slottedItem.rarity, name), newElm('div.flexbox-fill')));
 				return group;
@@ -1048,7 +1048,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 	let descriptionAlreadyShown = false; //idk, maybe i'll change that whole thing in the future.
 	if('applies_buff' in item) {
 		parts.push(newElm('span', fromHTML(GW2Text2HTML(item.description))));
-		parts.push(newElm('div.group', generateFact(item.applies_buff, -1, context, true).wrapper!));
+		parts.push(newElm('div.group', generateFact(item.applies_buff, -1, context, weaponSet, true).wrapper!));
 		descriptionAlreadyShown = true;
 	}
 
@@ -1068,7 +1068,7 @@ function generateItemTooltip(item : API.Item, context : Context, target : HTMLEl
 		pushCostAndRestrictionLabels(headerElements, factsSkill, contextInfo, context);
 		const innerParts = [newElm('tet.title', ...headerElements)];
 
-		pushFacts(innerParts, factsSkill, contextInfo, context);
+		pushFacts(innerParts, factsSkill, contextInfo, context, weaponSet);
 
 		parts.push(newElm('span', fromHTML(GW2Text2HTML(item.description))));
 		parts.push(newElm('div.group', ...innerParts));
@@ -1142,7 +1142,7 @@ export function findCorrectAttributeSet(item : API.Item, statSetId? : number) : 
 	return statSet;
 }
 
-function generateUpgradeItemGroup(item : API.ItemUpgradeComponent, context : Context) : HTMLElement {
+function generateUpgradeItemGroup(item : API.ItemUpgradeComponent, context : Context, weaponSet : number) : HTMLElement {
 	const group = newElm('div.group');
 	for(const [i, tier] of item.tiers.entries()) {
 		let tier_wrap = newElm('te');
@@ -1151,14 +1151,14 @@ function generateUpgradeItemGroup(item : API.ItemUpgradeComponent, context : Con
 		//NOTE(Rennorb): facts seem to exist, but almost universally be wrong.
 		else if(tier.facts) {
 			for(const fact of tier.facts) {
-				const { wrapper } = generateFact(fact, null as any, context);
+				const { wrapper } = generateFact(fact, null as any, context, weaponSet);
 				if(wrapper) tier_wrap.append(wrapper);
 			}
 		}
 
 		else if(tier.modifiers) {
 			tier_wrap.style.flexDirection = "column";
-			const activeAttributes = getActiveAttributes(context.character);
+			const activeAttributes = context.character.statsWithWeapons[weaponSet].values;
 			for(const modifier of tier.modifiers) {
 				//TODO(Rennorb) @cleanup: unify this wth the buf fact processing
 				let modifierValue = calculateModifier(modifier, context.character.level, activeAttributes);
@@ -1195,7 +1195,7 @@ function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute,
 
 		//NOTE(Rennorb): -1 because the cap is 200% for duration, but the displayed value is the _additional_ duration, so its a max of +100%.
 		const modCap = (getAttributeInformation(attribute, context.character).cap - 1) * 100;
-		const activeAttributes = getActiveAttributes(context.character);
+		const activeAttributes = context.character.statsWithWeapons[context.character.selectedWeaponSet].values;
 
 		for(const [effectId, sources] of Object.entries(weaponStats.sources)) {
 			//NOTE(Rennorb): For simplicity of the remaining library we just eat the performance hit of iterating over the additional props here.
@@ -1608,7 +1608,7 @@ type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet | API.Pet | API.I
 			if(e.key == 'd') {
 				e.preventDefault();
 				config.showFactComputationDetail = !config.showFactComputationDetail;
-				console.log(`[gw2-tooltips] [cfg] showFactComputationDetail is now ${config.showFactComputationDetail}`);
+				console.log(`[gw2-tooltips] [cfg] showFactComputationDetail is now ${config.showFactComputationDetail}.`);
 				if(lastTooltipTarget && tooltip.style.display != 'none') {
 					showTooltipFor(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
 					positionTooltip();
@@ -1617,7 +1617,20 @@ type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet | API.Pet | API.I
 			else if(e.key == 't') {
 				e.preventDefault();
 				config.showPreciseAbilityTimings = !config.showPreciseAbilityTimings;
-				console.log(`[gw2-tooltips] [cfg] showPreciseAbilityTimings is now ${config.showPreciseAbilityTimings}`);
+				console.log(`[gw2-tooltips] [cfg] showPreciseAbilityTimings is now ${config.showPreciseAbilityTimings}.`);
+				if(lastTooltipTarget && tooltip.style.display != 'none') {
+					showTooltipFor(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
+					positionTooltip();
+				}
+			}
+			else if(e.key == 'w') {
+				e.preventDefault();
+				for(const [i, context] of contexts.entries()) {
+					//TODO(Rennorb) @stability: This will fail for sparse weapon sets, but thats wrong / brittle in other ways aswell.
+					const mod = context.character.statsWithWeapons.length;
+					context.character.selectedWeaponSet = (context.character.selectedWeaponSet + 1) % mod;
+					console.log(`[gw2-tooltips] [cfg] Context #${i} is now on weapon set ${context.character.selectedWeaponSet + 1} / ${mod}.`);
+				}
 				if(lastTooltipTarget && tooltip.style.display != 'none') {
 					showTooltipFor(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
 					positionTooltip();
@@ -1642,5 +1655,5 @@ export { APICache }
 import { MISSING_SKILL, calculateModifier, generateFact, generateFacts } from './FactsProcessor';
 import * as Collect from './Collect';
 import { _legacy_transformEffectToSkillObject, inferItemUpgrades, inflateAttribute, inflateGenericIcon, inflateItem, inflateProfession, inflateSkill, inflateSpecialization } from './Inflators'
-import { LUT_DEFENSE, LUT_POWER_MONSTER, LUT_POWER_PLAYER, getActiveAttributes, getAttributeInformation, recomputeAttributesFromMods } from './CharacterAttributes'
+import { LUT_DEFENSE, LUT_POWER_MONSTER, LUT_POWER_PLAYER, getAttributeInformation, recomputeAttributesFromMods } from './CharacterAttributes'
 

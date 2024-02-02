@@ -35,6 +35,7 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 	- `stats='{id}'`: Id of the stat set that is selected on the item. Only processed if the type is `item`.
 	- `count='{amount}'`: Stack size. Only processed if type is `item`.
 	- `with-traits='{id1[,id2[,...]]}'`: List of traits to apply specifically to this skill. Only processed if type is `skill` or `trait`.
+	- `weapon-set='{index}'`: Specify the weapon set to use for calculations. Defaults to set #0 if not specified.
 	- `class='{...}'`: Several options are available here:
 		- `auto-transform`: Automatically replace this skill with a traited version if the trait in question is active.
 		- `gw2objectembed`: Embed this object into text. This will result in the object being inflated into an icon and its name, aswell as its stack size in the shape of '[n x ]icon name'. Can have further specifications:
@@ -147,6 +148,7 @@ If you need a simple example on how to manually invoke the library, have a look 
 Currently there are two hard-coded keybinds available:
 - `ctrl + alt + D`: toggle `showFactComputationDetail`
 - `ctrl + alt + T`: toggle `showPreciseAbilityTimings`
+- `ctrl + alt + W`: cycle all contexts currently selected weapon set
 
 ## Compiling form TypeScript
 1. Download [Node.js](https://nodejs.org/en), make sure `npm` is in your path after you installed it.

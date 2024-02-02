@@ -40,7 +40,7 @@ interface BaseAndComputedStats {
 	values   : { [k in BaseAttribute | ComputedAttribute] : number }
 	sources  : SourceMap
 }
-type SourceMap = SourceMapStrict & { [k in string]: StatSource[] }
+type SourceMap = SourceMapStrict & { [k in string]?: StatSource[] }
 type SourceMapStrict = { [k in BaseAttribute | ComputedAttribute | SyntheticAttributes]: StatSource[] }
 
 interface StatSource {

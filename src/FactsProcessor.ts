@@ -38,14 +38,14 @@ export function calculateModifier(
 }
 
 /** @param facts should already be context resolved */
-export function generateFacts(blocks : API.FactBlock[], weaponStrength : number, context : Context) : HTMLElement[] {
+export function generateFacts(blocks : API.FactBlock[], weaponStrength : number, context : Context, weaponSet : number) : HTMLElement[] {
 	const [looseBlock, ...remainingBlocks] = blocks;
 	let totalDefianceBreak = 0
 
 	const makeFactElements = (facts : API.Fact[] | undefined) => (!facts ? [] : facts
 		.sort((a, b) => a.order - b.order)
 		.map(fact => {
-			const { wrapper, defiance_break } = generateFact(fact, weaponStrength, context);
+			const { wrapper, defiance_break } = generateFact(fact, weaponStrength, context, weaponSet);
 			totalDefianceBreak += defiance_break;
 			if(wrapper) wrapper.dataset.order = String(fact.order); //used later on to insert a potential synthetic defiance break fact in the right place
 			return wrapper;
@@ -89,12 +89,13 @@ export function generateFacts(blocks : API.FactBlock[], weaponStrength : number,
 }
 
 /** @param fact should already be context resolved */
-export function generateFact(fact : API.Fact, weapon_strength : number, context : Context, itemMode : boolean = false) : { wrapper? : HTMLElement, defiance_break : number } {
+export function generateFact(fact : API.Fact, weaponStrength : number, context : Context, weaponSet : number, itemMode : boolean = false) : { wrapper? : HTMLElement, defiance_break : number } {
 	let iconSlug = fact.icon;
 	let buffStackSize = 1;
 	let buffDuration = (fact as API.BuffFact).duration;
 	let defiance_break_per_s = fact.defiance_break;
-	let activeStats = getActiveAttributes(context.character);
+	let activeModSources = context.character.statsWithWeapons[weaponSet].sources;
+	let activeStats = context.character.statsWithWeapons[weaponSet].values;
 
 	const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact, duration : Milliseconds, valueMod : number  /* TODO(Rennorb): kindof a weird hack for now. maybe merge the two export functions? */) => {
 		let modsArray: string[] = []
@@ -184,7 +185,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		const durationAttr : ComputedAttribute | false = (buff.buff_type == 'Boon' && 'BoonDuration') || (buff.buff_type == 'Condition' && 'ConditionDuration');
 		if(durationAttr) {
 			const { baseAttribute, div, cap: cap_ } = getAttributeInformation(durationAttr, context.character); cap = cap_;
-			const attribVal = getAttributeValue(context.character, baseAttribute!);
+			const attribVal = activeStats[baseAttribute!];
 			// every 15 points add 1%
 			durMod += attribVal / div;
 			if(attribVal > 0 && config.showFactComputationDetail) {
@@ -192,7 +193,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				detailStack.push(`+ ${n3(baseDuration / 1000 * attribVal / div)}s (${n3(attribVal / div * 100)}%) from ${n3(attribVal)} ${baseAttribute}`);
 			}
 
-			for(const source of getAttributeSources(context.character, durationAttr)) {
+			for(const source of activeModSources[durationAttr]) {
 				let mod = calculateModifier(source.modifier, context.character.level, activeStats) * source.count;
 				const innerSuffix = source.modifier.flags.includes('FormatPercent') ? '%' : '';
 				const displayMul = innerSuffix ? 100 : 1;
@@ -212,8 +213,8 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		}
 
 		//TODO(Rennorb) @correctness: this is probably not quite stable, but its good enough for now
-		let durModStack = getAttributeSources(context.character, buff.id);
-		if(durModStack.length) {
+		let durModStack = activeModSources[buff.id];
+		if(durModStack) {
 			//NOTE(Rennorb): Just in case we didn't have a stat duration increase. Im aware that this is jank, but i cant think of a better way rn.
 			if(durMod === 1 && config.showFactComputationDetail)
 				detailStack.push(`base duration: ${n3(baseDuration / 1000)}s`);
@@ -236,7 +237,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		baseDuration *= durMod;
 
 		if(buff.name.includes('Regeneration')) {
-			let valueModStack = getAttributeSources(context.character, 'HealEffectiveness');
+			let valueModStack = activeModSources.HealEffectiveness;
 			if(valueModStack.length) {
 				if(config.showFactComputationDetail)
 					detailStack.push('regeneration value mods:');
@@ -268,7 +269,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 			let attributeVal = 0;
 			if(fact.attribute) {
-				attributeVal = getAttributeValue(context.character, fact.attribute);
+				attributeVal = activeStats[fact.attribute];
 				value += attributeVal * fact.attribute_multiplier * fact.hit_count;
 			}
 
@@ -283,7 +284,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 
 			if(fact.text?.includes('Heal')) { //TODO(Rennorb) @cleanup @correctness
 				let percentMod = 100;
-				for(const { source, modifier, count } of getAttributeSources(context.character, 'HealEffectiveness')) {
+				for(const { source, modifier, count } of activeModSources.HealEffectiveness) {
 					let mod = calculateModifier(modifier, context.character.level, activeStats);
 					if(modifier.source_attribute) mod *= 100; // @cleanup
 
@@ -355,12 +356,11 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			const lines : (string|Node)[] = [];
 
 			if(defiance_break_per_s && text && text.includes('Defiance')) {
-				const modifiers = getAttributeSources(context.character, 'Stun');
-				if(modifiers.length) {
+				if(activeModSources.Stun.length) {
 					if(config.showFactComputationDetail)
 						lines.push(`${n3(value)} base value`);
 					let percentMod = 100;
-					for(const { source, modifier, count } of modifiers) {
+					for(const { source, modifier, count } of activeModSources.Stun) {
 						const mod = calculateModifier(modifier, context.character.level, activeStats);
 						if(config.showFactComputationDetail)
 							lines.push(newElm('span.detail', `${n3ss(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character))));
@@ -379,8 +379,8 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			return [`${GW2Text2HTML(fact.text)}: ${formatFraction(fact.percent, config)}%`];
 		},
 		PercentHpSelfDamage : ({fact}) => {
-			const hpPool = getAttributeValue(context.character, 'Health'); //NOTE(Rennorb): Does not include barrier.
-			return [`${GW2Text2HTML(fact.text)}: ${Math.floor(hpPool * fact.percent / 100)} (${formatFraction(fact.percent, config)}% HP pool)`];
+			//NOTE(Rennorb): Does not include barrier.
+			return [`${GW2Text2HTML(fact.text)}: ${Math.floor(activeStats.Health * fact.percent / 100)} (${formatFraction(fact.percent, config)}% HP pool)`];
 		},
 		PercentLifeForceCost : ({fact: {percent, text}}) => {
 			const hpPool = getBaseHealth(context.character);
@@ -395,21 +395,20 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 			return lines;
 		},
 		PercentHealth : ({fact: {percent, text}}) => {
-			const raw = Math.round(getAttributeValue(context.character, 'Health') * percent * 0.01);
+			const raw = Math.round(activeStats.Health * percent * 0.01);
 			return [`${GW2Text2HTML(text)}: ${formatFraction(percent, config)}% (${raw} HP)`];
 		},
 		PercentLifeForceGain : ({fact: {percent, text}}) => {
-			const hpPool = getAttributeValue(context.character, 'Health');
+			const hpPool = activeStats.Health;
 
 			const lines = [];
 			if(config.showFactComputationDetail) {
-				lines.push(`${n3(percent * 0.01 * hpPool * 0.69)} from ${n3(percent)}% * (${n3(hpPool)} HP * 0.69) pool (${n3(getBaseHealth(context.character))} base pool modified by ${n3(getAttributeValue(context.character, 'Vitality'))} Vitality)`);
+				lines.push(`${n3(percent * 0.01 * hpPool * 0.69)} from ${n3(percent)}% * (${n3(hpPool)} HP * 0.69) pool (${n3(getBaseHealth(context.character))} base pool modified by ${n3(activeStats.Vitality)} Vitality)`);
 			}
 
-			const modifiers = getAttributeSources(context.character, 'LifeForce');
-			if(modifiers.length) {
+			if(activeModSources.LifeForce.length) {
 				let percentMod = 100;
-				for(const { source, modifier, count } of modifiers) {
+				for(const { source, modifier, count } of activeModSources.LifeForce) {
 					const mod = calculateModifier(modifier, context.character.level, activeStats);
 					if(config.showFactComputationDetail)
 						lines.push(newElm('span.detail', `${n3ss(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character))));
@@ -426,29 +425,25 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 		Damage : ({fact: {dmg_multiplier, hit_count, text}, weaponStrength}) => {
 			const lines = [];
 
-			const power = getAttributeValue(context.character, 'Power');
-			let damage = dmg_multiplier * hit_count * weaponStrength * power / context.targetArmor;
+			let damage = dmg_multiplier * hit_count * weaponStrength * activeStats.Power / context.targetArmor;
 			if(config.showFactComputationDetail) {
-				lines.push(`${n3(damage)} from ${n3(dmg_multiplier)} internal mod. * ${n3(power)} power * ${weaponStrength} avg. weapon str. / ${context.targetArmor} target armor`);
+				lines.push(`${n3(damage)} from ${n3(dmg_multiplier)} internal mod. * ${n3(activeStats.Power)} power * ${weaponStrength} avg. weapon str. / ${context.targetArmor} target armor`);
 				if(hit_count != 1) lines.push(`* ${hit_count} hits`);
 			}
 
-			const precision = getAttributeValue(context.character, 'Precision');
-			const ferocity  = getAttributeValue(context.character, 'Ferocity');
 			//TODO(Rennorb): level scaling attributes. these are for lvl 80
-			const critChance = Math.min(0.05 + (precision - 1000) / 21 * 0.01, 1);
+			const critChance = Math.min(0.05 + (activeStats.Precision - 1000) / 21 * 0.01, 1);
 			//TODO(Rennorb): crit damage mods
-			const critDamage = 1.5 + ferocity / 15 * 0.01;
+			const critDamage = 1.5 + activeStats.Ferocity / 15 * 0.01;
 			const moreDmgFromCrit = damage * critChance * (critDamage - 1);
 			damage += moreDmgFromCrit;
 			if(config.showFactComputationDetail) {
-				lines.push(`+ ${n3(moreDmgFromCrit)} (${n3(critChance * (critDamage - 1) * 100)}%) from ${n3(critChance * 100)}% crit chance and ${n3(critDamage * 100)}% damage on crit (${n3(precision)} precision and ${n3(ferocity)} ferocity)`);
+				lines.push(`+ ${n3(moreDmgFromCrit)} (${n3(critChance * (critDamage - 1) * 100)}%) from ${n3(critChance * 100)}% crit chance and ${n3(critDamage * 100)}% damage on crit (${n3(activeStats.Precision)} precision and ${n3(activeStats.Ferocity)} ferocity)`);
 			}
 
-			const modifiers = getAttributeSources(context.character, 'Damage');
-			if(modifiers.length) {
+			if(activeModSources.Damage.length) {
 				let percentMod = 100;
-				for(const { source, modifier, count } of modifiers) {
+				for(const { source, modifier, count } of activeModSources.Damage) {
 					const mod = calculateModifier(modifier, context.character.level, activeStats);
 					if(config.showFactComputationDetail)
 						lines.push(newElm('span.detail', `${n3ss(mod)}% from ${count > 1 ? `${count} ` : ''}`, fromHTML(resolveInflections(source, count, context.character))));
@@ -471,7 +466,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 				// This will not modify the 'total defiance break' synthetic fact as that one gets generated after all others are done.
 				|| text.includes('Defiance'))
 			) {
-				const modifiers = getAttributeSources(context.character, 'Stun');
+				const modifiers = activeModSources.Stun;
 				if(modifiers.length) {
 					if(config.showFactComputationDetail)
 						lines.push(`${n3(buffDuration / 1000)}s base duration`);
@@ -567,7 +562,7 @@ export function generateFact(fact : API.Fact, weapon_strength : number, context 
 	}
 
 	const buff = APICache.storage.skills.get((fact as API.BuffFact).buff || 0)
-	const data : HandlerParams = { fact, buff, weaponStrength: weapon_strength }
+	const data : HandlerParams = { fact, buff, weaponStrength: weaponStrength }
 	const [firstLine, ...remainingDetail] = factInflators[fact.type](data as any)
 	const wrapper = newElm('div.fact')
 	if(fact.requires_trait) {
@@ -632,4 +627,4 @@ export const MISSING_SKILL : API.Skill = {
 import { newElm, newImg, formatFraction, GW2Text2HTML, withUpToNDigits, localizeInternalName, joinWordList, fromHTML, n3, resolveInflections, formatDuration, n3s, n3ss } from './TUtilsV2';
 import APICache from './APICache';
 import { ICONS, config } from './TooltipsV2';
-import { getActiveAttributes, getAttributeInformation, getAttributeValue, getBaseHealth, getAttributeSources } from './CharacterAttributes';
+import { getAttributeInformation, getBaseHealth } from './CharacterAttributes';

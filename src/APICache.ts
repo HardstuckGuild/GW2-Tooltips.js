@@ -46,7 +46,7 @@ export default class APICache {
 			if(currentEndpoint == 'palettes') didCollectPalettes = true;
 
 			const storageSet : Map<APIResponseTypeMap[typeof currentEndpoint]['id'], any> = this.storage[currentEndpoint]
-			//TODO(Rennorb): i really don't like this but it seems to be the most sensible way for now
+			//TODO(Rennorb): Get rid of this unnecessary copy. Only reasonably doable once Iterator.prototype.toArray is stabilized.
 			const request = Array.from<APIResponseTypeMap[typeof currentEndpoint]['id']>(additionalIds[currentEndpoint].values())
 			additionalIds[currentEndpoint].clear()
 
