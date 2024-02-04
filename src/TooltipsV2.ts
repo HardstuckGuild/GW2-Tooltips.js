@@ -804,7 +804,7 @@ function generateToolTipList(initialAPIObject : SupportedTTTypes, gw2Object: HTM
 		}
 		const [palette, group] = guessGroupAndContext(petSkill, context);
 		let slot_name = refineSlotName(palette!, group?.slot);
-		if(slot_name) slot_name = 'ai '+slot_name;
+		if(slot_name) slot_name = 'AI '+slot_name;
 		tooltipChain.push(generateToolTip(petSkill, slot_name, subiconRenderMode, context, weaponSet));
 	}
 	if(context.character.specializations.has(Specializations.SOULBEAST) && 'skills_soulbeast' in initialAPIObject) for(const petSkillId of initialAPIObject.skills_soulbeast) {

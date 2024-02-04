@@ -1,40 +1,41 @@
-export function calculateModifier(
-	{ formula, base_amount, formula_param1: level_scaling, formula_param2, source_attribute } : API.Modifier,
-	level : number, stats : Character['stats']['values'],
-) : number {
-	let { Power, ConditionDamage, HealingPower } = stats;
-	if(source_attribute) {
-		//conversion mod
-		return stats[source_attribute] * base_amount / 100;
+export function calculateModifier(modifier : API.Modifier, level : number, stats : Character['stats']['values']) : number {
+	if(modifier.source_attribute) { //NOTE(Rennorb): Conversion mods don't use the scaling
+		return stats[modifier.source_attribute] * modifier.base_amount / 100;
 	}
 
-	//TODO(Rennorb): this is **screaming** tabledrive me
-	switch (formula) {
-		case 'BuffLevelLinear':
-			return         level * level_scaling + base_amount
-		case 'ConditionDamage':
-			return         level * level_scaling + base_amount + ConditionDamage * formula_param2
-		case 'ConditionDamageSquared':
-			return level * level * level_scaling + base_amount + ConditionDamage * formula_param2
-		case 'NoScaling':
-			return                                 base_amount
-		case 'Regeneration':
-			return         level * level_scaling + base_amount + HealingPower * formula_param2
-		case 'RegenerationSquared':
-			return level * level * level_scaling + base_amount + HealingPower * formula_param2
-		case 'SpawnScaleLinear':
-		case 'TargetLevelLinear':
-			return         level * level_scaling + base_amount
-		case 'BuffFormulaType11':
-			return         level * level_scaling + base_amount - formula_param2
-		case 'Power':
-			return         level * level_scaling + base_amount + Power * formula_param2
-		case 'PowerSquared':
-			return level * level * level_scaling + base_amount + Power * formula_param2
+	let attribute = 0;
+	switch (modifier.formula) {
+		case 'NoScaling': level = 0;
+			break;
+
+		case 'SpawnScaleLinear': case 'TargetLevelLinear': case 'BuffLevelLinear':
+			break;
+
+		case 'BuffFormulaType11': attribute = -1;
+			break;
+
+		case 'ConditionDamageSquared': level = level * level; //fallthrough
+		case 'ConditionDamage': attribute = stats.ConditionDamage;
+			break;
+
+		case 'RegenerationSquared': level = level * level; //fallthrough
+		case 'Regeneration': attribute = stats.HealingPower;
+			break;
+
+		case 'PowerSquared': level = level * level; //fallthrough
+		case 'Power': attribute = stats.Power;
+			break;
+
+		case 'CritDamageSquared': level = level * level; //fallthrough
+		case 'CritDamage': attribute = stats.Ferocity;
+			break;
+
+		default:
+			console.warn('[gw2-tooltips] [facts processor] Could not find formula #', modifier.formula, ', using base amount for now!');
+			level = 0;
 	}
 
-	console.warn('[gw2-tooltips] [facts processor] Could not find formula #', formula, ', using base amount for now!')
-	return base_amount; //TODO(Rennorb) @correctness
+	return modifier.base_amount + level * modifier.formula_param1 + attribute * modifier.formula_param2;
 }
 
 /** @param facts should already be context resolved */
@@ -103,8 +104,8 @@ export function generateFact(fact : API.Fact, weaponStrength : number, context :
 			//TODO(Rennorb) @consistency: gamemode splitting for mods (?)
 			const relevantModifiers = buff.modifiers.filter(modifier => (
 				   (!modifier.source_trait_req || context.character.traits.has(modifier.source_trait_req))
-				//NOTE(Rennorb): We ignore this on purpose. See https://github.com/HardstuckGuild/Tooltips.js/issues/81 for context
-				//&& (!modifier.target_trait_req || context.character.traits.includes(modifier.target_trait_req))
+				//TODO(Rennorb) @correctness: See https://github.com/HardstuckGuild/Tooltips.js/issues/81 for context
+				&& (!modifier.target_trait_req || context.character.traits.has(modifier.target_trait_req))
 				&& (!modifier.mode || modifier.mode === context.gameMode)
 			));
 
