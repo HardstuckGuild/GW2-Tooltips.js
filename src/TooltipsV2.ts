@@ -70,7 +70,7 @@ function positionTooltip(animate = false) {
 }
 
 type GW2ObjectMap = {
-	[k in `${Exclude<V2ObjectType, 'effect' | 'attribute'>}s`] : Map<APIResponseTypeMap[k]['id'], HTMLElement[]>
+	[k in `${Exclude<V2ObjectType, 'attribute'>}s`] : Map<APIResponseTypeMap[k]['id'], HTMLElement[]>
 } & {
 	attributes : Map<string, HTMLElement[]>,
 }
@@ -260,7 +260,7 @@ export async function hookDOMSubtreeSlim(scope : ScopeElement) : Promise<GW2Obje
 
 		//TODO(Rennorb) @cleanup: this is literally just for naming 'convenience'. 
 		// Unfortunately i don't think we can get rid of this as the api eps use plural forms. allow singular forms on the api side to get rid of this? 
-		let type = (gw2Object.getAttribute('type') || 'skill') + 's' as `${V2ObjectType}s`;
+		let type = (gw2Object.getAttribute('type') || 'skill') + 's' as `${V2ObjectType | LegacyCompat.ObjectType}s`;
 
 
 		if(type === 'attributes') {
@@ -352,7 +352,7 @@ export function attachMouseListeners(target : HTMLElement) {
 }
 
 function showTooltipFor(gw2Object : HTMLElement, visibleIndex = 0) {
-	const type = ((gw2Object.getAttribute('type') || 'skill') + 's') as `${V2ObjectType}s`;
+	const type = ((gw2Object.getAttribute('type') || 'skill') + 's') as `${V2ObjectType | LegacyCompat.ObjectType}s`;
 	const objIdRaw = gw2Object.getAttribute('objId')
 	let   context = contexts[+String(gw2Object.getAttribute('contextSet')) || 0];
 	const statSetId = +String(gw2Object.getAttribute('stats')) || undefined;

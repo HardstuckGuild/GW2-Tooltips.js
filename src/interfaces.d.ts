@@ -16,7 +16,7 @@ namespace LegacyCompat {
 	type ObjectType = 'skill' | 'trait' | 'item' | 'specialization' | 'pet' | 'pvp/amulet' | 'specialization' | 'effect' | 'profession';
 }
 
-type V2ObjectType = LegacyCompat.ObjectType | 'attribute'; //TODO @cleanup
+type V2ObjectType = 'skill' | 'trait' | 'item' | 'specialization' | 'pet' | 'pvp/amulet' | 'specialization' | 'profession' | 'attribute';
 
 
 namespace API {
@@ -75,7 +75,13 @@ namespace API {
 		previous_chain_skill_index? : number
 	}
 
-	type ProfessionState = 'todo'; //TODO(Rennorb): cleanup on api first
+	type ProfessionState = 'None'
+		| 'ElementalistAttunementFire' | 'ElementalistAttunementWater' | 'ElementalistAttunementAir' | 'ElementalistAttunementEarth'
+		| 'EngineerPhotonForge'
+		| 'NecromancerShroud'
+		| 'WarriorAdrenalineStage1' | 'WarriorAdrenalineStage2' | 'WarriorAdrenalineStage3'
+		| 'RangerDruid' | 'RangerDruidCelestialAvatar' | 'RangerSoulbeast'
+		| 'RevenantLegendDragon' | 'RevenantLegendAssassin' | 'RevenantLegendDwarf' | 'RevenantLegendDemon' | 'RevenantLegendRenegade' | 'RevenantLegendCentaur' | 'RevenantLegendAlliance'
 
 	type ModifierDescriptionOverride = {
 		profession  : Profession
@@ -87,7 +93,7 @@ namespace API {
 		base_amount                : number
 		formula_param1             : number
 		formula_param2             : number
-		formula                    : 'BuffLevelLinear' | 'ConditionDamage' | 'ConditionDamageSquared' | 'CritDamage' | 'CritDamageSquared' | 'BuffFormulaType5' | 'NoScaling' | 'Regeneration' | 'RegenerationSquared' | 'SpawnScaleLinear' | 'TargetLevelLinear' | 'BuffFormulaType11' | 'InfiniteDungeonScale' | 'Power' | 'PowerSquared' | 'BuffFormulaType15' //TODO(Rennorb) @rename critdamage
+		formula                    : 'BuffLevelLinear' | 'ConditionDamage' | 'ConditionDamageSquared' | 'Ferocity' | 'FerocitySquared' | 'BuffFormulaType5' | 'NoScaling' | 'HealingPower' | 'HealingPowerSquared' | 'SpawnScaleLinear' | 'TargetLevelLinear' | 'BuffFormulaType11' | 'InfiniteDungeonScale' | 'Power' | 'PowerSquared' | 'BuffFormulaType15'
 		target_attribute_or_skill? : BaseAttribute | number | 'Armor' | 'Damage' | 'LifeForce' | 'Health' | 'HealEffectiveness' | `${'Boon'|'Condition'}Duration`
 		source_attribute?          : BaseAttribute
 		description                : string
@@ -373,7 +379,7 @@ namespace API {
 		icon             : number
 		description      : string
 		skills           : number[]
-		skills_ai        : number[] //not yet available
+		skills_ai        : number[]
 		skills_soulbeast : number[]
 	}
 
@@ -395,13 +401,14 @@ namespace API {
 	}
 
 	type ProfessionWeaponData = {
-		//flags           : ('Mainhand' | 'Offhand' | 'TwoHand' | 'Aquatic')[]
+		flags           : ('Mainhand' | 'Offhand' | 'TwoHand' | 'Aquatic')[]
 		specialization? : number
 		skills          : {
 			id         : number
 			slot       : SkillSlot
 			offhand?   : Weapons1H
-			//source?    : ProfessionId
+			// class the skills was stolen from
+			source?    : ProfessionId
 			attunement :  'Fire' | 'Earth' | 'Water' | 'Air'
 		}[]
 	}

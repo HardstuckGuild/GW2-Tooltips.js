@@ -18,16 +18,16 @@ export function calculateModifier(modifier : API.Modifier, level : number, stats
 		case 'ConditionDamage': attribute = stats.ConditionDamage;
 			break;
 
-		case 'RegenerationSquared': level = level * level; //fallthrough
-		case 'Regeneration': attribute = stats.HealingPower;
+		case 'HealingPowerSquared': level = level * level; //fallthrough
+		case 'HealingPower': attribute = stats.HealingPower;
 			break;
 
 		case 'PowerSquared': level = level * level; //fallthrough
 		case 'Power': attribute = stats.Power;
 			break;
 
-		case 'CritDamageSquared': level = level * level; //fallthrough
-		case 'CritDamage': attribute = stats.Ferocity;
+		case 'FerocitySquared': level = level * level; //fallthrough
+		case 'Ferocity': attribute = stats.Ferocity;
 			break;
 
 		default:
