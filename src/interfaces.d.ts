@@ -274,7 +274,7 @@ namespace API {
 		facts?              : Fact[]
 	}
 
-	type Item = (ItemBase & ItemDetail) | ItemAmulet | ItemUpgradeComponent | ItemConsumable | ItemRelic
+	type Item = ItemArmor | ItemTrinket | ItemWeapon | ItemTraitGuide | ItemAmulet | ItemUpgradeComponent | ItemConsumable | ItemRelic
 
 	type ItemBase = {
 		id             : number
@@ -288,22 +288,31 @@ namespace API {
 		vendor_value?  : number
 	}
 
+	type ItemStatSource = {
+		attribute_base : number
+		attribute_set? : number
+		slots          : ('Upgrade' | 'Infusion' | 'Enrichment')[]
+	}
+
 	type ItemFlag = 'AccountBound' | 'Activity' | 'Dungeon' | 'Pve' | 'Pvp' | 'PvpLobby' | 'WvwLobby' | 'Wvw' | 'GemStore' | 'HideSuffix' | 'MonsterOnly' | 'NoExport' | 'NoMysticForge' | 'NoSalvage' | 'NoSell' | 'NotUpgradeable' | 'SoulBindOnAcquire' | 'SoulBindOnUse' | 'Unique' | 'DisallowTrader' | 'DisallowUnderwater' | 'ItemFlag22' | 'AccountBindOnUse' | 'ItemFlag24' | 'ItemFlag25' | 'BulkConsume' | 'ItemFlag27' | 'BoosterEquipment' | 'Indestructible' | 'ItemFlag30' | 'ItemFlag31' | 'ItemFlag32' | 'ItemFlagEx1' | 'SalvageResearch' | 'ItemFlagEx3' | 'ItemFlagEx4' | 'ItemFlagEx5';
 
 	type WeaponDetailType = Weapons1H | Weapons2H | 'Polearm' | 'BundleSmall' | 'BundleLarge' | WeaponsAquatic | 'Toy' | 'ToyTwoHanded';
 
-	//TODO(Rennorb) @cleanup
-	type ItemDetail = ({
+	type ItemArmor = ItemBase & ItemStatSource & {
 		type    : 'Armor'
 		defense : ValueOrLutOffset
 		subtype : ArmorType
 		weight  : 'Clothes' | 'Light' | 'Medium' | 'Heavy'
 		skin    : number
-	} | {
+	}
+
+	type ItemTrinket = ItemBase & ItemStatSource & {
 		type    : 'Trinket'
 		subtype : TrinketType
 		skin?   : number
-	} | {
+	}
+
+	type ItemWeapon = ItemBase & ItemStatSource & {
 		type     : 'Weapon'
 		power    : [number, number] | {
 			//if unset its itemlevel scaling
@@ -315,15 +324,13 @@ namespace API {
 		subtype  : WeaponDetailType
 		damage_type? : 'Choking' | 'Falling' | 'Fire' | 'Ice' | 'Lightning' | 'Physical' | 'SiegeAntiDoor' | 'SiegeAntiSiege' | 'SiegeAntiWall',
 		skin     : number
-	}) & ItemStatSource | {
-		type  : 'TraitGuide'
-		trait : 'todo'
 	}
 
-	type ItemStatSource = {
-		attribute_base : number
-		attribute_set? : number
-		slots          : ('Upgrade' | 'Infusion' | 'Enrichment')[]
+	type ItemTraitGuide = ItemBase & {
+		type               : 'TraitGuide'
+		trait              : number
+		cost_gold?         : number
+		const_hero_points? : number
 	}
 
 	type ItemAmulet = ItemBase & {
@@ -369,7 +376,7 @@ namespace API {
 			scaling    : number
 		}[]
 		similar_sets? : {
-			[attribute in ItemDetail['subtype']]?: number
+			[attribute in (ItemWeapon | ItemTrinket | ItemArmor)['subtype']]?: number
 		}
 	}
 

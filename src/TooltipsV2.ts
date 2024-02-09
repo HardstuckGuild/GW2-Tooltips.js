@@ -1235,7 +1235,12 @@ function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute,
 export function formatItemName(item : API.Item, context : Context, statSet? : API.AttributeSet | false, upgradeComponent? : any, stackSize = 1) : string {
 	let name;
 	if(item.type == 'TraitGuide') {
-		name = item.trait;
+		const trait = APICache.storage.traits.get(item.trait);
+		if(trait) name = trait.name;
+		else {
+			console.warn(`[gw2-tooltips] [item-name-formatter] Cache is missing trait #${item.trait} for trait guide `, item);
+			name = `Trait #${item.trait}`;
+		}
 	}
 	else {
 		name = item.name;
