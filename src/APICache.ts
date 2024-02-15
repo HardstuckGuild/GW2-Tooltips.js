@@ -8,6 +8,7 @@ export default class APICache {
 		specializations: new Map<number, API.Specialization>(),
 		itemstats      : new Map<number, API.AttributeSet>(),
 		palettes       : new Map<number, API.Palette>(),
+		skins          : new Map<number, API.Skin>(),
 		professions    : new Map<ProfessionId, API.Profession>(),
 	}
 
@@ -29,6 +30,7 @@ export default class APICache {
 			specializations: new Set<number>(),
 			itemstats      : new Set<number>(),
 			palettes       : new Set<number>(),
+			skins          : new Set<number>(),
 			professions    : new Set<ProfessionId>,
 		}, { [endpoint]: new Set(initialIds) })
 

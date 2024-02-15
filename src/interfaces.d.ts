@@ -16,7 +16,7 @@ namespace LegacyCompat {
 	type ObjectType = 'skill' | 'trait' | 'item' | 'specialization' | 'pet' | 'pvp/amulet' | 'specialization' | 'effect' | 'profession';
 }
 
-type V2ObjectType = 'skill' | 'trait' | 'item' | 'specialization' | 'pet' | 'pvp/amulet' | 'specialization' | 'profession' | 'attribute';
+type V2ObjectType = 'skill' | 'trait' | 'item' | 'specialization' | 'pet' | 'pvp/amulet' | 'specialization' | 'profession' | 'attribute' | 'skin';
 
 
 namespace API {
@@ -282,6 +282,7 @@ namespace API {
 		icon?          : number
 		rarity         : 'Junk' | 'Basic' | 'Common' | 'Uncommon' | 'Rare' | 'Exotic' | 'Ascended' | 'Legendary'
 		flags          : ItemFlag[]
+		access_restrictions : RestrictionFlag[]
 		level          : number
 		required_level : number
 		description?   : string
@@ -293,6 +294,8 @@ namespace API {
 		attribute_set? : number
 		slots          : ('Upgrade' | 'Infusion' | 'Enrichment')[]
 	}
+
+	type RestrictionFlag = 'Female' | 'Male' | 'Asura' | 'Charr' | 'Human' | 'Norn' | 'Sylvari' | 'Engineer' | 'Elementalist' | 'Guardian' | 'Mesmer' | 'Necromancer' | 'Ranger' | 'Thief' | 'Warrior' | 'Revenant';
 
 	type ItemFlag = 'AccountBound' | 'Activity' | 'Dungeon' | 'Pve' | 'Pvp' | 'PvpLobby' | 'WvwLobby' | 'Wvw' | 'GemStore' | 'HideSuffix' | 'MonsterOnly' | 'NoExport' | 'NoMysticForge' | 'NoSalvage' | 'NoSell' | 'NotUpgradeable' | 'SoulBindOnAcquire' | 'SoulBindOnUse' | 'Unique' | 'DisallowTrader' | 'DisallowUnderwater' | 'ItemFlag22' | 'AccountBindOnUse' | 'ItemFlag24' | 'ItemFlag25' | 'BulkConsume' | 'ItemFlag27' | 'BoosterEquipment' | 'Indestructible' | 'ItemFlag30' | 'ItemFlag31' | 'ItemFlag32' | 'ItemFlagEx1' | 'SalvageResearch' | 'ItemFlagEx3' | 'ItemFlagEx4' | 'ItemFlagEx5';
 
@@ -312,6 +315,8 @@ namespace API {
 		skin?   : number
 	}
 
+	type DamageType = 'Choking' | 'Falling' | 'Fire' | 'Ice' | 'Lightning' | 'Physical' | 'SiegeAntiDoor' | 'SiegeAntiSiege' | 'SiegeAntiWall';
+
 	type ItemWeapon = ItemBase & ItemStatSource & {
 		type     : 'Weapon'
 		power    : [number, number] | {
@@ -322,7 +327,7 @@ namespace API {
 		}
 		defense? : ValueOrLutOffset
 		subtype  : WeaponDetailType
-		damage_type? : 'Choking' | 'Falling' | 'Fire' | 'Ice' | 'Lightning' | 'Physical' | 'SiegeAntiDoor' | 'SiegeAntiSiege' | 'SiegeAntiWall',
+		damage_type? : DamageType,
 		skin     : number
 	}
 
@@ -419,6 +424,43 @@ namespace API {
 			attunement :  'Fire' | 'Earth' | 'Water' | 'Air'
 		}[]
 	}
+
+	type Skin = SkinArmor | SkinBack | SkinGatheringTool | SkinWeapon;
+
+	type SkinBase = {
+		id                  : number
+		name?               : string
+		description?        : string
+		icon?               : number
+		icon_china?         : number
+		rarity              : ItemBase['rarity']
+		flags               : ('todo')[]
+		access_restrictions : RestrictionFlag[]
+	}
+
+	type SkinArmor = SkinBase & {
+		subtype      : ItemArmor['subtype']
+		weight       : ItemArmor['weight']
+		dye_channels : [number | null, number | null, number | null, number | null]
+	}
+
+	type SkinBack = SkinBase & {
+		subtype      : 'Default' | 'Glider' | 'Cape' | 'Special'
+		dye_channels : [number | null, number | null, number | null, number | null]
+	}
+
+	type SkinGatheringTool = SkinBase & {
+		subtype  : 'Foraging' | 'Logging' | 'Mining' | 'Fishing' | 'Bait' | 'Lure'
+		skills   : number[] // restrictions on skills not implemented
+		speed    : Milliseconds
+		duration : Milliseconds
+	}
+
+	type SkinWeapon = SkinBase & {
+		subtype : ItemWeapon['subtype'] | null
+		damage_type : DamageType
+		flags_ex : ('HasEmblem' | 'InstanceOwnerOnly' | 'OwnerOnly' | 'OwnerFriendsOnly')[] //TODO(Rennorb) @rename @cleanup
+	}
 }
 
 
@@ -440,6 +482,7 @@ type APIResponseTypeMap = {
 	'pvp/amulets'  : API.ItemAmulet;
 	itemstats      : API.AttributeSet;
 	palettes       : API.Palette;
+	skins          : API.Skin;
 	professions    : API.Profession;
 }
 

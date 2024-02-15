@@ -245,6 +245,7 @@ export async function hookDOMSubtreeSlim(scope : ScopeElement) : Promise<GW2Obje
 		specializations: new Map<number, HTMLElement[]>(),
 		pets           : new Map<number, HTMLElement[]>(),
 		'pvp/amulets'  : new Map<number, HTMLElement[]>(),
+		skins          : new Map<number, HTMLElement[]>(),
 		attributes     : new Map<string, HTMLElement[]>(),
 		professions    : new Map<ProfessionId, HTMLElement[]>(),
 	}
@@ -420,7 +421,7 @@ function generateToolTip(apiObject : SupportedTTTypes, slotName : string | undef
 		headerElements.push(newImg(apiObject.icon));
 
 	headerElements.push(
-		newElm('teb', fromHTML(GW2Text2HTML(resolveInflections(apiObject.name, 1, context.character)))),
+		newElm('teb', apiObject.name ? fromHTML(GW2Text2HTML(resolveInflections(apiObject.name, 1, context.character))) : `<#${apiObject.id}>`),
 		newElm('div.flexbox-fill'), // split, now the right side
 	);
 
@@ -1517,7 +1518,7 @@ export const ICONS = {
 const VALID_CHAIN_PALETTES = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard', 'Equipment'];
 
 
-type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet | API.Pet | API.Item;
+type SupportedTTTypes = API.Skill | API.Trait | API.ItemAmulet | API.Pet | API.Item | API.Skin;
 
 
 // "constructor"
