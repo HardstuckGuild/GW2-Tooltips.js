@@ -624,6 +624,14 @@ export const MISSING_SKILL : API.Skill = {
 	description: '<c=@warning>This Skill failed to load</c>',
 	categories : [], palettes   : [], modifiers  : [], flags: [],
 }
+export const EMPTY_SKIN : API.Skin = {
+	id         : 0,
+	type       : 'Back',
+	subtype    : 'Default',
+	rarity     : 'Basic',
+	flags      : ['HidePrefix'],
+	access_restrictions: [], dye_channels: [null, null, null, null]
+}
 
 import { newElm, newImg, formatFraction, GW2Text2HTML, withUpToNDigits, localizeInternalName, joinWordList, fromHTML, n3, resolveInflections, formatDuration, n3s, n3ss } from './TUtilsV2';
 import APICache from './APICache';

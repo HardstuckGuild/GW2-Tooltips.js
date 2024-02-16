@@ -306,13 +306,13 @@ namespace API {
 		defense : ValueOrLutOffset
 		subtype : ArmorType
 		weight  : 'Clothes' | 'Light' | 'Medium' | 'Heavy'
-		skin    : number
+		default_skin : number
 	}
 
 	type ItemTrinket = ItemBase & ItemStatSource & {
 		type    : 'Trinket'
 		subtype : TrinketType
-		skin?   : number
+		default_skin? : number
 	}
 
 	type DamageType = 'Choking' | 'Falling' | 'Fire' | 'Ice' | 'Lightning' | 'Physical' | 'SiegeAntiDoor' | 'SiegeAntiSiege' | 'SiegeAntiWall';
@@ -328,7 +328,7 @@ namespace API {
 		defense? : ValueOrLutOffset
 		subtype  : WeaponDetailType
 		damage_type? : DamageType,
-		skin     : number
+		default_skin : number
 	}
 
 	type ItemTraitGuide = ItemBase & {
@@ -434,22 +434,25 @@ namespace API {
 		icon?               : number
 		icon_china?         : number
 		rarity              : ItemBase['rarity']
-		flags               : ('todo')[]
+		flags               : ('HidePrefix' | 'todo')[]
 		access_restrictions : RestrictionFlag[]
 	}
 
 	type SkinArmor = SkinBase & {
+		type         : 'Armor'
 		subtype      : ItemArmor['subtype']
 		weight       : ItemArmor['weight']
 		dye_channels : [number | null, number | null, number | null, number | null]
 	}
 
 	type SkinBack = SkinBase & {
+		type         : 'Back'
 		subtype      : 'Default' | 'Glider' | 'Cape' | 'Special'
 		dye_channels : [number | null, number | null, number | null, number | null]
 	}
 
 	type SkinGatheringTool = SkinBase & {
+		type     : 'GatheringTool'
 		subtype  : 'Foraging' | 'Logging' | 'Mining' | 'Fishing' | 'Bait' | 'Lure'
 		skills   : number[] // restrictions on skills not implemented
 		speed    : Milliseconds
@@ -457,6 +460,7 @@ namespace API {
 	}
 
 	type SkinWeapon = SkinBase & {
+		type    : 'Weapon'
 		subtype : ItemWeapon['subtype'] | null
 		damage_type : DamageType
 		flags_ex : ('HasEmblem' | 'InstanceOwnerOnly' | 'OwnerOnly' | 'OwnerFriendsOnly')[] //TODO(Rennorb) @rename @cleanup

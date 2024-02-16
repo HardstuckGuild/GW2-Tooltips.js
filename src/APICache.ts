@@ -171,6 +171,11 @@ export default class APICache {
 			if(!this.storage.traits.has(datum.trait))
 				connectedIdsStorage.traits.add(datum.trait);
 		}
+
+		if('default_skin' in datum) {
+			if(!this.storage.skins.has(datum.default_skin!))
+				connectedIdsStorage.skins.add(datum.default_skin!);
+		}
 	}
 }
 

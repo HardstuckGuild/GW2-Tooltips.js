@@ -236,7 +236,9 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 			if(tier.modifiers) for(const mod of tier.modifiers!) {
 				if(!mod.target_attribute_or_skill || !isModApplicable(mod, context)) continue;
 
-				let source = formatItemName(item!, context, attributeSet, undefined, -1);
+				const skin = getActiveSkin(item! as API.ItemArmor, element);
+
+				let source = formatItemName(item!, context, skin, attributeSet, undefined, -1);
 				if(sourceRuneSuffix) {
 					source = `${source} (Tier ${tiersToProcess.length === 1 ? tierNumber : i + 1} Bonus)`;
 				}
@@ -455,4 +457,4 @@ declare global {
 
 import APICache from "./APICache";
 import { LUT_DEFENSE } from "./CharacterAttributes";
-import { resolveTraitsAndOverrides, config, formatItemName, contexts, findCorrectAttributeSet, DEFAULT_CONTEXT } from './TooltipsV2';
+import { resolveTraitsAndOverrides, config, formatItemName, contexts, findCorrectAttributeSet, DEFAULT_CONTEXT, getActiveSkin } from './TooltipsV2';

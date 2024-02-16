@@ -1,15 +1,15 @@
-export function inflateGenericIcon(gw2Object : HTMLElement, data : { name : string, icon? : Parameters<typeof newImg>[0] }, force = false) {
-	if(!force && gw2Object.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
+export function inflateGenericIcon(element : HTMLElement, data : { name : string, icon? : number }, force = false) {
+	if(!force && element.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
 
 	const wikiLink = newElm('a', newImg(data.icon, undefined, data.name));
 	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + resolveInflections(GW2Text2HTML(data.name), 1, { sex: "Male" });
 	wikiLink.target = '_blank';
-	if(gw2Object.classList.contains('gw2objectembed') && !gw2Object.classList.contains('icononly')) {
-		const stackSize = +String(gw2Object.getAttribute('count')) || 1;
-		const context = contexts[+String(gw2Object.getAttribute('contextSet')) || 0];
+	if(element.classList.contains('gw2objectembed') && !element.classList.contains('icononly')) {
+		const stackSize = +String(element.getAttribute('count')) || 1;
+		const context = contexts[+String(element.getAttribute('contextSet')) || 0];
 		wikiLink.append(resolveInflections(GW2Text2HTML(data.name), stackSize, context.character));
 	}
-	gw2Object.replaceChildren(wikiLink);
+	element.replaceChildren(wikiLink);
 }
 
 export function inflateSkill(gw2Object : HTMLElement, skill : API.Skill) {
@@ -30,32 +30,36 @@ export function inflateSkill(gw2Object : HTMLElement, skill : API.Skill) {
 	inflateGenericIcon(gw2Object, skill, force);
 }
 
-export function inflateItem(gw2Object : HTMLElement, item : API.Item) {
-	if(gw2Object.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
+export function inflateItem(element : HTMLElement, item : API.Item) {
+	if(element.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
 
-	const stackSize = +String(gw2Object.getAttribute('count')) || 1;
-	const context = contexts[+String(gw2Object.getAttribute('contextSet')) || 0];
+	const stackSize = +String(element.getAttribute('count')) || 1;
+	const context = contexts[+String(element.getAttribute('contextSet')) || 0];
 
-	const wikiLink = newElm('a', newImg(item.icon, undefined, item.name));
+	const skin = getActiveSkin(item as API.ItemArmor, element);
+
+	const wikiLink = newElm('a', newImg(skin?.icon || item.icon, undefined, item.name));
 	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + GW2Text2HTML(item.name).replaceAll(/\[.*?\]/g, ''); //remove plural forms ([s] and similar)
 	wikiLink.target = '_blank';
-	if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(formatItemName(item, context, undefined, undefined, stackSize));
-	gw2Object.append(wikiLink);
+	if(element.classList.contains('gw2objectembed')) {
+		wikiLink.append(formatItemName(item, context, skin, undefined, undefined, stackSize));
+	}
+	element.append(wikiLink);
 }
 
-export function inflateSpecialization(gw2Object : HTMLElement, spec: API.Specialization) {
-	if(gw2Object.classList.contains('gw2objectembed')) {
-		inflateGenericIcon(gw2Object, spec);
+export function inflateSpecialization(element : HTMLElement, spec: API.Specialization) {
+	if(element.classList.contains('gw2objectembed')) {
+		inflateGenericIcon(element, spec);
 	}
 	else {
-		gw2Object.style.backgroundImage = `url(${formatImageUrl(spec.background)})`;
-		gw2Object.dataset.label = spec.name;
+		element.style.backgroundImage = `url(${formatImageUrl(spec.background)})`;
+		element.dataset.label = spec.name;
 
 		//TODO(Rennorb) @cleanup @compat: this is kinda dumb. we could just mark the selected traits, as we need to do that anyways for css. 
 		// Issue is backwards compat so yea, might not be able to get rid of it completely.
-		const selectedPositions = String(gw2Object.getAttribute('selected_traits')).split(',').map(i => +i).filter(i => !isNaN(i) && 0 <= i && i <= 2);
+		const selectedPositions = String(element.getAttribute('selected_traits')).split(',').map(i => +i).filter(i => !isNaN(i) && 0 <= i && i <= 2);
 		if(selectedPositions.length != 3) {
-			console.warn("[gw2-tooltips] [inflator] Specialization object ", gw2Object, " does not have its 'selected_traits' (properly) set. Add the attribute as `selected_traits=\"0,2,1\"` where the numbers are 0-2 indicating top, middle or bottom selection.");
+			console.warn("[gw2-tooltips] [inflator] Specialization object ", element, " does not have its 'selected_traits' (properly) set. Add the attribute as `selected_traits=\"0,2,1\"` where the numbers are 0-2 indicating top, middle or bottom selection.");
 			return;
 		}
 
@@ -69,9 +73,9 @@ export function inflateSpecialization(gw2Object : HTMLElement, spec: API.Special
 			//  <minor />
 			//  <wrapper><major /><major /><major /></>
 			// </>
-			const column = gw2Object.children[1 + x * 2];
+			const column = element.children[1 + x * 2];
 			if(!column) {
-				console.warn("[gw2-tooltips] [inflator] Cannot mark selected trait object in column #", x, " for specialization object ", gw2Object,  " because the column doesn't seem to exist. Either mark the specialization object as inline or add the missing column.");
+				console.warn("[gw2-tooltips] [inflator] Cannot mark selected trait object in column #", x, " for specialization object ", element,  " because the column doesn't seem to exist. Either mark the specialization object as inline or add the missing column.");
 				continue;
 			}
 
@@ -84,8 +88,8 @@ export function inflateSpecialization(gw2Object : HTMLElement, spec: API.Special
 }
 
 type AdditionalAttributes = 'Profession' | 'MagicFind'
-export function inflateAttribute(gw2Object : HTMLElement, attribute : BaseAttribute | ComputedAttribute | AdditionalAttributes) {
-	const { character } = contexts[+String(gw2Object.getAttribute('contextSet')) || 0];
+export function inflateAttribute(element : HTMLElement, attribute : BaseAttribute | ComputedAttribute | AdditionalAttributes) {
+	const { character } = contexts[+String(element.getAttribute('contextSet')) || 0];
 
 	const value : number | undefined = character.statsWithWeapons[character.selectedWeaponSet].values[attribute as Exclude<typeof attribute, AdditionalAttributes>];
 	const _p  = ({
@@ -110,7 +114,7 @@ export function inflateAttribute(gw2Object : HTMLElement, attribute : BaseAttrib
 	let img, suffix = '';
 	if(_p) [img, suffix] = _p;
 	else {
-		console.warn(`[gw2-tooltips] [inflator] Unknown attribute '${attribute}' on object `, gw2Object);
+		console.warn(`[gw2-tooltips] [inflator] Unknown attribute '${attribute}' on object `, element);
 	}
 
 	const displayMul = suffix ? 100 : 1;
@@ -123,7 +127,7 @@ export function inflateAttribute(gw2Object : HTMLElement, attribute : BaseAttrib
 	const wikiLink = newElm('a', newImg(img));
 	wikiLink.href = `https://wiki-en.guildwars2.com/wiki/Special:Search/${search}`;
 	wikiLink.target = '_blank';
-	if(gw2Object.classList.contains('gw2objectembed')) {
+	if(element.classList.contains('gw2objectembed')) {
 		if(value !== undefined) {
 			wikiLink.append(withUpToNDigits(value * displayMul, 1) + suffix);
 		}
@@ -133,21 +137,21 @@ export function inflateAttribute(gw2Object : HTMLElement, attribute : BaseAttrib
 	}
 
 	// We blindly replace this as we can assume the server does not do proper calculation and therefore can only do a rough simulation at best.
-	gw2Object.replaceChildren(wikiLink);
+	element.replaceChildren(wikiLink);
 }
 
-export function inflateProfession(gw2Object : HTMLElement, profession : API.Profession) {
-	if(gw2Object.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
+export function inflateProfession(element : HTMLElement, profession : API.Profession) {
+	if(element.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
 
 	const wikiLink = newElm('a', newImg(profession.icon_big, undefined, profession.name));
 	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + profession.name;
 	wikiLink.target = '_blank';
-	if(gw2Object.classList.contains('gw2objectembed')) wikiLink.append(profession.name);
-	gw2Object.append(wikiLink);
+	if(element.classList.contains('gw2objectembed')) wikiLink.append(profession.name);
+	element.append(wikiLink);
 }
 
-export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, error_store : Set<string>) : number {
-	const name = String(gw2Object.getAttribute('objId'));
+export function _legacy_transformEffectToSkillObject(element : HTMLElement, error_store : Set<string>) : number {
+	const name = String(element.getAttribute('objId'));
 	let id = ({
 		//// auras
 		chaos_aura              : 10332,
@@ -318,15 +322,15 @@ export function _legacy_transformEffectToSkillObject(gw2Object : HTMLElement, er
 	}
 
 	if(id) {
-		gw2Object.setAttribute('type', 'skill');
-		gw2Object.setAttribute('objId', String(id));
+		element.setAttribute('type', 'skill');
+		element.setAttribute('objId', String(id));
 		return id;
 	}
 	else {
-		gw2Object.innerText = name;
-		gw2Object.title = `Failed to translate effect '${name}'.`;
-		gw2Object.style.cursor = "help";
-		gw2Object.classList.add('error');
+		element.innerText = name;
+		element.title = `Failed to translate effect '${name}'.`;
+		element.style.cursor = "help";
+		element.classList.add('error');
 		error_store.add(name);
 		return 0;
 	}
@@ -392,4 +396,4 @@ export function inferItemUpgrades(wrappers : Iterable<Element>) {
 
 import APICache from "./APICache";
 import { GW2Text2HTML, formatImageUrl, localizeInternalName, newElm, newImg, resolveInflections, withUpToNDigits } from "./TUtilsV2";
-import { ICONS, contexts, findTraitedOverride, formatItemName, specializeContextFromInlineAttribs } from "./TooltipsV2";
+import { ICONS, contexts, findTraitedOverride, formatItemName, getActiveSkin, specializeContextFromInlineAttribs } from "./TooltipsV2";

@@ -34,6 +34,7 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 		- `effect`: **obsolete** `objid` is a string containing the name of an effect. This only exists for backwards compatibility and available hard coded values can be found in `Inflators.ts`.
 	- `stats='{id}'`: Id of the stat set that is selected on the item. Only processed if the type is `item`.
 	- `count='{amount}'`: Stack size. Only processed if type is `item`.
+	- `skin='{id}'`: The skin to use instead of the default one. Only processed if type is `item`.
 	- `with-traits='{id1[,id2[,...]]}'`: List of traits to apply specifically to this skill. Only processed if type is `skill` or `trait`.
 	- `weapon-set='{index}'`: Specify the weapon set to use for calculations. Defaults to set #0 if not specified.
 	- `class='{...}'`: Several options are available here:
