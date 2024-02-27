@@ -355,9 +355,9 @@ namespace API {
 	})
 
 	type ItemRelic = ItemBase & {
-		type             : 'Relic'
-		facts_from_skill : number
-		related_skills   : number[]
+		type              : 'Relic'
+		facts_from_skill? : number
+		related_skills    : number[]
 	}
 
 	type ItemUpgradeComponent = ItemBase & {

@@ -1061,7 +1061,7 @@ function generateItemTooltip(item : API.Item | API.Skin, context : Context, weap
 	}
 
 	if('facts_from_skill' in item) {
-		let factsSkill = APICache.storage.skills.get(item.facts_from_skill);
+		let factsSkill = APICache.storage.skills.get(item.facts_from_skill!);
 		if(!factsSkill) {
 			console.warn(`[gw2-tooltips] Relic facts skill #${item.facts_from_skill} is missing from the cache. The query was caused by `, item, target);
 			factsSkill = MISSING_SKILL;

@@ -163,8 +163,8 @@ export default class APICache {
 		}
 
 		if('facts_from_skill' in datum) {
-			if(!this.storage.skills.has(datum.facts_from_skill))
-				connectedIdsStorage.skills.add(datum.facts_from_skill);
+			if(!this.storage.skills.has(datum.facts_from_skill!))
+				connectedIdsStorage.skills.add(datum.facts_from_skill!);
 		}
 
 		if('trait' in datum) {
