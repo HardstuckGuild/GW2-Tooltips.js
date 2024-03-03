@@ -351,10 +351,12 @@ export async function hookDOMSubtreeSlim(scope : ScopeElement) : Promise<GW2Obje
 
 export function attachMouseListeners(target : HTMLElement) {
 	target.addEventListener('mouseenter', (e) => showTooltipOn(e.target as HTMLElement));
-	target.addEventListener('mouseleave', () => {
-		tooltip.style.display   = 'none';
-		tooltip.style.transform = '';
-	});
+	target.addEventListener('mouseleave', hideTooltip);
+}
+
+export function hideTooltip() {
+	tooltip.style.display   = 'none';
+	tooltip.style.transform = '';
 }
 
 function showTooltipOn(element : HTMLElement, visibleIndex = 0) {

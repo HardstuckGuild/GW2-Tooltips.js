@@ -40,6 +40,7 @@ export default class APICache {
 				if(!storage.has(id))
 					initialSet.add(id);
 			}
+			if(initialSet.size == 0) return;
 			additionalIds[endpoint] = initialSet as any;
 		}
 
