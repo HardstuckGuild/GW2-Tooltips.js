@@ -350,70 +350,119 @@ export async function hookDOMSubtreeSlim(scope : ScopeElement) : Promise<GW2Obje
 }
 
 export function attachMouseListeners(target : HTMLElement) {
-	target.addEventListener('mouseenter', (e) => showTooltipFor(e.target as HTMLElement));
+	target.addEventListener('mouseenter', (e) => showTooltipOn(e.target as HTMLElement));
 	target.addEventListener('mouseleave', () => {
 		tooltip.style.display   = 'none';
 		tooltip.style.transform = '';
 	});
 }
 
-function showTooltipFor(element : HTMLElement, visibleIndex = 0) {
+function showTooltipOn(element : HTMLElement, visibleIndex = 0) {
 	const type = (element.getAttribute('type') || 'skill') as V2ObjectType | LegacyCompat.ObjectType;
 	if(type == 'specialization' || type == 'effect' || type == 'profession') return;
 
-	const objIdRaw = element.getAttribute('objId');
-	let   context = contexts[+String(element.getAttribute('contextSet')) || 0];
+	let objId  : number | BaseAttribute | ComputedAttribute;
+	let params : AttributeParams | TooltipParams;
+	
+	const objIdRaw = String(element.getAttribute('objId'));
+	let context = contexts[+String(element.getAttribute('contextSet')) || 0];
+	if(type === 'attribute') {
+		objId = objIdRaw as BaseAttribute | ComputedAttribute;
+		params = { type };
+	}
+	else {
+		context = specializeContextFromInlineAttribs(context, element);
+		objId = +objIdRaw;
+		let weaponSet : number | undefined = +String(element.getAttribute('weapon-set')); if(isNaN(weaponSet)) weaponSet = undefined;
+
+		if(type === 'item' || type === 'skin') {
+			params = { type, weaponSet, element,
+				statSetId   : +String(element.getAttribute('stats')) || undefined,
+				stackSize   : +String(element.getAttribute('count')) || undefined,
+				slottedItems: element.getAttribute('slotted')?.split(',')
+					.map(id => APICache.storage.items.get(+String(id) || 0))
+					.filter(i => i && 'subtype' in i) as API.ItemUpgradeComponent[] | undefined,
+			};
+		}
+		else {
+			params = { type, weaponSet,
+				adjustTraitedSkillIds: element.classList.contains('auto-transform'),
+			};
+		}
+	}
 
 	lastTooltipTarget = element;
 
-	if(type == 'attribute') {
-		if(objIdRaw) {
-			//TODO(Rennorb): should we actually reset this every time?
-			cyclePos = visibleIndex;
-			tooltip.replaceChildren(generateAttributeTooltip(objIdRaw as BaseAttribute | ComputedAttribute, context));
+	showTooltipFor(objId as any, params as any, context, visibleIndex);
+	if(tooltip.childElementCount > 1) {
+		element.classList.add('cycler')
+		element.title = 'Right-click to cycle through tooltips'
+	}
+}
 
-			tooltip.style.display = ''; //empty value resets actual value to use stylesheet
-			for(const tt of tooltip.children) tt.classList.add('active');
-			scrollSubTooltipIntoView(cyclePos);
-		}
+type TooltipParams = SkillParams | ItemParams
+type AttributeParams = { type : 'attribute' }
+type ItemParams = {
+	type          : 'item' | 'skin',
+	weaponSet?    : number,
+	statSetId?    : number,
+	stackSize?    : number,
+	slottedItems? : API.ItemUpgradeComponent[],
+	element       : Element | { getAttribute : (attr : 'skin') => string | undefined }
+}
+type SkillParams = {
+	type                   : Exclude<V2ObjectType, 'attribute' | 'specialization' | 'profession' | 'item' | 'skin'>,
+	weaponSet?             : number,
+	adjustTraitedSkillIds? : boolean,
+}
+
+export function showTooltipFor(objId : BaseAttribute | ComputedAttribute, params : AttributeParams, context : Context, visibleIndex? : number) : void;
+export function showTooltipFor(objId : number, params : TooltipParams, context : Context, visibleIndex? : number) : void;
+
+
+export function showTooltipFor(objId : number | BaseAttribute | ComputedAttribute, params : AttributeParams | TooltipParams, context : Context, visibleIndex = 0) : void {
+	if(params.type == 'attribute') {
+		//TODO(Rennorb): should we actually reset this every time?
+		cyclePos = visibleIndex;
+		tooltip.replaceChildren(generateAttributeTooltip(objId as BaseAttribute | ComputedAttribute, context));
+
+		tooltip.style.display = ''; //empty value resets actual value to use stylesheet
+		for(const tt of tooltip.children) tt.classList.add('active');
+		scrollSubTooltipIntoView(cyclePos);
 		return;
 	}
 
-	const data = APICache.storage[(type + 's') as `${typeof type}s`].get(+String(objIdRaw));
-	if(data) {
-		context = specializeContextFromInlineAttribs(context, element);
-		if('palettes' in data) {
-			//NOTE(Rennorb): This is here so we can look at underwater skills from a land context and vice versa.
-			if(context.underwater) {
-				if(!data.flags.includes('UsableUnderWater') && data.flags.includes('UsableLand')) {
-					if(!context.cloned) context = Object.assign({}, context);
-					context.underwater = false;
-				}
-			}
-			else if(!context.underwater) {
-				if(!data.flags.includes('UsableLand') && data.flags.includes('UsableUnderWater')) {
-					if(!context.cloned) context = Object.assign({}, context);
-					context.underwater = true;
-				}
-			}
-		}
-		const [innerTooltips, initialActiveIndex] = generateToolTipList(type, data, element, context);
-		//TODO(Rennorb): should we actually reset this every time?
-		cyclePos = visibleIndex > 0 ? visibleIndex : initialActiveIndex;
-		tooltip.replaceChildren(...innerTooltips);
+	const data = APICache.storage[(params.type + 's') as `${typeof params.type}s`].get(objId as number);
+	if(!data) return;
 
-		tooltip.style.display = ''; //empty value resets actual value to use stylesheet
-		if(tooltip.childElementCount > 1) {
-			element.classList.add('cycler')
-			element.title = 'Right-click to cycle through tooltips'
-	
-			activateSubTooltip(cyclePos)
+	if('palettes' in data) {
+		//NOTE(Rennorb): This is here so we can look at underwater skills from a land context and vice versa.
+		if(context.underwater) {
+			if(!data.flags.includes('UsableUnderWater') && data.flags.includes('UsableLand')) {
+				if(!context.cloned) context = Object.assign({}, context);
+				context.underwater = false;
+			}
 		}
-		else if(tooltip.firstElementChild) {
-			tooltip.firstElementChild.classList.add('active');
+		else if(!context.underwater) {
+			if(!data.flags.includes('UsableLand') && data.flags.includes('UsableUnderWater')) {
+				if(!context.cloned) context = Object.assign({}, context);
+				context.underwater = true;
+			}
 		}
-		scrollSubTooltipIntoView(cyclePos)
 	}
+	const [innerTooltips, initialActiveIndex] = generateToolTipList(data, params, context);
+	//TODO(Rennorb): should we actually reset this every time?
+	cyclePos = visibleIndex > 0 ? visibleIndex : initialActiveIndex;
+	tooltip.replaceChildren(...innerTooltips);
+
+	tooltip.style.display = ''; //empty value resets actual value to use stylesheet
+	if(tooltip.childElementCount > 1) {
+		activateSubTooltip(cyclePos)
+	}
+	else if(tooltip.firstElementChild) {
+		tooltip.firstElementChild.classList.add('active');
+	}
+	scrollSubTooltipIntoView(cyclePos)
 }
 
 // TODO(Rennorb) @cleanup: split this into the inflator system aswell. its getting to convoluted already
@@ -674,21 +723,19 @@ function getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) :
 	}
 }
 
-function generateToolTipList<T extends keyof SupportedTTTypeMap>(type : T, initialAPIObject : SupportedTTTypeMap[T], element: HTMLElement, context : Context) : [HTMLElement[], number] {
+function generateToolTipList<T extends keyof SupportedTTTypeMap>(initialAPIObject : SupportedTTTypeMap[T], params : TooltipParams, context : Context) : [HTMLElement[], number] {
 	let subiconRenderMode = IconRenderMode.SHOW;
 	//NOTE(Rennorb): This is a bit sad, but we have to hide or at least filter icons for skills attached to traits and relics, as those often don't come with actual icons because they never were meant to be seen (they don't show in game).
-	if(type === 'trait') subiconRenderMode = IconRenderMode.FILTER_DEV_ICONS;
+	if(params.type === 'trait') subiconRenderMode = IconRenderMode.FILTER_DEV_ICONS;
 	else if((initialAPIObject as API.Item).type === 'Relic') subiconRenderMode = IconRenderMode.HIDE_ICON;
 
 	let initialActiveIndex = 0;
 	const tooltipChain : HTMLElement[] = []
-	const adjustTraitedSkillIds = element.classList.contains('auto-transform');
-	let weaponSet : number | undefined = +String(element.getAttribute('weapon-set')); if(isNaN(weaponSet)) weaponSet = undefined;
 	let palette, group, slot : string | undefined = undefined;
 
-	if(type === 'skill') {
+	if(params.type === 'skill') {
 		//TODO(Rennorb): cleanup is this necessary? The root element already gets replaced automatically. It would be if we have skills where some skill in the chain needs to be replaced. 
-		if(adjustTraitedSkillIds) {
+		if(params.adjustTraitedSkillIds) {
 			const replacementSkill = findTraitedOverride(initialAPIObject as API.Skill, context);
 			if(replacementSkill) (initialAPIObject as API.Skill) = replacementSkill;
 		}
@@ -708,18 +755,18 @@ function generateToolTipList<T extends keyof SupportedTTTypeMap>(type : T, initi
 
 				let skill = APICache.storage.skills.get(otherCandidate.skill);
 				if(!skill) {
-					console.warn(`[gw2-tooltips] Chain skill #${otherCandidate.skill} is missing from the cache. The query was caused by `, element);
+					console.warn(`[gw2-tooltips] Chain skill #${otherCandidate.skill} is missing from the cache. The query was caused by `, lastTooltipTarget);
 					skill = MISSING_SKILL;
 				}
 
-				tooltipChain.splice(insertAtIndex, 0, generateToolTip(skill, slot, IconRenderMode.SHOW, context, weaponSet));
+				tooltipChain.splice(insertAtIndex, 0, generateToolTip(skill, slot, IconRenderMode.SHOW, context, params.weaponSet));
 
 				candidate = otherCandidate;
 			}
 		}
 
 		//now ourself
-		tooltipChain.push(generateToolTip(initialAPIObject, slot, IconRenderMode.SHOW, context, weaponSet));
+		tooltipChain.push(generateToolTip(initialAPIObject, slot, IconRenderMode.SHOW, context, params.weaponSet));
 
 		//remaining chain
 		for(let j = 0; j < i; j++) {
@@ -729,23 +776,20 @@ function generateToolTipList<T extends keyof SupportedTTTypeMap>(type : T, initi
 
 			let skill = APICache.storage.skills.get(otherCandidate.skill);
 			if(!skill) {
-				console.warn(`[gw2-tooltips] Chain skill #${otherCandidate.skill} is missing from the cache. The query was caused by `, element);
+				console.warn(`[gw2-tooltips] Chain skill #${otherCandidate.skill} is missing from the cache. The query was caused by `, lastTooltipTarget);
 				skill = MISSING_SKILL;
 			}
 
-			tooltipChain.push(generateToolTip(skill, slot, IconRenderMode.SHOW, context, weaponSet));
+			tooltipChain.push(generateToolTip(skill, slot, IconRenderMode.SHOW, context, params.weaponSet));
 
 			i = j;
 			j = -1;
 		}
 	}
 	else {
-		if('type' in initialAPIObject) {
-			const statSetId = +String(element.getAttribute('stats')) || undefined;
-			const stackSize = +String(element.getAttribute('count')) || undefined;
-
-			const skin = getActiveSkin(initialAPIObject as API.ItemArmor, element);
-			tooltipChain.push(generateItemTooltip(initialAPIObject, context, weaponSet === undefined ? context.character.selectedWeaponSet : weaponSet, element, skin, statSetId, stackSize));
+		if(params.type === 'skin' || params.type === 'item') {
+			const skin = getActiveSkin(initialAPIObject as API.ItemArmor, params.element);
+			tooltipChain.push(generateItemTooltip(initialAPIObject as API.Item | API.Skin, context, params.weaponSet === undefined ? context.character.selectedWeaponSet : params.weaponSet, skin, params.statSetId, params.slottedItems, params.stackSize));
 		}
 		else {
 			let slotName = undefined;
@@ -753,7 +797,7 @@ function generateToolTipList<T extends keyof SupportedTTTypeMap>(type : T, initi
 				slotName = initialAPIObject.slot
 				if('specialization' in initialAPIObject) (APICache.storage.specializations.get(initialAPIObject.specialization!)?.name || initialAPIObject.specialization!) + ' - ' + slotName;
 			}
-			tooltipChain.push(generateToolTip(initialAPIObject, slotName, IconRenderMode.SHOW, context, weaponSet));
+			tooltipChain.push(generateToolTip(initialAPIObject, slotName, IconRenderMode.SHOW, context, params.weaponSet));
 		}
 	}
 
@@ -762,20 +806,19 @@ function generateToolTipList<T extends keyof SupportedTTTypeMap>(type : T, initi
 			const subSkillInChain = APICache.storage.skills.get(subSkillId);
 			if(subSkillInChain && canBeUsedOnCurrentTerrain(subSkillInChain, context)) {
 				const [palette, group] = guessGroupAndContext(subSkillInChain, context); //@perf
-				tooltipChain.push(generateToolTip(subSkillInChain, refineSlotName(palette!, group?.slot), IconRenderMode.SHOW, context, weaponSet));
+				tooltipChain.push(generateToolTip(subSkillInChain, refineSlotName(palette!, group?.slot), IconRenderMode.SHOW, context, params.weaponSet));
 			}
 		}
 	}
 	if('related_skills' in initialAPIObject) {
-		const type = element.getAttribute('type') || 'skill';
 		for(const subSkillId of initialAPIObject.related_skills!) {
 			const subSkillInChain = APICache.storage.skills.get(subSkillId);
-			if(subSkillInChain && canBeUsedOnCurrentTerrain(subSkillInChain, context) && ((type != 'skill') || subSkillInChain.palettes.some(pid => {
+			if(subSkillInChain && canBeUsedOnCurrentTerrain(subSkillInChain, context) && ((params.type != 'skill') || subSkillInChain.palettes.some(pid => {
 				const palette = APICache.storage.palettes.get(pid);
 				return palette && VALID_CHAIN_PALETTES.includes(palette.type);
 			}))) {
 				const [palette, group] = guessGroupAndContext(subSkillInChain, context); //@perf
-				tooltipChain.push(generateToolTip(subSkillInChain, refineSlotName(palette!, group?.slot), subiconRenderMode, context, weaponSet));
+				tooltipChain.push(generateToolTip(subSkillInChain, refineSlotName(palette!, group?.slot), subiconRenderMode, context, params.weaponSet));
 			}
 		}
 	}
@@ -787,7 +830,7 @@ function generateToolTipList<T extends keyof SupportedTTTypeMap>(type : T, initi
 					[palette, group] = guessGroupAndContext(subSkillInChain, context);
 					slot = refineSlotName(palette!, group?.slot);
 				}
-				tooltipChain.push(generateToolTip(subSkillInChain, slot, subiconRenderMode, context, weaponSet));
+				tooltipChain.push(generateToolTip(subSkillInChain, slot, subiconRenderMode, context, params.weaponSet));
 				break; // only one ambush skill
 			}
 		}
@@ -798,31 +841,31 @@ function generateToolTipList<T extends keyof SupportedTTTypeMap>(type : T, initi
 		initialActiveIndex = 1;
 		let petSkill = APICache.storage.skills.get(petSkillId);
 		if(!petSkill) {
-			console.warn(`[gw2-tooltips] pet skill #${petSkillId} is missing from the cache. The query was caused by `, element);
+			console.warn(`[gw2-tooltips] pet skill #${petSkillId} is missing from the cache. The query was caused by `, lastTooltipTarget);
 			petSkill = MISSING_SKILL;
 		}
 		const [palette, group] = guessGroupAndContext(petSkill, context);
-		tooltipChain.push(generateToolTip(petSkill, refineSlotName(palette!, group?.slot), subiconRenderMode, context, weaponSet));
+		tooltipChain.push(generateToolTip(petSkill, refineSlotName(palette!, group?.slot), subiconRenderMode, context, params.weaponSet));
 	}
 	if('skills_ai' in initialAPIObject) for(const petSkillId of initialAPIObject.skills_ai) {
 		let petSkill = APICache.storage.skills.get(petSkillId);
 		if(!petSkill) {
-			console.warn(`[gw2-tooltips] pet skill #${petSkillId} is missing from the cache. The query was caused by `, element);
+			console.warn(`[gw2-tooltips] pet skill #${petSkillId} is missing from the cache. The query was caused by `, lastTooltipTarget);
 			petSkill = MISSING_SKILL;
 		}
 		const [palette, group] = guessGroupAndContext(petSkill, context);
 		let slot_name = refineSlotName(palette!, group?.slot);
 		if(slot_name) slot_name = 'AI '+slot_name;
-		tooltipChain.push(generateToolTip(petSkill, slot_name, subiconRenderMode, context, weaponSet));
+		tooltipChain.push(generateToolTip(petSkill, slot_name, subiconRenderMode, context, params.weaponSet));
 	}
 	if(context.character.specializations.has(Specializations.SOULBEAST) && 'skills_soulbeast' in initialAPIObject) for(const petSkillId of initialAPIObject.skills_soulbeast) {
 		let petSkill = APICache.storage.skills.get(petSkillId);
 		if(!petSkill) {
-			console.warn(`[gw2-tooltips] pet skill #${petSkillId} is missing from the cache. The query was caused by `, element);
+			console.warn(`[gw2-tooltips] pet skill #${petSkillId} is missing from the cache. The query was caused by `, lastTooltipTarget);
 			petSkill = MISSING_SKILL;
 		}
 		const [palette, group] = guessGroupAndContext(petSkill, context);
-		tooltipChain.push(generateToolTip(petSkill, refineSlotName(palette!, group?.slot), subiconRenderMode, context, weaponSet));
+		tooltipChain.push(generateToolTip(petSkill, refineSlotName(palette!, group?.slot), subiconRenderMode, context, params.weaponSet));
 	}
 
 	tooltip.append(...tooltipChain);
@@ -960,15 +1003,8 @@ export function findTraitedOverride(skill : API.Skill, context : Context) : API.
 	return;
 }
 
-function generateItemTooltip(item : API.Item | API.Skin, context : Context, weaponSet : number, target : HTMLElement, skin? : API.Skin, statSetId? : number, stackSize = 1) : HTMLElement {
+function generateItemTooltip(item : API.Item | API.Skin, context : Context, weaponSet : number, skin? : API.Skin, statSetId? : number, slottedItems? : API.ItemUpgradeComponent[], stackSize = 1) : HTMLElement {
 	let statSet = ('attribute_base' in item && (context.gameMode !== 'Pvp' || (item.type === 'Trinket' && item.subtype === 'Amulet'))) && findCorrectAttributeSet(item, statSetId); // pvp builds use an amulet for stats, equipment itself doesn't provide any
-
-	let slottedItems : API.ItemUpgradeComponent[] | undefined;
-	if('slots' in item) {
-		slottedItems = target.getAttribute('slotted')?.split(',')
-			.map(id => APICache.storage.items.get(+String(id) || 0))
-			.filter(i => i && 'subtype' in i) as API.ItemUpgradeComponent[];
-	}
 
 	const countPrefix = stackSize > 1 ? stackSize + ' ' : '';
 	const upgradeNameSource = slottedItems?.find(i => !['Infusion', 'Enrichment'].includes(i.subtype)) || slottedItems?.[0];
@@ -1063,7 +1099,7 @@ function generateItemTooltip(item : API.Item | API.Skin, context : Context, weap
 	if('facts_from_skill' in item) {
 		let factsSkill = APICache.storage.skills.get(item.facts_from_skill!);
 		if(!factsSkill) {
-			console.warn(`[gw2-tooltips] Relic facts skill #${item.facts_from_skill} is missing from the cache. The query was caused by `, item, target);
+			console.warn(`[gw2-tooltips] Relic facts skill #${item.facts_from_skill} is missing from the cache. The query was caused by `, item, lastTooltipTarget);
 			factsSkill = MISSING_SKILL;
 		}
 		const contextInfo = resolveTraitsAndOverrides(factsSkill, context);
@@ -1310,7 +1346,7 @@ function formatCoins(amount : number) : HTMLElement {
 	return newElm('span', ...parts);
 }
 
-export function getActiveSkin(item : { default_skin? : number, subtype? : any }, element : Element) : API.Skin | undefined {
+export function getActiveSkin(item : { default_skin? : number, subtype? : any }, element : Element | { getAttribute : (attr : 'skin') => string | undefined }) : API.Skin | undefined {
 	const overrideId = +String(element.getAttribute('skin'));
 	const id = overrideId || item.default_skin;
 	if(!id) return;
@@ -1620,7 +1656,7 @@ type SupportedTTTypes = SupportedTTTypeMap[keyof SupportedTTTypeMap];
 		}
 		if(isMobile && tooltip.style.display == 'none') {
 			event.preventDefault()
-			showTooltipFor(node);
+			showTooltipOn(node);
 			positionTooltip()
 		}
 	})
@@ -1653,7 +1689,7 @@ type SupportedTTTypes = SupportedTTTypeMap[keyof SupportedTTTypeMap];
 				config.showFactComputationDetail = !config.showFactComputationDetail;
 				console.log(`[gw2-tooltips] [cfg] showFactComputationDetail is now ${config.showFactComputationDetail}.`);
 				if(lastTooltipTarget && tooltip.style.display != 'none') {
-					showTooltipFor(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
+					showTooltipOn(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
 					positionTooltip();
 				}
 			}
@@ -1662,7 +1698,7 @@ type SupportedTTTypes = SupportedTTTypeMap[keyof SupportedTTTypeMap];
 				config.showPreciseAbilityTimings = !config.showPreciseAbilityTimings;
 				console.log(`[gw2-tooltips] [cfg] showPreciseAbilityTimings is now ${config.showPreciseAbilityTimings}.`);
 				if(lastTooltipTarget && tooltip.style.display != 'none') {
-					showTooltipFor(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
+					showTooltipOn(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
 					positionTooltip();
 				}
 			}
@@ -1675,7 +1711,7 @@ type SupportedTTTypes = SupportedTTTypeMap[keyof SupportedTTTypeMap];
 					console.log(`[gw2-tooltips] [cfg] Context #${i} is now on weapon set ${context.character.selectedWeaponSet + 1} / ${mod}.`);
 				}
 				if(lastTooltipTarget && tooltip.style.display != 'none') {
-					showTooltipFor(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
+					showTooltipOn(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
 					positionTooltip();
 				}
 			}

@@ -32,7 +32,16 @@ export default class APICache {
 			palettes       : new Set<number>(),
 			skins          : new Set<number>(),
 			professions    : new Set<ProfessionId>,
-		}, { [endpoint]: new Set(initialIds) })
+		})
+		{
+			const initialSet = new Set<APIResponseTypeMap[E]['id']>();
+			const storage = this.storage[endpoint];
+			for(const id of initialIds) {
+				if(!storage.has(id))
+					initialSet.add(id);
+			}
+			additionalIds[endpoint] = initialSet as any;
+		}
 
 		const findNextRelevantEndpoint = () => {
 			for(const [endpoint, ids] of Object.entries(additionalIds))
