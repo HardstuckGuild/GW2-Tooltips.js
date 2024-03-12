@@ -165,8 +165,8 @@ export function generateFact(fact : API.Fact, weaponStrength : number, context :
 				}
 				strValue += ' ' + modifier.description;
 
-				if(typeof modifier.target_attribute_or_skill === 'string') {
-					const { computedAttribute } = getAttributeInformation(modifier.target_attribute_or_skill, context.character);
+				if(typeof modifier.target === 'string') {
+					const { computedAttribute } = getAttributeInformation(modifier.target, context.character);
 					if(computedAttribute) {
 						const { div, suffix } = getAttributeInformation(computedAttribute, context.character);
 						const displayMul = suffix ? 100 : 1;

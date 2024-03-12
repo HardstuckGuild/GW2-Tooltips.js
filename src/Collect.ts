@@ -192,9 +192,9 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 		if(attributeSet) {
 			tiersToProcess = [{
 				modifiers: attributeSet.attributes.map(a => ({
-					target_attribute_or_skill: a.attribute,
-					base_amount              : Math.round(a.base_value + (item as API.ItemStatSource).attribute_base * a.scaling),
-					formula                  : "NoScaling",
+					target     : a.attribute,
+					base_amount: Math.round(a.base_value + (item as API.ItemStatSource).attribute_base * a.scaling),
+					formula    : "NoScaling",
 					
 					flags: [], id: -1, formula_param1: 0, formula_param2: 0, description: '',
 				} as API.Modifier))
@@ -208,9 +208,9 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 			//NOTE(Rennorb): Pvp shields might have defense but no attribute set.
 			if(!tiersToProcess) tiersToProcess = [{ modifiers: [] }];
 			tiersToProcess[0].modifiers!.push({
-				target_attribute_or_skill: 'Armor',
-				base_amount              : Math.ceil(defense),
-				formula                  : "NoScaling",
+				target     : 'Armor',
+				base_amount: Math.ceil(defense),
+				formula    : "NoScaling",
 				
 				flags: [], id: -1, formula_param1: 0, formula_param2: 0, description: '',
 			} as API.Modifier)
@@ -234,7 +234,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 
 		if(tiersToProcess) for(const [i, tier] of tiersToProcess.entries()) {
 			if(tier.modifiers) for(const mod of tier.modifiers!) {
-				if(!mod.target_attribute_or_skill || !isModApplicable(mod, context)) continue;
+				if(!mod.target || !isModApplicable(mod, context)) continue;
 
 				const skin = getActiveSkin(item! as API.ItemArmor, element);
 
@@ -243,7 +243,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 					source = `${source} (Tier ${tiersToProcess.length === 1 ? tierNumber : i + 1} Bonus)`;
 				}
 
-				(targetSources[mod.target_attribute_or_skill] || (targetSources[mod.target_attribute_or_skill] = []))
+				(targetSources[mod.target] || (targetSources[mod.target] = []))
 					.push({ modifier: mod, source, count: amountToAdd })
 			}
 		}
@@ -396,9 +396,9 @@ export function traitEffects(contexts : Context[]) {
 
 			const addModifiers = (modifiers : API.Modifier[]) => {
 				for(const mod of modifiers) {
-					if(!mod.target_attribute_or_skill || !isModApplicable(mod, context)) continue;
+					if(!mod.target || !isModApplicable(mod, context)) continue;
 
-					(context.character.stats.sources[mod.target_attribute_or_skill] || (context.character.stats.sources[mod.target_attribute_or_skill] = []))
+					(context.character.stats.sources[mod.target] || (context.character.stats.sources[mod.target] = []))
 						.push({source: `trait '<span class="gw2-color-traited-fact">${trait.name}</span>'`, modifier: mod, count: 1});
 				}
 			};

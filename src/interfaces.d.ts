@@ -94,7 +94,7 @@ namespace API {
 		formula_param1             : number
 		formula_param2             : number
 		formula                    : 'BuffLevelLinear' | 'ConditionDamage' | 'ConditionDamageSquared' | 'Ferocity' | 'FerocitySquared' | 'BuffFormulaType5' | 'NoScaling' | 'HealingPower' | 'HealingPowerSquared' | 'SpawnScaleLinear' | 'TargetLevelLinear' | 'BuffFormulaType11' | 'InfiniteDungeonScale' | 'Power' | 'PowerSquared' | 'BuffFormulaType15'
-		target_attribute_or_skill? : BaseAttribute | number | 'Armor' | 'Damage' | 'LifeForce' | 'Health' | 'HealEffectiveness' | `${'Boon'|'Condition'}Duration`
+		target?                    : BaseAttribute | number | 'Armor' | 'Damage' | 'LifeForce' | 'Health' | 'HealEffectiveness' | `${'Boon'|'Condition'}Duration` | 'SpeciesPlaceholder' // this is not a real value, in reality this could be any string 
 		source_attribute?          : BaseAttribute
 		description                : string
 		description_override?      : ModifierDescriptionOverride[]
