@@ -157,3 +157,11 @@ Currently there are two hard-coded keybinds available:
 4. The `tsconfig.json` and `rollup.config.mjs` in the project root define all parameters. You only need to run `npm run build` in that directory.
 5. The `out/` directory now holds your compiled `tooltips.min.js` file, a map file and the unstable worker.
 6. As a bare minimum you need `tooltips.min.js` and `tooltips.css` for this to work properly.
+
+
+
+## Copyright
+Copyright 2024 Hardstuck Ltd.  
+This notice applies to all files in this repository or otherwise belonging to the project.
+
+Licensed under AGPL 3.0, contact us ([development@hardstuck.gg](mailto:development@hardstuck.gg)) if you need differing licensing.
