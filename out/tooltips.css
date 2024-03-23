@@ -122,11 +122,13 @@
 	gap: 0.5em;
 }
 
-.tooltipWrapper tet {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0 1ch;
+.tooltipWrapper h4 {
+	margin: 0;
+	font-weight: normal;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 0 1ch;
 }
 .tooltipWrapper .detail {
 	font-size: var(--gw2-tt-font-size-s);
@@ -137,24 +139,24 @@
 .tooltipWrapper .detail.capped {
 	color: var(--gw2-tt-color-tt-detail-capped);
 }
-.tooltip:not(.item) tet teb {
+.tooltip:not(.item) h4 .title-text {
 	color: var(--gw2-tt-color-tt-title);
 	font-family: var(--gw2-tt-font-title);
 }
 
-.tooltipWrapper teb, .tooltipWrapper te {
+.tooltipWrapper .title-text, .tooltipWrapper .line {
   display: flex;
 	align-items: start;
   gap: 0 .5ch;
 }
-.tooltipWrapper te img,
+.tooltipWrapper .line img,
 .tooltipWrapper .title>img {
 	width: 32px;
 	height: 32px;
 	flex: 0 0 auto
 }
 
-.tooltipWrapper teb {
+.tooltipWrapper .title-text {
 	font-size: var(--gw2-tt-font-size-m);
 }
 
@@ -199,10 +201,10 @@
 	vertical-align: bottom;
 }
 
-.tooltipWrapper ter {
+.tooltipWrapper .property {
   white-space: nowrap;
 }
-.tooltipWrapper ter img {
+.tooltipWrapper .property img {
 	margin-left: .5ch;
 	vertical-align: bottom;
 }

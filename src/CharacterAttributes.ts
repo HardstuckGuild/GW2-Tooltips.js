@@ -107,7 +107,7 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 
 		if(uncappedValue != value)
 			parts.push(newElm('span.detail.capped', `(Capped to ${n3(value * displayMul)}${suffix}! Uncapped value would be ${n3(uncappedValue * displayMul)}${suffix})`));
-		parts.unshift(newElm('tet.title', newElm('teb', ' +' + n3(value * displayMul) + suffix + ' ' + localizeInternalName(attribute))));
+		parts.unshift(newElm('h4.title', newElm('span.title-text', ' +' + n3(value * displayMul) + suffix + ' ' + localizeInternalName(attribute))));
 	}
 
 	for(const attribute of attributeOrder) {

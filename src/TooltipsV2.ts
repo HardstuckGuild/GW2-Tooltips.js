@@ -1,5 +1,4 @@
 //TODO(Rennorb): Provide a clean way to construct custom tooltips. Currently with the old version we manipulate the cache before the hook function gets called, which really isn't the the best.
-//TODO(Rennorb): Stop using these jank custom tags. There is no reason to do so and its technically not legal per html spec.
 //TODO(Rennorb): Defiance break on single effect tooltips.
 //TODO(Rennorb): Change anything percent related to use fractions instead of integers (0.2 instead of 20).
 // The only thing this is good for is to make drawing the facts easier. Since we do quite a few calculations this swap would reduce conversions quite a bit.
@@ -473,7 +472,7 @@ function generateToolTip(apiObject : SupportedTTTypes, slotName : string | undef
 		headerElements.push(newImg(apiObject.icon));
 
 	headerElements.push(
-		newElm('teb', apiObject.name ? fromHTML(GW2Text2HTML(resolveInflections(apiObject.name, 1, context.character))) : `<#${apiObject.id}>`),
+		newElm('span.title-text', apiObject.name ? fromHTML(GW2Text2HTML(resolveInflections(apiObject.name, 1, context.character))) : `<#${apiObject.id}>`),
 		newElm('div.flexbox-fill'), // split, now the right side
 	);
 
@@ -489,8 +488,8 @@ function generateToolTip(apiObject : SupportedTTTypes, slotName : string | undef
 
 	pushGamemodeSplitLabels(secondHeaderRow, apiObject, context);
 
-	const parts : HTMLElement[] = [newElm('tet.title', ...headerElements)];
-	if(secondHeaderRow.length > 1) parts.push(newElm('tet.detail', ...secondHeaderRow));
+	const parts : HTMLElement[] = [newElm('h4.title', ...headerElements)];
+	if(secondHeaderRow.length > 1) parts.push(newElm('h4.detail', ...secondHeaderRow));
 
 	if('description' in apiObject && apiObject.description) {
 		parts.push(newElm('p.description', fromHTML(GW2Text2HTML(apiObject.description))))
@@ -512,7 +511,7 @@ function pushCostAndRestrictionLabels(destinationArray : Node[], sourceObject : 
 	if(specializedContextInformation.activation) {
 		const value = formatFraction(specializedContextInformation.activation / 1000, config);
 		if (value != '0') { //in case we rounded down a fractional value just above 0
-			destinationArray.push(newElm('ter',
+			destinationArray.push(newElm('span.property',
 				value,
 				newImg(ICONS.ACTIVATION, 'iconsmall')
 			));
@@ -520,7 +519,7 @@ function pushCostAndRestrictionLabels(destinationArray : Node[], sourceObject : 
 	}
 
 	if(specializedContextInformation.resource_cost) {
-		destinationArray.push(newElm('ter',
+		destinationArray.push(newElm('span.property',
 			String(specializedContextInformation.resource_cost),
 			//TODO(Rennorb) @correctness: see reaper shroud
 			newImg(context.character.profession == 'Revenant' ? ICONS.RESOURCE_REV : ICONS.RESOURCE_THIEF, 'iconsmall')
@@ -528,14 +527,14 @@ function pushCostAndRestrictionLabels(destinationArray : Node[], sourceObject : 
 	}
 
 	if(specializedContextInformation.endurance_cost) {
-		destinationArray.push(newElm('ter',
+		destinationArray.push(newElm('span.property',
 			String(Math.round(specializedContextInformation.endurance_cost)),
 			newImg(ICONS.ENDURANCE_COST, 'iconsmall')
 		));
 	}
 
 	if(specializedContextInformation.upkeep_cost) {
-		destinationArray.push(newElm('ter',
+		destinationArray.push(newElm('span.property',
 			String(specializedContextInformation.upkeep_cost),
 			newImg(ICONS.UPKEEP_COST, 'iconsmall')
 		));
@@ -544,7 +543,7 @@ function pushCostAndRestrictionLabels(destinationArray : Node[], sourceObject : 
 	if(specializedContextInformation.recharge) {
 		const value = formatFraction(specializedContextInformation.recharge / 1000, config);
 		if (value != '0') {
-			destinationArray.push(newElm('ter',
+			destinationArray.push(newElm('span.property',
 				value,
 				newImg(ICONS.RECHARGE, 'iconsmall')
 			));
@@ -552,7 +551,7 @@ function pushCostAndRestrictionLabels(destinationArray : Node[], sourceObject : 
 	}
 
 	if(specializedContextInformation.supply_cost) {
-		destinationArray.push(newElm('ter',
+		destinationArray.push(newElm('span.property',
 			String(specializedContextInformation.supply_cost),
 			newImg(ICONS.SUPPLY_COST, 'iconsmall')
 		));
@@ -1009,14 +1008,14 @@ function generateItemTooltip(item : API.Item | API.Skin, context : Context, weap
 	const countPrefix = stackSize > 1 ? stackSize + ' ' : '';
 	const upgradeNameSource = slottedItems?.find(i => !['Infusion', 'Enrichment'].includes(i.subtype)) || slottedItems?.[0];
 	const name = countPrefix + formatItemName(item, context, skin, statSet, upgradeNameSource, stackSize);
-	const parts = [newElm('tet.title', newImg(skin?.icon || item.icon),  newElm('teb.gw2-color-rarity-'+item.rarity, name), newElm('div.flexbox-fill'))];
+	const parts = [newElm('h4.title', newImg(skin?.icon || item.icon),  newElm('span.title-text.gw2-color-rarity-'+item.rarity, name), newElm('div.flexbox-fill'))];
 
 	if('defense' in item && item.defense) {
 		const defense = (typeof item.defense  == "number")
 			? item.defense
 			: LUT_DEFENSE[Math.min(100, (item.defense[0] + context.character.level))] * item.defense[1];
 
-		parts.push(newElm('te', newElm('tem', 'Defense: ', newElm('span.gw2-color-stat-green', String(Math.ceil(defense))))));
+		parts.push(newElm('span.line', newElm('tem', 'Defense: ', newElm('span.gw2-color-stat-green', String(Math.ceil(defense))))));
 	}
 
 	if('power' in item) {
@@ -1049,7 +1048,7 @@ function generateItemTooltip(item : API.Item | API.Skin, context : Context, weap
 
 		const line = newElm('tem', 'Weapon Strength: ', newElm('span.gw2-color-stat-green', `${power[0]} - ${power[1]}`));
 		if(item.damage_type) line.append(` (${item.damage_type})`);
-		parts.push(newElm('te', line));
+		parts.push(newElm('span.line', line));
 	}
 
 	if('tiers' in item) {
@@ -1059,7 +1058,7 @@ function generateItemTooltip(item : API.Item | API.Skin, context : Context, weap
 	if(statSet && 'attribute_base' in item) {
 		parts.push(...statSet.attributes.map(({attribute, base_value, scaling}) => {
 			const computedValue = Math.round(base_value + item.attribute_base! * scaling);
-			return newElm('te', newElm('tem.gw2-color-stat-green', `+${computedValue} ${localizeInternalName(attribute)}`));
+			return newElm('span.line', newElm('tem.gw2-color-stat-green', `+${computedValue} ${localizeInternalName(attribute)}`));
 		}));
 	}
 
@@ -1078,11 +1077,11 @@ function generateItemTooltip(item : API.Item | API.Skin, context : Context, weap
 				const slottedItem = slottedItems!.splice(slottedItemIdx, 1)[0];
 				const group = generateUpgradeItemGroup(slottedItem, context, weaponSet);
 				const name = formatItemName(slottedItem, context);
-				group.prepend(newElm('tet', newImg(slottedItem.icon, 'iconsmall'),  newElm('teb.gw2-color-rarity-'+slottedItem.rarity, name), newElm('div.flexbox-fill')));
+				group.prepend(newElm('h4', newImg(slottedItem.icon, 'iconsmall'),  newElm('span.title-text.gw2-color-rarity-'+slottedItem.rarity, name), newElm('div.flexbox-fill')));
 				return group;
 			}
 			else {
-				return newElm('te',
+				return newElm('span.line',
 					newImg(ICONS['SLOT_'+s as keyof typeof ICONS], 'iconsmall'), `Empty ${s} Slot`
 				)
 			}
@@ -1110,7 +1109,7 @@ function generateItemTooltip(item : API.Item | API.Skin, context : Context, weap
 		headerElements.push(newElm('div.flexbox-fill')); // now push elements to the right
 		
 		pushCostAndRestrictionLabels(headerElements, factsSkill, contextInfo, context);
-		const innerParts = [newElm('tet.title', ...headerElements)];
+		const innerParts = [newElm('h4.title', ...headerElements)];
 
 		pushFacts(innerParts, factsSkill, contextInfo, context, weaponSet);
 
@@ -1193,7 +1192,7 @@ export function findCorrectAttributeSet(item : API.Item, statSetId? : number) : 
 function generateUpgradeItemGroup(item : API.ItemUpgradeComponent, context : Context, weaponSet : number) : HTMLElement {
 	const group = newElm('div.group');
 	for(const [i, tier] of item.tiers.entries()) {
-		let tier_wrap = newElm('te');
+		let tier_wrap = newElm('span.line');
 		if(tier.description) tier_wrap.append(newElm('span', fromHTML(GW2Text2HTML(tier.description))));
 
 		//NOTE(Rennorb): facts seem to exist, but almost universally be wrong.
@@ -1217,11 +1216,11 @@ function generateUpgradeItemGroup(item : API.ItemUpgradeComponent, context : Con
 				} else {
 					text = `+${Math.round(modifierValue)} ${localizeInternalName(modifier.description as any)}`;
 				}
-				tier_wrap.append(newElm('te', text));
+				tier_wrap.append(newElm('span.line', text));
 			}
 		}
 		
-		const w = newElm('te', tier_wrap);
+		const w = newElm('span.line', tier_wrap);
 		if(item.subtype == "Rune") {
 			const colorClass = i < (context.character.upgradeCounts[item.id] || 0) ? '.gw2-color-stat-green' : '';
 			w.prepend(newElm('span'+colorClass, `(${i + 1})`));
