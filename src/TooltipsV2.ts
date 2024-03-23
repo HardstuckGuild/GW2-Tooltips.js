@@ -1,12 +1,10 @@
 //TODO(Rennorb): Provide a clean way to construct custom tooltips. Currently with the old version we manipulate the cache before the hook function gets called, which really isn't the the best.
-//TODO(Rennorb): Option to show whole skill-chain (maybe on button hold)?
 //TODO(Rennorb): Stop using these jank custom tags. There is no reason to do so and its technically not legal per html spec.
 //TODO(Rennorb): Defiance break on single effect tooltips.
 //TODO(Rennorb): Change anything percent related to use fractions instead of integers (0.2 instead of 20).
 // The only thing this is good for is to make drawing the facts easier. Since we do quite a few calculations this swap would reduce conversions quite a bit.
 //TODO(Rennorb) @correctness: Split up incoming / outgoing effects. Mostly relevant for healing.
 //TODO(Rennorb) @correctness: implement processing for trait / skill buffs to properly show certain flip skills and chains aswell as properly do trait overrides for skills
-//TODO(Rennorb) @completeness: Relic facts
 
 let tooltip : HTMLElement
 let lastTooltipTarget : HTMLElement | undefined
@@ -1545,6 +1543,7 @@ const DEFAULT_CONFIG : Config = {
 	legacyCompatibility             : true,
 	showPreciseAbilityTimings       : false,
 	showFactComputationDetail       : false,
+	globalKeyBinds                  : true,
 	validateApiResponses            : true,
 }
 
@@ -1684,7 +1683,7 @@ type SupportedTTTypes = SupportedTTTypeMap[keyof SupportedTTTypeMap];
 	window.addEventListener('touchmove', scrollHandler, passive)
 
 	//TODO(Rennorb) @ui
-	window.addEventListener('keydown', e => {
+	if(config.globalKeyBinds) window.addEventListener('keydown', e => {
 		if(e.ctrlKey && e.altKey) {
 			if(e.key == 'd') {
 				e.preventDefault();

@@ -101,7 +101,7 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 		var GW2TooltipsConfig = {
 			autoInitialize                  : true,
 
-			//    These only run inside calls to `hookDocument`. If you dont call that function for everything,
+			//    These only run inside calls to `hookDocument`. If you don't call that function for everything,
 			// v- you need to explicitly call the related functions if you want the associated effects.
 			autoCollectRuneCounts           : true,
 			autoCollectStatSources          : true,
@@ -111,14 +111,17 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 			autoInferWeaponSetAssociation   : true,
 			// ^---------------------------
 
-			// This option 'fixes' stat ids for things like armor or amulets, as different pieces of equipment use different stat ids for the same stats. there are for example multiple ids for 'berserkers' that are used for different equipment pieces.
+			// This option 'fixes' stat ids for things like armor or amulets, as different pieces of equipment use different stat ids for the same stats.
+			// There are for example multiple ids for 'berserkers' that are used for different equipment pieces.
 			// If this option is turned on the script will automatically detect incorrect stat ids and replace them with the correct ones before any calculations are done.
 			adjustIncorrectStatIds          : true,
 			legacyCompatibility             : true,
 
-			// Toggelable at runtime (key-binds)
+			// Toggelable at runtime (key-binds) if `globalKeyBinds` was enabled when initializing.
 			showPreciseAbilityTimings       : false, // CTRL + ALT + t
 			showFactComputationDetail       : false, // CTRL + ALT + d
+
+			globalKeyBinds                  : true,
 
 			// Debug option to show warnings in case the api does not respond with all requested items.
 			validateApiResponses            : true,

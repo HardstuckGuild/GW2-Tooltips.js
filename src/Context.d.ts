@@ -71,6 +71,7 @@ interface Config {
 	legacyCompatibility        : boolean
 	showPreciseAbilityTimings  : boolean
 	showFactComputationDetail  : boolean
+	globalKeyBinds             : boolean
 
 	validateApiResponses       : boolean
 

@@ -103,7 +103,7 @@
 	border-image-slice: 1;
 	border-image-source: linear-gradient(to right, transparent, transparent 5%, currentcolor 15%, currentcolor 85%, transparent 95%);
 
-	content: '- Block collapsed -';
+	content: '- Details collapsed -';
 	text-align: center;
 	color: var(--gw2-tt-color-tt-detail);
 }
