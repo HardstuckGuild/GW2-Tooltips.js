@@ -1,13 +1,11 @@
 // This file is meant for anyone who want to have typings for the tooltips.js context structure
-// Defaults for these structures can be found in TooltipsV2.ts
+// Defaults for these structures can be found in Constants.ts
 
-//NOTE(Rennorb): these are separate window objects to allow using just either or.
+//NOTE(Rennorb): these are separate global objects to allow using just either or.
 // Most of the time the only interesting thing will be to set up the context.
-declare interface Window {
-	GW2TooltipsContext : PartialContext[] | PartialContext | undefined;
-	GW2TooltipsConfig  : Config | undefined;
-	GW2TooltipsV2      : GW2TooltipsV2
-}
+var GW2TooltipsContext : PartialContext[] | PartialContext | undefined;
+var GW2TooltipsConfig  : Config | undefined;
+var GW2TooltipsV2      : GW2TooltipsV2
 
 type PartialContext = PartialR<Context>
 

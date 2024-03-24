@@ -7,21 +7,19 @@
 		"HS",
 		"GuildWars 2",
 		"GW2",
-		"tooltip"
+		"Tooltip"
 	],
 	"author": "Rennorb <rennorb@hardstuck.gg>",
-	"license": "UNLICENSED",
+	"license": "AGPL-3.0",
 	"main": "out/tooltips.js",
 	"mainMin": "out/tooltips.min.js",
 	"files": [
 		"out"
 	],
-	"directories": {
-		"test": "test"
-	},
 	"scripts": {
 		"build": "rollup -c",
-		"watch": "rollup -cw"
+		"watch": "rollup -cw",
+		"test": "jest"
 	},
 	"repository": {
 		"type": "git",
@@ -34,8 +32,19 @@
 	"devDependencies": {
 		"@rollup/plugin-terser": "^0.4.3",
 		"@rollup/plugin-typescript": "^11.1.2",
+		"jest": "^29.7.0",
+		"jest-environment-jsdom": "^29.7.0",
 		"rollup": "^3.28.0",
+		"rollup-plugin-strip-code": "^0.2.7",
 		"tslib": "^2.6.0",
-		"typescript": "^5.1.6"
+		"typescript": "^5.1.6",
+		"whatwg-fetch": "^3.6.20"
+	},
+	"jest": {
+		"testMatch": [
+			"<rootDir>/tests/*.js",
+			"!**/tooltips?(.min).js"
+		],
+		"testEnvironment": "jsdom"
 	}
 }

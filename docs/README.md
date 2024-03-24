@@ -44,7 +44,7 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 			- `big`: Render a slightly larger icon.
 
 
-2. Optionally define one or more context(s) in a window-scoped object '`GW2TooltipsContext`'
+2. Optionally define one or more context(s) in a global-scoped object '`GW2TooltipsContext`'
 	```html
 	<script>
 	/* may be: PartialContext[] | PartialContext | undefined */
@@ -146,7 +146,7 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 	You may also call `GW2TooltipsV2.hookDocument(targetNode)` to specifically only process a target root node and its descendants.
 
 ## Manual Usage
-If you need a simple example on how to manually invoke the library, have a look at `test/palette_visualizer.htm`. The page shows how to interact with the api to fetch information, and how to use that information manually as well as how to inflate objects and hook the tooltips into them.
+If you need a simple example on how to manually invoke the library, have a look at `examples/palette_visualizer.htm`. The page shows how to interact with the api to fetch information, and how to use that information manually as well as how to inflate objects and hook the tooltips into them.
 
 ## Keybinds
 Currently there are two hard-coded keybinds available:

@@ -1407,22 +1407,22 @@ type SupportedTTTypes = SupportedTTTypeMap[keyof SupportedTTTypeMap];
 // "constructor"
 {
 	//TODO(Rennorb): Validate config. there are a few places this partially happens but its hard to keep track. Should just happen in one place.
-	if(window.GW2TooltipsContext instanceof Array) {
-		for(const partialContext of window.GW2TooltipsContext)
+	if(globalThis.GW2TooltipsContext instanceof Array) {
+		for(const partialContext of globalThis.GW2TooltipsContext)
 			contexts.push(createCompleteContext(partialContext))
 	}
-	else if(window.GW2TooltipsContext) {
-		contexts.push(createCompleteContext(window.GW2TooltipsContext))
+	else if(globalThis.GW2TooltipsContext) {
+		contexts.push(createCompleteContext(globalThis.GW2TooltipsContext))
 	}
 	else{
 		contexts.push(createCompleteContext({}))
 	}
 
-	config = Object.assign({}, DEFAULT_CONFIG, window.GW2TooltipsConfig)
+	config = Object.assign({}, DEFAULT_CONFIG, globalThis.GW2TooltipsConfig)
 	if(config.apiImpl) APICache.apiImpl = config.apiImpl(APIs);
 
 	
-	if("serviceWorker" in navigator && config.workerPath) {
+	if(globalThis.navigator && "serviceWorker" in navigator && config.workerPath) {
 		//NOTE(Rennorb): options, apparently server needs to set header for broader scope. `Service-Worker-Allowed : /`
 		// https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/register
 		// https://w3c.github.io/ServiceWorker/#service-worker-allowed
@@ -1439,7 +1439,7 @@ type SupportedTTTypes = SupportedTTTypeMap[keyof SupportedTTTypeMap];
 	else
 		document.addEventListener('DOMContentLoaded', () => document.body.appendChild(tooltip));
 
-	const isMobile = /android|webos|iphone|ipad|ipod|blackberry|bb|playbook|mobile|windows phone|kindle|silk|opera mini/.test(navigator.userAgent.toLowerCase())
+	const isMobile = globalThis.navigator && /android|webos|iphone|ipad|ipod|blackberry|bb|playbook|mobile|windows phone|kindle|silk|opera mini/.test(navigator.userAgent.toLowerCase())
 	document.addEventListener('mousemove', event => {
 		if(isMobile && (Math.abs(event.pageX - lastMouseX) + Math.abs(event.pageY - lastMouseY) > 20)) {
 			tooltip.style.display = 'none';
@@ -1471,62 +1471,64 @@ type SupportedTTTypes = SupportedTTTypeMap[keyof SupportedTTTypeMap];
 		}
 	})
 
-	//TODO(Rennorb): This isn't very clean, I would like a better solution tbh
-	let touch : Touch;
-	const scrollHandler = (event : WheelEvent | TouchEvent | { detail : number, preventDefault: VoidFunction }) => {
-		if(tooltip.style.display == 'none') return;
-		const activeTT = tooltip.children[cyclePos];
-		if(activeTT.scrollHeight == activeTT.clientHeight) return;
+	if(globalThis.window) {
+		//TODO(Rennorb): This isn't very clean, I would like a better solution tbh
+		let touch : Touch;
+		const scrollHandler = (event : WheelEvent | TouchEvent | { detail : number, preventDefault: VoidFunction }) => {
+			if(tooltip.style.display == 'none') return;
+			const activeTT = tooltip.children[cyclePos];
+			if(activeTT.scrollHeight == activeTT.clientHeight) return;
 
-		event.preventDefault()
-		const deltaY = (event as WheelEvent).deltaY || event.detail || (event as TouchEvent).touches[0].clientY - touch.clientY;
-		activeTT.scrollBy(0, deltaY);
-	}
-	const passive = 'onwheel' in window ? { passive: false } : false;
-	
-	window.addEventListener('DOMMouseScroll', scrollHandler as any, false); // older FF
-	window.addEventListener('wheel', scrollHandler, passive)
-	window.addEventListener('touchstart', event => {
-		touch = event.touches[0];
-	})
-	window.addEventListener('touchmove', scrollHandler, passive)
-
-	//TODO(Rennorb) @ui
-	if(config.globalKeyBinds) window.addEventListener('keydown', e => {
-		if(e.ctrlKey && e.altKey) {
-			if(e.key == 'd') {
-				e.preventDefault();
-				config.showFactComputationDetail = !config.showFactComputationDetail;
-				console.log(`[gw2-tooltips] [cfg] showFactComputationDetail is now ${config.showFactComputationDetail}.`);
-				if(lastTooltipTarget && tooltip.style.display != 'none') {
-					showTooltipOn(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
-					positionTooltip();
-				}
-			}
-			else if(e.key == 't') {
-				e.preventDefault();
-				config.showPreciseAbilityTimings = !config.showPreciseAbilityTimings;
-				console.log(`[gw2-tooltips] [cfg] showPreciseAbilityTimings is now ${config.showPreciseAbilityTimings}.`);
-				if(lastTooltipTarget && tooltip.style.display != 'none') {
-					showTooltipOn(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
-					positionTooltip();
-				}
-			}
-			else if(e.key == 'w') {
-				e.preventDefault();
-				for(const [i, context] of contexts.entries()) {
-					//TODO(Rennorb) @stability: This will fail for sparse weapon sets, but thats wrong / brittle in other ways aswell.
-					const mod = context.character.statsWithWeapons.length;
-					context.character.selectedWeaponSet = (context.character.selectedWeaponSet + 1) % mod;
-					console.log(`[gw2-tooltips] [cfg] Context #${i} is now on weapon set ${context.character.selectedWeaponSet + 1} / ${mod}.`);
-				}
-				if(lastTooltipTarget && tooltip.style.display != 'none') {
-					showTooltipOn(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
-					positionTooltip();
-				}
-			}
+			event.preventDefault()
+			const deltaY = (event as WheelEvent).deltaY || event.detail || (event as TouchEvent).touches[0].clientY - touch.clientY;
+			activeTT.scrollBy(0, deltaY);
 		}
-	});
+		const passive = 'onwheel' in window ? { passive: false } : false;
+		
+		window.addEventListener('DOMMouseScroll', scrollHandler as any, false); // older FF
+		window.addEventListener('wheel', scrollHandler, passive)
+		window.addEventListener('touchstart', event => {
+			touch = event.touches[0];
+		})
+		window.addEventListener('touchmove', scrollHandler, passive)
+
+		//TODO(Rennorb) @ui
+		if(config.globalKeyBinds) window.addEventListener('keydown', e => {
+			if(e.ctrlKey && e.altKey) {
+				if(e.key == 'd') {
+					e.preventDefault();
+					config.showFactComputationDetail = !config.showFactComputationDetail;
+					console.log(`[gw2-tooltips] [cfg] showFactComputationDetail is now ${config.showFactComputationDetail}.`);
+					if(lastTooltipTarget && tooltip.style.display != 'none') {
+						showTooltipOn(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
+						positionTooltip();
+					}
+				}
+				else if(e.key == 't') {
+					e.preventDefault();
+					config.showPreciseAbilityTimings = !config.showPreciseAbilityTimings;
+					console.log(`[gw2-tooltips] [cfg] showPreciseAbilityTimings is now ${config.showPreciseAbilityTimings}.`);
+					if(lastTooltipTarget && tooltip.style.display != 'none') {
+						showTooltipOn(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
+						positionTooltip();
+					}
+				}
+				else if(e.key == 'w') {
+					e.preventDefault();
+					for(const [i, context] of contexts.entries()) {
+						//TODO(Rennorb) @stability: This will fail for sparse weapon sets, but thats wrong / brittle in other ways aswell.
+						const mod = context.character.statsWithWeapons.length;
+						context.character.selectedWeaponSet = (context.character.selectedWeaponSet + 1) % mod;
+						console.log(`[gw2-tooltips] [cfg] Context #${i} is now on weapon set ${context.character.selectedWeaponSet + 1} / ${mod}.`);
+					}
+					if(lastTooltipTarget && tooltip.style.display != 'none') {
+						showTooltipOn(lastTooltipTarget, cyclePos); // visibleIndex = cyclePos: keep the same sub-tooltip active
+						positionTooltip();
+					}
+				}
+			}
+		});
+	}
 }
 
 if(config.autoInitialize) {
@@ -1545,3 +1547,9 @@ import { transformEffectToSkillObject as transformEffectToSkillObject } from './
 import { LUT_DEFENSE, LUT_POWER_MONSTER, LUT_POWER_PLAYER, getAttributeInformation, recomputeAttributesFromMods } from './CharacterAttributes'
 import { DEFAULT_CONFIG, DEFAULT_CONTEXT, ICONS, LUT_RARITY, LUT_RARITY_MUL, LUT_WEAPON_STRENGTH, PROFESSIONS, RARITY, SPECIALIZATIONS, VALID_CHAIN_PALETTES } from './Constants'
 
+
+
+
+/*@TEST_ONLY_START*/
+export { DEFAULT_CONTEXT }
+/*@TEST_ONLY_END*/
