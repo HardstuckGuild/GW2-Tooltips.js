@@ -457,4 +457,5 @@ declare global {
 
 import APICache from "./APICache";
 import { LUT_DEFENSE } from "./CharacterAttributes";
-import { resolveTraitsAndOverrides, config, formatItemName, contexts, findCorrectAttributeSet, DEFAULT_CONTEXT, getActiveSkin } from './TooltipsV2';
+import { resolveTraitsAndOverrides, config, formatItemName, contexts, findCorrectAttributeSet, getActiveSkin } from './TooltipsV2';
+import { DEFAULT_CONTEXT } from './Constants';

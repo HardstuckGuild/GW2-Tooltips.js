@@ -16,9 +16,6 @@ export const contexts : Context[] = []; //@debug
 export let config    : Config = null!;
 
 
-const PROFESSIONS : API.Profession['id'][] = ['Guardian', 'Warrior', 'Engineer', 'Ranger', 'Thief', 'Elementalist', 'Mesmer', 'Necromancer', 'Revenant'];
-
-
 function activateSubTooltip(tooltipIndex : number) {
 	const tooltips = tooltip.children as HTMLCollectionOf<HTMLLegendElement>;
 
@@ -275,7 +272,7 @@ export async function hookDOMSubtreeSlim(scope : ScopeElement) : Promise<GW2Obje
 				//NOTE(Rennorb): weapon swaps are completely synthesized
 				if(config.legacyCompatibility) {
 					type = 'skills';
-					objId = _legacy_transformEffectToSkillObject(gw2Object, _legacy_effectErrorStore);
+					objId = transformEffectToSkillObject(gw2Object, _legacy_effectErrorStore);
 				}
 				else {
 					continue;
@@ -505,7 +502,7 @@ function generateToolTip(apiObject : SupportedTTTypes, slotName : string | undef
 
 function pushCostAndRestrictionLabels(destinationArray : Node[], sourceObject : SupportedTTTypes, specializedContextInformation : API.ContextInformation, context : Context) {
 	if('flags' in sourceObject && sourceObject.flags!.includes('DisallowUnderwater')) {
-		destinationArray.push(newImg(ICONS.NO_UNDERWATER, 'iconsmall'));
+		destinationArray.push(newImg(ICONS.NoUnderwater, 'iconsmall'));
 	}
 
 	if(specializedContextInformation.activation) {
@@ -513,7 +510,7 @@ function pushCostAndRestrictionLabels(destinationArray : Node[], sourceObject : 
 		if (value != '0') { //in case we rounded down a fractional value just above 0
 			destinationArray.push(newElm('span.property',
 				value,
-				newImg(ICONS.ACTIVATION, 'iconsmall')
+				newImg(ICONS.Activation, 'iconsmall')
 			));
 		}
 	}
@@ -522,21 +519,21 @@ function pushCostAndRestrictionLabels(destinationArray : Node[], sourceObject : 
 		destinationArray.push(newElm('span.property',
 			String(specializedContextInformation.resource_cost),
 			//TODO(Rennorb) @correctness: see reaper shroud
-			newImg(context.character.profession == 'Revenant' ? ICONS.RESOURCE_REV : ICONS.RESOURCE_THIEF, 'iconsmall')
+			newImg(ICONS['Resource'+context.character.profession as keyof typeof ICONS] || ICONS.ResourceThief, 'iconsmall')
 		));
 	}
 
 	if(specializedContextInformation.endurance_cost) {
 		destinationArray.push(newElm('span.property',
 			String(Math.round(specializedContextInformation.endurance_cost)),
-			newImg(ICONS.ENDURANCE_COST, 'iconsmall')
+			newImg(ICONS.CostEndurance, 'iconsmall')
 		));
 	}
 
 	if(specializedContextInformation.upkeep_cost) {
 		destinationArray.push(newElm('span.property',
 			String(specializedContextInformation.upkeep_cost),
-			newImg(ICONS.UPKEEP_COST, 'iconsmall')
+			newImg(ICONS.CostUpkeep, 'iconsmall')
 		));
 	}
 
@@ -545,7 +542,7 @@ function pushCostAndRestrictionLabels(destinationArray : Node[], sourceObject : 
 		if (value != '0') {
 			destinationArray.push(newElm('span.property',
 				value,
-				newImg(ICONS.RECHARGE, 'iconsmall')
+				newImg(ICONS.Recharge, 'iconsmall')
 			));
 		}
 	}
@@ -553,7 +550,7 @@ function pushCostAndRestrictionLabels(destinationArray : Node[], sourceObject : 
 	if(specializedContextInformation.supply_cost) {
 		destinationArray.push(newElm('span.property',
 			String(specializedContextInformation.supply_cost),
-			newImg(ICONS.SUPPLY_COST, 'iconsmall')
+			newImg(ICONS.CostSupply, 'iconsmall')
 		));
 	}
 }
@@ -696,29 +693,7 @@ function getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) :
 		return 690.5
 	}
 	else {
-		return {
-			BundleLarge: 0,
-			Standard   : 690.5,
-			Focus      : 900,
-			Shield     : 900,
-			Torch      : 900,
-			Warhorn    : 900,
-			Greatsword : 1100,
-			Hammer     : 1100,
-			Staff      : 1100,
-			BowLong    : 1050,
-			Rifle      : 1150,
-			BowShort   : 1000,
-			Axe        : 1000,
-			Sword      : 1000,
-			Dagger     : 1000,
-			Pistol     : 1000,
-			Scepter    : 1000,
-			Mace       : 1000,
-			Spear      : 1000,
-			Speargun   : 1000,
-			Trident    : 1000,
-		}[weapon_type];
+		return LUT_WEAPON_STRENGTH[weapon_type];
 	}
 }
 
@@ -853,11 +828,11 @@ function generateToolTipList<T extends keyof SupportedTTTypeMap>(initialAPIObjec
 			petSkill = MISSING_SKILL;
 		}
 		const [palette, group] = guessGroupAndContext(petSkill, context);
-		let slot_name = refineSlotName(palette!, group?.slot);
-		if(slot_name) slot_name = 'AI '+slot_name;
-		tooltipChain.push(generateToolTip(petSkill, slot_name, subiconRenderMode, context, params.weaponSet));
+		let slotName = refineSlotName(palette!, group?.slot);
+		if(slotName) slotName = 'AI '+slotName;
+		tooltipChain.push(generateToolTip(petSkill, slotName, subiconRenderMode, context, params.weaponSet));
 	}
-	if(context.character.specializations.has(Specializations.SOULBEAST) && 'skills_soulbeast' in initialAPIObject) for(const petSkillId of initialAPIObject.skills_soulbeast) {
+	if(context.character.specializations.has(SPECIALIZATIONS.Soulbeast) && 'skills_soulbeast' in initialAPIObject) for(const petSkillId of initialAPIObject.skills_soulbeast) {
 		let petSkill = APICache.storage.skills.get(petSkillId);
 		if(!petSkill) {
 			console.warn(`[gw2-tooltips] pet skill #${petSkillId} is missing from the cache. The query was caused by `, lastTooltipTarget);
@@ -1021,16 +996,16 @@ function generateItemTooltip(item : API.Item | API.Skin, context : Context, weap
 	if('power' in item) {
 		let power;
 		if('mul' in item.power) {
-			let maxRarity = Rarity.Legendary;
+			let maxRarity = RARITY.Legendary;
 			if(['PlayerLevelScaleRarity', 'ItemScale4'].includes(item.power.scaling!)) {
 				//NOTE(Rennorb) @hardcoded: these thresholds are apparently from a config
-				     if(context.character.level < 14) maxRarity = Rarity.Common;   // content:Configuration?guid=Wu52xQQYEUWiDdyKv+jf2Q==
-				else if(context.character.level < 30) maxRarity = Rarity.Uncommon; // content:Configuration?guid=AX9BmdFkNkuyIpWOz58kmA==
-				else if(context.character.level < 60) maxRarity = Rarity.Rare;     // content:Configuration?guid=X6vQWpTe2Ui+LPdJTv560g==
-				else if(context.character.level < 80) maxRarity = Rarity.Exotic;   // content:Configuration?guid=W2O5W4HAPEy3GJFfaSt4mQ==
+				     if(context.character.level < 14) maxRarity = RARITY.Common;   // Wu52xQQYEUWiDdyKv+jf2Q==
+				else if(context.character.level < 30) maxRarity = RARITY.Uncommon; // AX9BmdFkNkuyIpWOz58kmA==
+				else if(context.character.level < 60) maxRarity = RARITY.Rare;     // X6vQWpTe2Ui+LPdJTv560g==
+				else if(context.character.level < 80) maxRarity = RARITY.Exotic;   // W2O5W4HAPEy3GJFfaSt4mQ==
 			}
 
-			const rarity = Math.min(Rarity[item.rarity], maxRarity)
+			const rarity = Math.min(RARITY[item.rarity], maxRarity)
 			let index = LUT_RARITY[rarity];
 			if(!item.power.scaling) //no scaling property means ItemLevel scaling
 				index += item.level;
@@ -1082,7 +1057,7 @@ function generateItemTooltip(item : API.Item | API.Skin, context : Context, weap
 			}
 			else {
 				return newElm('span.line',
-					newImg(ICONS['SLOT_'+s as keyof typeof ICONS], 'iconsmall'), `Empty ${s} Slot`
+					newImg(ICONS['Slot'+s as keyof typeof ICONS], 'iconsmall'), `Empty ${s} Slot`
 				)
 			}
 		})));
@@ -1339,9 +1314,9 @@ export function specializeContextFromInlineAttribs(context : Context, gw2Object 
 }
 
 function formatCoins(amount : number) : HTMLElement {
-	const parts = [String(Math.floor(amount % 100)), newImg(ICONS.COIN_COPPER, 'iconsmall', '')];
-	if(amount > 99) parts.unshift(String(Math.floor((amount / 100) % 100)), newImg(ICONS.COIN_SILVER, 'iconsmall', ''));
-	if(amount > 9999) parts.unshift(String(Math.floor(amount / 1_00_00)), newImg(ICONS.COIN_GOLD, 'iconsmall', ''));
+	const parts = [String(Math.floor(amount % 100)), newImg(ICONS.CoinCopper, 'iconsmall', '')];
+	if(amount > 99) parts.unshift(String(Math.floor((amount / 100) % 100)), newImg(ICONS.CoinSilver, 'iconsmall', ''));
+	if(amount > 9999) parts.unshift(String(Math.floor(amount / 1_00_00)), newImg(ICONS.CoinGold, 'iconsmall', ''));
 	return newElm('span', ...parts);
 }
 
@@ -1394,118 +1369,6 @@ function isTwoHanded(type : API.WeaponDetailType) {
 	}
 }
 
-//NOTE(Rennorb): stats are going to be processed separately
-export const DEFAULT_CONTEXT : Context = {
-	gameMode           : 'Pve',
-	underwater         : false,
-	targetArmor        : 2597,
-	character: {
-		level            : 80,
-		isPlayer         : true,
-		sex              : "Male",
-		traits           : new Set(),
-		specializations  : new Set(),
-		stats: {
-			values:  {
-				Power            : 0,
-				Toughness        : 0,
-				Vitality         : 0,
-				Precision        : 0,
-				Ferocity         : 0,
-				ConditionDamage  : 0,
-				Expertise        : 0,
-				Concentration    : 0,
-				HealingPower     : 0,
-				AgonyResistance  : 0,
-			},
-			sources: {
-				Power            : [],
-				Toughness        : [],
-				Vitality         : [],
-				Precision        : [],
-				Ferocity         : [],
-				ConditionDamage  : [],
-				Expertise        : [],
-				Concentration    : [],
-				HealingPower     : [],
-				AgonyResistance  : [],
-				Armor            : [],
-				Damage           : [],
-				LifeForce        : [],
-				Health           : [],
-				HealEffectiveness: [],
-				Stun             : [],
-				ConditionDuration: [],
-				BoonDuration     : [],
-				CritChance       : [],
-				CritDamage       : [],
-			},
-		},
-		statsWithWeapons: [{
-			values: {
-				Power            : 1000,
-				Toughness        : 1000,
-				Vitality         : 1000,
-				Precision        : 1000,
-				Ferocity         : 0,
-				ConditionDamage  : 0,
-				Expertise        : 0,
-				Concentration    : 0,
-				HealingPower     : 0,
-				AgonyResistance  : 0,
-				Health           : 10000,
-				Armor            : 1000,
-				CritChance       : 0.05,
-				CritDamage       : 1.5,
-				ConditionDuration: 0,
-				BoonDuration     : 0,
-			},
-			sources: {
-				Power            : [],
-				Toughness        : [],
-				Vitality         : [],
-				Precision        : [],
-				Ferocity         : [],
-				ConditionDamage  : [],
-				Expertise        : [],
-				Concentration    : [],
-				HealingPower     : [],
-				AgonyResistance  : [],
-				Armor            : [],
-				Damage           : [],
-				LifeForce        : [],
-				Health           : [],
-				HealEffectiveness: [],
-				Stun             : [],
-				ConditionDuration: [],
-				BoonDuration     : [],
-				CritChance       : [],
-				CritDamage       : [],
-			},
-			htmlParts: {
-				Power            : [],
-				Toughness        : [],
-				Vitality         : [],
-				Precision        : [],
-				Ferocity         : [],
-				ConditionDamage  : [],
-				Expertise        : [],
-				Concentration    : [],
-				HealingPower     : [],
-				AgonyResistance  : [],
-				Armor            : [],
-				Health           : [],
-				ConditionDuration: [],
-				BoonDuration     : [],
-				CritChance       : [],
-				CritDamage       : [],
-			},
-		}],
-		selectedWeaponSet: 0,
-		upgradeCounts: {},
-	},
-}
-
 function createCompleteContext(partialContext : PartialContext) : Context {
 	if(partialContext.gameMode == "Pvp" && partialContext.character?.level && partialContext.character?.level != 80) {
 		console.error('[gw2-tooltips] [init] supplied (partial) context has its gamemode set to pvp, but has a character level specified thats other than 80. In pvp you are always level 80. This will lead to unexpected results; Remove the explicit level or change the gamemode. The (partial) context in question is: ', partialContext);
@@ -1529,59 +1392,6 @@ export function createCompletedStats(partialSource : PartialR<BaseAndComputedSta
 	const htmlParts = Object.assign({}, structuredClone(DEFAULT_CONTEXT.character.statsWithWeapons[0].htmlParts), partialSource.htmlParts);
 	return { values, sources, htmlParts };
 }
-
-const DEFAULT_CONFIG : Config = {
-	autoInitialize                  : true,
-	autoCollectRuneCounts           : true,
-	autoCollectStatSources          : true,
-	autoCollectSelectedTraits       : true,
-	autoRecomputeCharacterAttributes: true,
-	adjustIncorrectStatIds          : true,
-	autoInferEquipmentUpgrades      : true,
-	autoInferWeaponSetAssociation   : true,
-	legacyCompatibility             : true,
-	showPreciseAbilityTimings       : false,
-	showFactComputationDetail       : false,
-	globalKeyBinds                  : true,
-	validateApiResponses            : true,
-}
-
-enum Rarity { Junk, Basic, Common, Uncommon, Rare, Exotic, Ascended, Legendary }
-const LUT_RARITY = [ 0, 0, 1, 2, 3, 4, 4, 4 ];
-const LUT_RARITY_MUL = [ 0.5, 0.65, 0.8, 0.85, 0.9, 1.0, 1.05, 1.05 ];
-
-export const ICONS = {
-	COIN_COPPER     : 156902,
-	COIN_SILVER     : 156907,
-	COIN_GOLD       : 156904,
-	//NOTE(Rennorb): lower case to make it compatible with the enum
-	SLOT_Upgrade    : 517197,
-	SLOT_Infusion   : 517202,
-	SLOT_Enrichment : 517204,
-
-	RESOURCE_THIEF  : 156649,
-	RESOURCE_REV    : 156647,
-	UPKEEP_COST     : 156058,
-	SUPPLY_COST     : 2111003,
-	ENDURANCE_COST  : 156649,
-	NO_UNDERWATER   : 358417,
-	RECHARGE        : 156651,
-	ACTIVATION      : 496252,
-	RANGE           : 156666,
-	DEFIANCE_BREAK  : 1938788,
-	WEAPON_SWAP     : 156583,
-	BARRIER         : 1770209,
-	STUN_BREAK      : 156654,
-	KNOCKDOWN       : 2440716,
-	PULL            : 2440717,
-	KNOCKBACK       : 2440715,
-	LAUNCH          : 2440712,
-	FLOAT           : 2440713,
-	SINK            : 2440714,
-}
-
-const VALID_CHAIN_PALETTES = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard', 'Equipment'];
-
 
 type SupportedTTTypeMap = {
 	skill         : API.Skill;
@@ -1724,15 +1534,14 @@ if(config.autoInitialize) {
 }
 
 
-
-const enum Specializations { SOULBEAST = 55 }
-
-import { newElm, newImg, GW2Text2HTML, localizeInternalName, formatFraction, fromHTML, findSelfOrParent, n3, resolveInflections, IconRenderMode, IsDevIcon } from './TUtilsV2';
+import { newElm, newImg, GW2Text2HTML, localizeInternalName, formatFraction, fromHTML, findSelfOrParent, n3, resolveInflections, IconRenderMode, IsDevIcon } from './Utils';
 import * as APIs from './API';
 import APICache from './APICache';
 export { APICache }
 import { EMPTY_SKIN, MISSING_SKILL, calculateModifier, generateFact, generateFacts } from './FactsProcessor';
 import * as Collect from './Collect';
-import { _legacy_transformEffectToSkillObject, inferItemUpgrades, inflateAttribute, inflateGenericIcon, inflateItem, inflateProfession, inflateSkill, inflateSpecialization } from './Inflators'
+import { inferItemUpgrades, inflateAttribute, inflateGenericIcon, inflateItem, inflateProfession, inflateSkill, inflateSpecialization } from './Inflators'
+import { transformEffectToSkillObject as transformEffectToSkillObject } from './EffectsShim'
 import { LUT_DEFENSE, LUT_POWER_MONSTER, LUT_POWER_PLAYER, getAttributeInformation, recomputeAttributesFromMods } from './CharacterAttributes'
+import { DEFAULT_CONFIG, DEFAULT_CONTEXT, ICONS, LUT_RARITY, LUT_RARITY_MUL, LUT_WEAPON_STRENGTH, PROFESSIONS, RARITY, SPECIALIZATIONS, VALID_CHAIN_PALETTES } from './Constants'
 

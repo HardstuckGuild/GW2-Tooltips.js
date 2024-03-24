@@ -195,4 +195,4 @@ export const LUT_POWER_MONSTER = [
 ];
 
 import { calculateModifier } from "./FactsProcessor";
-import { fromHTML, localizeInternalName, n3, newElm, resolveInflections } from "./TUtilsV2";
+import { fromHTML, localizeInternalName, n3, newElm, resolveInflections } from "./Utils";

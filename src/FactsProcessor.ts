@@ -74,7 +74,7 @@ export function generateFacts(blocks : API.FactBlock[], weaponStrength : number,
 
 	if(totalDefianceBreak > 0) {
 		const defianceWrap = newElm('div.fact',
-			newImg(ICONS.DEFIANCE_BREAK, 'iconmed'),
+			newImg(ICONS.DefianceBreak, 'iconmed'),
 			newElm('div.gw2-color-defiance-fact', `Total Defiance Break: ${withUpToNDigits(totalDefianceBreak, 2)}`)
 		);
 
@@ -633,7 +633,8 @@ export const EMPTY_SKIN : API.Skin = {
 	access_restrictions: [], dye_channels: [null, null, null, null]
 }
 
-import { newElm, newImg, formatFraction, GW2Text2HTML, withUpToNDigits, localizeInternalName, joinWordList, fromHTML, n3, resolveInflections, formatDuration, n3s, n3ss } from './TUtilsV2';
+import { newElm, newImg, formatFraction, GW2Text2HTML, withUpToNDigits, localizeInternalName, joinWordList, fromHTML, n3, resolveInflections, formatDuration, n3s, n3ss } from './Utils';
 import APICache from './APICache';
-import { ICONS, config } from './TooltipsV2';
+import { config } from './TooltipsV2';
 import { getAttributeInformation, getBaseHealth } from './CharacterAttributes';
+import { ICONS } from './Constants';
