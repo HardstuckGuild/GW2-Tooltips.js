@@ -195,7 +195,7 @@
   text-shadow: -1px 2px 0px var(--gw2-tt-color-shadow);
 }
 
-.tooltipWrapper .iconsmall {
+.tooltipWrapper img.iconsmall {
 	width: var(--gw2-tt-font-size-m);
 	height: auto;
 	vertical-align: bottom;
