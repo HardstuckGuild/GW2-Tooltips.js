@@ -612,29 +612,8 @@ export function generateBuffIcon(icon : Parameters<typeof newImg>[0], stackSize 
 	}
 }
 
-export const MISSING_BUFF : API.Skill = {
-	id         : 0,
-	name       : 'Missing Buff',
-	description: '<c=@warning>This Buff failed to load</c>',
-	categories : [], palettes   : [], modifiers  : [], flags: [],
-}
-export const MISSING_SKILL : API.Skill = {
-	id         : 0,
-	name       : 'Missing Skill',
-	description: '<c=@warning>This Skill failed to load</c>',
-	categories : [], palettes   : [], modifiers  : [], flags: [],
-}
-export const EMPTY_SKIN : API.Skin = {
-	id         : 0,
-	type       : 'Back',
-	subtype    : 'Default',
-	rarity     : 'Basic',
-	flags      : ['HidePrefix'],
-	access_restrictions: [], dye_channels: [null, null, null, null]
-}
-
 import { newElm, newImg, formatFraction, GW2Text2HTML, withUpToNDigits, localizeInternalName, joinWordList, fromHTML, n3, resolveInflections, formatDuration, n3s, n3ss } from './Utils';
 import APICache from './APICache';
 import { config } from './TooltipsV2';
 import { getAttributeInformation, getBaseHealth } from './CharacterAttributes';
-import { ICONS } from './Constants';
+import { ICONS, MISSING_BUFF } from './Constants';

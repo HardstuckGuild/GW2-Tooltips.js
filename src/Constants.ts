@@ -195,3 +195,24 @@ export const DEFAULT_CONTEXT : Context = {
 		upgradeCounts: {},
 	},
 };
+
+export const MISSING_BUFF : API.Skill = {
+	id         : 0,
+	name       : 'Missing Buff',
+	description: '<c=@warning>This Buff failed to load</c>',
+	categories : [], palettes   : [], modifiers  : [], flags: [],
+}
+export const MISSING_SKILL : API.Skill = {
+	id         : 0,
+	name       : 'Missing Skill',
+	description: '<c=@warning>This Skill failed to load</c>',
+	categories : [], palettes   : [], modifiers  : [], flags: [],
+}
+export const EMPTY_SKIN : API.Skin = {
+	id         : 0,
+	type       : 'Back',
+	subtype    : 'Default',
+	rarity     : 'Basic',
+	flags      : ['HidePrefix'],
+	access_restrictions: [], dye_channels: [null, null, null, null]
+}

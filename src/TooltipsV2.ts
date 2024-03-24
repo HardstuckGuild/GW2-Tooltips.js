@@ -1540,16 +1540,16 @@ import { newElm, newImg, GW2Text2HTML, localizeInternalName, formatFraction, fro
 import * as APIs from './API';
 import APICache from './APICache';
 export { APICache }
-import { EMPTY_SKIN, MISSING_SKILL, calculateModifier, generateFact, generateFacts } from './FactsProcessor';
+import { calculateModifier, generateFact, generateFacts } from './FactsProcessor';
 import * as Collect from './Collect';
 import { inferItemUpgrades, inflateAttribute, inflateGenericIcon, inflateItem, inflateProfession, inflateSkill, inflateSpecialization } from './Inflators'
 import { transformEffectToSkillObject as transformEffectToSkillObject } from './EffectsShim'
 import { LUT_DEFENSE, LUT_POWER_MONSTER, LUT_POWER_PLAYER, getAttributeInformation, recomputeAttributesFromMods } from './CharacterAttributes'
-import { DEFAULT_CONFIG, DEFAULT_CONTEXT, ICONS, LUT_RARITY, LUT_RARITY_MUL, LUT_WEAPON_STRENGTH, PROFESSIONS, RARITY, SPECIALIZATIONS, VALID_CHAIN_PALETTES } from './Constants'
+import { DEFAULT_CONFIG, DEFAULT_CONTEXT, ICONS, LUT_RARITY, LUT_RARITY_MUL, LUT_WEAPON_STRENGTH, PROFESSIONS, RARITY, SPECIALIZATIONS, VALID_CHAIN_PALETTES, EMPTY_SKIN, MISSING_SKILL } from './Constants'
 
 
 
 
 /*@TEST_ONLY_START*/
-export { DEFAULT_CONTEXT }
+export { DEFAULT_CONTEXT, generateFact, generateItemTooltip, createCompleteContext }
 /*@TEST_ONLY_END*/
