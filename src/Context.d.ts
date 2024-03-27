@@ -80,5 +80,17 @@ interface Config {
 }
 
 
+interface GW2TooltipsV2 {
+	readonly VERSION  : number,
+	readonly APICache : APICache,
+	readonly config   : Config,
+	formatItemName : (item : API.Item | API.Skin, context : Context, skin : API.Skin = EMPTY_SKIN, statSet? : API.AttributeSet | false, upgradeComponent? : { suffix? : string }, stackSize = 1) => string,
+	formatCoins    : (amount : number) => HTMLElement,
+	showTooltipFor : (objId : number | BaseAttribute | ComputedAttribute, params : AttributeParams | TooltipParams, context : Context, visibleIndex = 0) => void,
+	hideTooltip    : () => void,
+	hookDocument       : (scope : ScopeElement, _unused? : any) => Promise<GW2ObjectMap>,
+	hookDOMSubtreeSlim : (scope : ScopeElement) => Promise<GW2ObjectMap>,
+}
+
 
 type PartialR<T> = { [P in keyof T]?: (T[P] extends string | number | StatSource | number[] ? T[P] : PartialR<T[P]>) | undefined; }

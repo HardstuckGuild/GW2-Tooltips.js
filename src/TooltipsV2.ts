@@ -5,6 +5,8 @@
 //TODO(Rennorb) @correctness: Split up incoming / outgoing effects. Mostly relevant for healing.
 //TODO(Rennorb) @correctness: implement processing for trait / skill buffs to properly show certain flip skills and chains aswell as properly do trait overrides for skills
 
+export const VERSION = 0;
+
 let tooltip : HTMLElement
 let lastTooltipTarget : HTMLElement | undefined
 
@@ -1313,7 +1315,7 @@ export function specializeContextFromInlineAttribs(context : Context, gw2Object 
 	return context;
 }
 
-function formatCoins(amount : number) : HTMLElement {
+export function formatCoins(amount : number) : HTMLElement {
 	const parts = [String(Math.floor(amount % 100)), newImg(ICONS.CoinCopper, 'iconsmall', '')];
 	if(amount > 99) parts.unshift(String(Math.floor((amount / 100) % 100)), newImg(ICONS.CoinSilver, 'iconsmall', ''));
 	if(amount > 9999) parts.unshift(String(Math.floor(amount / 1_00_00)), newImg(ICONS.CoinGold, 'iconsmall', ''));
