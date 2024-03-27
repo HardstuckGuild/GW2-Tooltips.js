@@ -106,13 +106,18 @@ test('no defiance break on "removes ..." 1', () => {
 	]));
 });
 
-test.skip('no defiance break on "removes ..." 2', () => {
+test('no defiance break on "removes ..." 2', () => {
 	const skill = GW2TooltipsV2.APICache.storage.skills.get(SKILL_IDS.VineSurge);
 	const info = GW2TooltipsV2.resolveTraitsAndOverrides(skill, DEFAULT_CONTEXT);
-	expect(info.blocks[0].facts).toEqual(expect.arrayContaining([
-		expect.objectContaining({ buff: SKILL_IDS.Entangle, defiance_break: expect.any(Number) }),
-		expect.objectContaining({ buff: SKILL_IDS.Entangle, defiance_break: expect.not.defiend() }), // find a way to express this
-	]));
+
+	let entangle_with_db = false, entangle_without_db = false;
+	for(const fact of info.blocks[0].facts) {
+		if(fact.buff === SKILL_IDS.Entangle) {
+			if(fact.defiance_break) entangle_with_db = true;
+			else entangle_without_db = true;
+		}
+	}
+	expect([entangle_with_db, entangle_without_db]).toEqual([true, true]);
 });
 
 test('PlayerLevel scaling', () => {
@@ -163,7 +168,6 @@ test('Multiple fact skip layers', () => {
 		if(fact.buff === SKILL_IDS.Bleed) n_bleed++;
 		if(fact.buff === SKILL_IDS.Cripple) n_cripple++;
 	}
-	console.log(info.blocks[0].facts);
 	expect(n_bleed).toBe(1);
 	expect(n_cripple).toBe(1);
 });
