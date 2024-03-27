@@ -59,7 +59,7 @@ test("modifier clamping", () => {
 	const fact = {
 		type: "Buff",
 		buff: SKILL_IDS.UrnOfSaintViktor,
-		duration: 0, // this is the interesting part here, even it ifs 0 that means it should be treated as one
+		duration: 0, // this is the interesting part here, even it ifs 0 that means it should be "ignored" / permanent (don't multiply down to 0)
 		apply_count: 1,
 		icon: 156661,
 		oder: 1,

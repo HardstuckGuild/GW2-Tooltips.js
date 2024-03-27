@@ -134,7 +134,7 @@ export function generateFact(fact : API.Fact, weaponStrength : number, context :
 					value -= 100;
 				}
 
-				if(modifier.flags.includes('MulByDuration')) {
+				if(duration && modifier.flags.includes('MulByDuration')) {
 					let this_duration = duration / 1000;
 					if(modifier.flags.includes('DivDurationBy3')) {
 						this_duration /= 3;
@@ -143,7 +143,7 @@ export function generateFact(fact : API.Fact, weaponStrength : number, context :
 						this_duration /= 10;
 					}
 
-					value *= this_duration || 1;
+					value *= this_duration;
 				}
 
 				if(!modifier.flags.includes('NonStacking')) {
@@ -159,7 +159,7 @@ export function generateFact(fact : API.Fact, weaponStrength : number, context :
 
 				if(modifier.flags.includes('FormatPercent')) {
 					if(value > 0 ) {
-						strValue = '+ ' + strValue;
+						strValue = '+' + strValue;
 					}
 					strValue += '%'
 				}

@@ -60,18 +60,15 @@ export function n3s(v : number) { return v >= 0 ? '+'+n3(v) : n3(v) }
 export function n3ss(v : number) { return v >= 0 ? '+ '+n3(v) : '- '+-n3(v) }
 
 export function formatFraction(value : number, config : Config) {
+	if(value === 0) return '0';
+
 	if (!config.showPreciseAbilityTimings) {
 		const sign = value < 0 ? '-' : '';
 		value = Math.abs(value);
-		const index = (Math.min(Math.round((value % 1) * 4), 4));
 		let fraction = '';
-		switch (index) {
-			case 0: 
-			case 4:
-			{
-				value = Math.round(value);
-				break;
-			}
+		switch (Math.round((value % 1) * 4)) {
+			case 0:
+				if((value % 1) === 0) break;
 			case 1: {
 				value = Math.floor(value);
 				fraction = '¼';
@@ -87,10 +84,12 @@ export function formatFraction(value : number, config : Config) {
 				fraction = '¾';
 				break;
 			}
+			case 4: {
+				value = Math.ceil(value);
+				break;
+			}
 		}
-		if(value == 0 && fraction == '') {
-			return '0';
-		}
+		
 		return `${sign}${value > 0 ? value : ''}${fraction}`;
 	} else {
 		return withUpToNDigits(value, 3);
