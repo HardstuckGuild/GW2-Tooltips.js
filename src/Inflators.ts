@@ -36,7 +36,7 @@ export function inflateItem(element : HTMLElement, item : API.Item) {
 	const stackSize = +String(element.getAttribute('count')) || 1;
 	const context = contexts[+String(element.getAttribute('contextSet')) || 0];
 
-	const skin = getActiveSkin(item as API.ItemArmor, element);
+	const skin = getActiveSkin(item as API.Items.Armor, element);
 
 	const wikiLink = newElm('a', newImg(skin?.icon || item.icon, undefined, item.name));
 	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + GW2Text2HTML(item.name).replaceAll(/\[.*?\]/g, ''); //remove plural forms ([s] and similar)
@@ -87,8 +87,8 @@ export function inflateSpecialization(element : HTMLElement, spec: API.Specializ
 	}
 }
 
-type AdditionalAttributes = 'Profession' | 'MagicFind'
-export function inflateAttribute(element : HTMLElement, attribute : BaseAttribute | ComputedAttribute | AdditionalAttributes) {
+type AdditionalAttributes = 'Profession' | 'MagicFind' // TODO process on api
+export function inflateAttribute(element : HTMLElement, attribute : API.BaseAttribute | API.ComputedAttribute | AdditionalAttributes) {
 	const { character } = contexts[+String(element.getAttribute('contextSet')) || 0];
 
 	const value : number | undefined = character.statsWithWeapons[character.selectedWeaponSet].values[attribute as Exclude<typeof attribute, AdditionalAttributes>];
@@ -110,7 +110,7 @@ export function inflateAttribute(element : HTMLElement, attribute : BaseAttribut
 		CritChance       : [536051, '%'],
 		CritDamage       : [784327, '%'],
 		MagicFind        : [536054, '%'],
-	} as { [k in BaseAttribute | ComputedAttribute | AdditionalAttributes]? : [number, string]})[attribute];
+	} as { [k in API.BaseAttribute | API.ComputedAttribute | AdditionalAttributes]? : [number, string]})[attribute];
 	let img, suffix = '';
 	if(_p) [img, suffix] = _p;
 	else {

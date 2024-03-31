@@ -103,7 +103,7 @@ export function formatDuration(value : number, config : Config) : string {
 	else return formatFraction(value, config) + 's';
 }
 
-export function localizeInternalName<T_ extends string>(type : BaseAttribute | ComputedAttribute | API.ComboFinisherType | API.ComboFieldType | API.Palette['weapon_type'] | T_) {
+export function localizeInternalName<T_ extends string>(type : API.BaseAttribute | API.ComputedAttribute | API.ComboFinisherType | API.ComboFieldType | API.Palette['weapon_type'] | T_) {
 	switch (type) {
 		case 'ConditionDuration': return 'Condition Duration';
 		case 'ConditionDamage'  : return 'Condition Damage';

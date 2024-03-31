@@ -93,12 +93,12 @@ export function generateFacts(blocks : API.FactBlock[], weaponStrength : number,
 export function generateFact(fact : API.Fact, weaponStrength : number, context : Context, weaponSet : number, itemMode : boolean = false) : { wrapper? : HTMLElement, defiance_break : number } {
 	let iconSlug = fact.icon;
 	let buffStackSize = 1;
-	let buffDuration = (fact as API.BuffFact).duration;
+	let buffDuration = (fact as API.Facts.Buff).duration;
 	let defiance_break_per_s = fact.defiance_break;
 	let activeModSources = context.character.statsWithWeapons[weaponSet].sources;
 	let activeStats = context.character.statsWithWeapons[weaponSet].values;
 
-	const generateBuffDescription = (buff : API.Skill, fact : API.BuffFact | API.PrefixedBuffFact, duration : Milliseconds, valueMod : number  /* TODO(Rennorb): kindof a weird hack for now. maybe merge the two export functions? */) => {
+	const generateBuffDescription = (buff : API.Skill, fact : API.Facts.Buff | API.Facts.PrefixedBuff, duration : Milliseconds, valueMod : number  /* TODO(Rennorb): kindof a weird hack for now. maybe merge the two export functions? */) => {
 		let modsArray: string[] = []
 		if(buff.modifiers && !buff.description_brief && !itemMode) { // early bail to not have to do the work if we use the description anyways
 			//TODO(Rennorb) @consistency: gamemode splitting for mods (?)
@@ -183,7 +183,7 @@ export function generateFact(fact : API.Fact, weaponStrength : number, context :
 
 	const applyMods = (baseDuration : Milliseconds, buff : API.Skill, detailStack : (string | Node)[]) : [Milliseconds, number] => {
 		let durMod = 1, valueMod = 1, cap = Number.MAX_SAFE_INTEGER;
-		const durationAttr : ComputedAttribute | false = (buff.buff_type == 'Boon' && 'BoonDuration') || (buff.buff_type == 'Condition' && 'ConditionDuration');
+		const durationAttr : API.ComputedAttribute | false = (buff.buff_type == 'Boon' && 'BoonDuration') || (buff.buff_type == 'Condition' && 'ConditionDuration');
 		if(durationAttr) {
 			const { baseAttribute, div, cap: cap_ } = getAttributeInformation(durationAttr, context.character); cap = cap_;
 			const attribVal = activeStats[baseAttribute!];
@@ -562,7 +562,7 @@ export function generateFact(fact : API.Fact, weaponStrength : number, context :
 		},
 	}
 
-	const buff = APICache.storage.skills.get((fact as API.BuffFact).buff || 0)
+	const buff = APICache.storage.skills.get((fact as API.Facts.Buff).buff || 0)
 	const data : HandlerParams = { fact, buff, weaponStrength: weaponStrength }
 	const [firstLine, ...remainingDetail] = factInflators[fact.type](data as any)
 	const wrapper = newElm('div.fact')

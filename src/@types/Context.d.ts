@@ -10,7 +10,7 @@ var GW2TooltipsV2      : GW2TooltipsV2
 type PartialContext = PartialR<Context>
 
 interface Context {
-	gameMode    : GameMode
+	gameMode    :  API.GameMode
 	underwater  : boolean
 	targetArmor : number
 	character   : Character
@@ -20,7 +20,7 @@ interface Character {
 	level             : number
 	isPlayer          : boolean
 	sex               : 'Male' | 'Female'
-	profession?       : ProfessionId
+	profession?       : API.Profession['id']
 	traits            : Set<number>
 	specializations   : Set<number>
 	stats             : BaseStats
@@ -31,15 +31,15 @@ interface Character {
 }
 
 type BaseStats = {
-	values  : { [k in BaseAttribute] : number }
+	values  : { [k in  API.BaseAttribute] : number }
 	sources : SourceMap
 }
 interface BaseAndComputedStats {
-	values   : { [k in BaseAttribute | ComputedAttribute] : number }
+	values   : { [k in  API.BaseAttribute |  API.ComputedAttribute] : number }
 	sources  : SourceMap
 }
 type SourceMap = SourceMapStrict & { [k in string]?: StatSource[] }
-type SourceMapStrict = { [k in BaseAttribute | ComputedAttribute | SyntheticAttributes]: StatSource[] }
+type SourceMapStrict = { [k in  API.BaseAttribute |  API.ComputedAttribute |  API.SyntheticAttributes]: StatSource[] }
 
 interface StatSource {
 	source   : string
@@ -47,11 +47,9 @@ interface StatSource {
 	count    : number
 }
 
-type GameMode            = 'Pve' | 'Pvp' | 'Wvw';
-type ProfessionId        = 'Guardian' | 'Warrior' | 'Engineer' | 'Ranger' | 'Thief' | 'Elementalist' | 'Mesmer' | 'Necromancer' | 'Revenant'
-type BaseAttribute       = 'Power' | 'Toughness' | 'Vitality' | 'Precision' | 'Ferocity' | 'ConditionDamage' | 'Expertise' | 'Concentration' | 'HealingPower' | 'AgonyResistance'
-type ComputedAttribute   = 'Health' | 'Armor' | 'ConditionDuration' | 'BoonDuration' | 'CritChance' | 'CritDamage'
-type SyntheticAttributes = 'Damage' | 'LifeForce' | 'HealEffectiveness' | 'Stun'
+
+
+
 
 interface Config {
 	autoInitialize             : boolean
@@ -86,7 +84,7 @@ interface GW2TooltipsV2 {
 	readonly config   : Config,
 	formatItemName : (item : API.Item | API.Skin, context : Context, skin : API.Skin = EMPTY_SKIN, statSet? : API.AttributeSet | false, upgradeComponent? : { suffix? : string }, stackSize = 1) => string,
 	formatCoins    : (amount : number) => HTMLElement,
-	showTooltipFor : (objId : number | BaseAttribute | ComputedAttribute, params : AttributeParams | TooltipParams, context : Context, visibleIndex = 0) => void,
+	showTooltipFor : (objId : number |  API.BaseAttribute |  API.ComputedAttribute, params : AttributeParams | TooltipParams, context : Context, visibleIndex = 0) => void,
 	hideTooltip    : () => void,
 	hookDocument       : (scope : ScopeElement, _unused? : any) => Promise<GW2ObjectMap>,
 	hookDOMSubtreeSlim : (scope : ScopeElement) => Promise<GW2ObjectMap>,

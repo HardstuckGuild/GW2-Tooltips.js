@@ -4,12 +4,12 @@ export default class APICache {
 		items          : new Map<number, API.Item>(),
 		traits         : new Map<number, API.Trait>(),
 		pets           : new Map<number, API.Pet>(),
-		'pvp/amulets'  : new Map<number, API.ItemAmulet>(),
+		'pvp/amulets'  : new Map<number, API.Items.Amulet>(),
 		specializations: new Map<number, API.Specialization>(),
 		itemstats      : new Map<number, API.AttributeSet>(),
 		palettes       : new Map<number, API.Palette>(),
 		skins          : new Map<number, API.Skin>(),
-		professions    : new Map<ProfessionId, API.Profession>(),
+		professions    : new Map<API.Profession['id'], API.Profession>(),
 	}
 
 	static apiImpl : APIImplementation
@@ -31,7 +31,7 @@ export default class APICache {
 			itemstats      : new Set<number>(),
 			palettes       : new Set<number>(),
 			skins          : new Set<number>(),
-			professions    : new Set<ProfessionId>,
+			professions    : new Set<API.Profession['id']>,
 		})
 		{
 			const initialSet = new Set<APIResponseTypeMap[E]['id']>();

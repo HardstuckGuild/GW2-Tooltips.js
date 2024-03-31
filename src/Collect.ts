@@ -193,7 +193,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 			tiersToProcess = [{
 				modifiers: attributeSet.attributes.map(a => ({
 					target     : a.attribute,
-					base_amount: Math.round(a.base_value + (item as API.ItemStatSource).attribute_base * a.scaling),
+					base_amount: Math.round(a.base_value + (item as API.Items.StatSource).attribute_base * a.scaling),
 					formula    : "NoScaling",
 					
 					flags: [], id: -1, formula_param1: 0, formula_param2: 0, description: '',
@@ -236,7 +236,7 @@ function _statSources(contextIndex : number, contexts : Context[], elements : It
 			if(tier.modifiers) for(const mod of tier.modifiers!) {
 				if(!mod.target || !isModApplicable(mod, context)) continue;
 
-				const skin = getActiveSkin(item! as API.ItemArmor, element);
+				const skin = getActiveSkin(item! as API.Items.Armor, element);
 
 				let source = formatItemName(item!, context, skin, attributeSet, undefined, -1);
 				if(sourceRuneSuffix) {
@@ -451,7 +451,7 @@ declare global {
 		cloned? : true
 	}
 	interface BaseAndComputedStats {
-		htmlParts: { [k in BaseAttribute | ComputedAttribute] : HTMLElement[] }
+		htmlParts: { [k in API.BaseAttribute | API.ComputedAttribute] : HTMLElement[] }
 	}
 }
 

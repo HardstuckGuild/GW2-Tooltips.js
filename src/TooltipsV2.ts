@@ -221,7 +221,7 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 
 	for(const [attribute, elements] of gw2Objects.attributes) {
 		for(const element of elements) {
-			inflateAttribute(element, attribute as BaseAttribute | ComputedAttribute);
+			inflateAttribute(element, attribute as API.BaseAttribute | API.ComputedAttribute);
 		}
 	}
 
@@ -243,7 +243,7 @@ export async function hookDOMSubtreeSlim(scope : ScopeElement) : Promise<GW2Obje
 		'pvp/amulets'  : new Map<number, HTMLElement[]>(),
 		skins          : new Map<number, HTMLElement[]>(),
 		attributes     : new Map<string, HTMLElement[]>(),
-		professions    : new Map<ProfessionId, HTMLElement[]>(),
+		professions    : new Map<API.Profession['id'], HTMLElement[]>(),
 	}
 	const statsToGet = new Set<number>();
 	const _legacy_effectErrorStore = new Set<string>();
@@ -359,13 +359,13 @@ function showTooltipOn(element : HTMLElement, visibleIndex = 0) {
 	const type = (element.getAttribute('type') || 'skill') as V2ObjectType | LegacyCompat.ObjectType;
 	if(type == 'specialization' || type == 'effect' || type == 'profession') return;
 
-	let objId  : number | BaseAttribute | ComputedAttribute;
+	let objId  : number | API.BaseAttribute | API.ComputedAttribute;
 	let params : AttributeParams | TooltipParams;
 	
 	const objIdRaw = String(element.getAttribute('objId'));
 	let context = contexts[+String(element.getAttribute('contextSet')) || 0];
 	if(type === 'attribute') {
-		objId = objIdRaw as BaseAttribute | ComputedAttribute;
+		objId = objIdRaw as API.BaseAttribute | API.ComputedAttribute;
 		params = { type };
 	}
 	else {
@@ -379,7 +379,7 @@ function showTooltipOn(element : HTMLElement, visibleIndex = 0) {
 				stackSize   : +String(element.getAttribute('count')) || undefined,
 				slottedItems: element.getAttribute('slotted')?.split(',')
 					.map(id => APICache.storage.items.get(+String(id) || 0))
-					.filter(i => i && 'subtype' in i) as API.ItemUpgradeComponent[] | undefined,
+					.filter(i => i && 'subtype' in i) as API.Items.UpgradeComponent[] | undefined,
 			};
 		}
 		else {
@@ -405,7 +405,7 @@ type ItemParams = {
 	weaponSet?    : number,
 	statSetId?    : number,
 	stackSize?    : number,
-	slottedItems? : API.ItemUpgradeComponent[],
+	slottedItems? : API.Items.UpgradeComponent[],
 	element       : Element | { getAttribute : (attr : 'skin') => string | undefined }
 }
 type SkillParams = {
@@ -414,15 +414,15 @@ type SkillParams = {
 	adjustTraitedSkillIds? : boolean,
 }
 
-export function showTooltipFor(objId : BaseAttribute | ComputedAttribute, params : AttributeParams, context : Context, visibleIndex? : number) : void;
+export function showTooltipFor(objId : API.BaseAttribute | API.ComputedAttribute, params : AttributeParams, context : Context, visibleIndex? : number) : void;
 export function showTooltipFor(objId : number, params : TooltipParams, context : Context, visibleIndex? : number) : void;
 
 
-export function showTooltipFor(objId : number | BaseAttribute | ComputedAttribute, params : AttributeParams | TooltipParams, context : Context, visibleIndex = 0) : void {
+export function showTooltipFor(objId : number | API.BaseAttribute | API.ComputedAttribute, params : AttributeParams | TooltipParams, context : Context, visibleIndex = 0) : void {
 	if(params.type == 'attribute') {
 		//TODO(Rennorb): should we actually reset this every time?
 		cyclePos = visibleIndex;
-		tooltip.replaceChildren(generateAttributeTooltip(objId as BaseAttribute | ComputedAttribute, context));
+		tooltip.replaceChildren(generateAttributeTooltip(objId as API.BaseAttribute | API.ComputedAttribute, context));
 
 		tooltip.style.display = ''; //empty value resets actual value to use stylesheet
 		for(const tt of tooltip.children) tt.classList.add('active');
@@ -559,17 +559,17 @@ function pushCostAndRestrictionLabels(destinationArray : Node[], sourceObject : 
 
 function pushGamemodeSplitLabels(destinationArray : Node[], SourceObject : SupportedTTTypes, context : Context) {
 	if('override_groups' in SourceObject && SourceObject.override_groups) {
-		const baseContext = new Set<GameMode>(['Pve', 'Pvp', 'Wvw']);
+		const baseContext = new Set<API.GameMode>(['Pve', 'Pvp', 'Wvw']);
 		for(const override of SourceObject.override_groups) {
 			for(const context of override.context) {
-				baseContext.delete(context as GameMode);
+				baseContext.delete(context as API.GameMode);
 			}
 		}
 
 		const splits = [Array.from(baseContext), ...SourceObject.override_groups.map(o => o.context)]
 
 		const splits_html : string[] = [];
-		for(const mode of ['Pve', 'Pvp', 'Wvw'] as GameMode[]) { //loop to keep sorting vaguely correct
+		for(const mode of ['Pve', 'Pvp', 'Wvw'] as API.GameMode[]) { //loop to keep sorting vaguely correct
 			let split;
 			for(let i = 0; i < splits.length; i++) {
 				if(splits[i].includes(mode)) {
@@ -764,7 +764,7 @@ function generateToolTipList<T extends keyof SupportedTTTypeMap>(initialAPIObjec
 	}
 	else {
 		if(params.type === 'skin' || params.type === 'item') {
-			const skin = getActiveSkin(initialAPIObject as API.ItemArmor, params.element);
+			const skin = getActiveSkin(initialAPIObject as API.Items.Armor, params.element);
 			tooltipChain.push(generateItemTooltip(initialAPIObject as API.Item | API.Skin, context, params.weaponSet === undefined ? context.character.selectedWeaponSet : params.weaponSet, skin, params.statSetId, params.slottedItems, params.stackSize));
 		}
 		else {
@@ -979,7 +979,7 @@ export function findTraitedOverride(skill : API.Skill, context : Context) : API.
 	return;
 }
 
-function generateItemTooltip(item : API.Item | API.Skin, context : Context, weaponSet : number, skin? : API.Skin, statSetId? : number, slottedItems? : API.ItemUpgradeComponent[], stackSize = 1) : HTMLElement {
+function generateItemTooltip(item : API.Item | API.Skin, context : Context, weaponSet : number, skin? : API.Skin, statSetId? : number, slottedItems? : API.Items.UpgradeComponent[], stackSize = 1) : HTMLElement {
 	let statSet = ('attribute_base' in item && (context.gameMode !== 'Pvp' || (item.type === 'Trinket' && item.subtype === 'Amulet'))) && findCorrectAttributeSet(item, statSetId); // pvp builds use an amulet for stats, equipment itself doesn't provide any
 
 	const countPrefix = stackSize > 1 ? stackSize + ' ' : '';
@@ -1098,7 +1098,7 @@ function generateItemTooltip(item : API.Item | API.Skin, context : Context, weap
 	const metaInfo = newElm('div.group');
 	//NOTE(Rennorb): PvP amulets only show the stats, they aren't real 'items'.
 	if(item.type == "Armor" || item.type == "Weapon" || (item.type == "Trinket" && !item.flags.includes('Pvp'))) {
-		if(skin && skin.id != (item as API.ItemArmor).default_skin) {
+		if(skin && skin.id != (item as API.Items.Armor).default_skin) {
 			parts.push(newElm('div.group', newElm('span', newElm('span.gw2-color-rarity-Junk', 'Transmuted, originally: '), formatItemName(item, context))));
 		}
 
@@ -1126,10 +1126,10 @@ function generateItemTooltip(item : API.Item | API.Skin, context : Context, weap
 		if(salvageOptions.length) metaInfo.append(newElm('span', 'Salvage: '+salvageOptions.join(', ')));
 	}
 
-	if((item as API.ItemBase).vendor_value) {
-		let inner = ['Vendor Value: ', formatCoins((item as API.ItemBase).vendor_value! * stackSize)];
+	if((item as API.Items.ItemBase).vendor_value) {
+		let inner = ['Vendor Value: ', formatCoins((item as API.Items.ItemBase).vendor_value! * stackSize)];
 		if(stackSize > 1)
-			inner.push(' (', formatCoins((item as API.ItemBase).vendor_value!), ` x ${stackSize})`);
+			inner.push(' (', formatCoins((item as API.Items.ItemBase).vendor_value!), ` x ${stackSize})`);
 		metaInfo.append(newElm('span', ...inner));
 	}
 
@@ -1166,7 +1166,7 @@ export function findCorrectAttributeSet(item : API.Item, statSetId? : number) : 
 	return statSet;
 }
 
-function generateUpgradeItemGroup(item : API.ItemUpgradeComponent, context : Context, weaponSet : number) : HTMLElement {
+function generateUpgradeItemGroup(item : API.Items.UpgradeComponent, context : Context, weaponSet : number) : HTMLElement {
 	const group = newElm('div.group');
 	for(const [i, tier] of item.tiers.entries()) {
 		let tier_wrap = newElm('span.line');
@@ -1208,7 +1208,7 @@ function generateUpgradeItemGroup(item : API.ItemUpgradeComponent, context : Con
 	return group;
 }
 
-function generateAttributeTooltip(attribute : BaseAttribute | ComputedAttribute, context : Context) : HTMLElement {
+function generateAttributeTooltip(attribute : API.BaseAttribute | API.ComputedAttribute, context : Context) : HTMLElement {
 	const weaponStats = context.character.statsWithWeapons[context.character.selectedWeaponSet];
 	const value = weaponStats.values[attribute];
 	let parts = weaponStats.htmlParts[attribute];
@@ -1341,7 +1341,7 @@ export function getActiveSkin(item : { default_skin? : number, subtype? : any },
 	return skin;
 }
 
-function isTwoHanded(type : API.WeaponDetailType) {
+function isTwoHanded(type : API.Items.Weapon['subtype']) {
 	switch(type) {
 		case 'Axe'         : return false;
 		case 'Dagger'      : return false;
@@ -1400,7 +1400,7 @@ type SupportedTTTypeMap = {
 	trait         : API.Trait;
 	item          : API.Item;
 	pet           : API.Pet;
-	'pvp/amulet'  : API.ItemAmulet;
+	'pvp/amulet'  : API.Items.Amulet;
 	skin          : API.Skin;
 };
 type SupportedTTTypes = SupportedTTTypeMap[keyof SupportedTTTypeMap];

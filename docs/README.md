@@ -93,7 +93,7 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 	</script>
 	```
 	These may be defined partially, the defaults should be sensible.
-	If you want to have typings for this context structure you can use `src/Context.d.ts`.
+	If you want to have typings for this context structure you can use `src/@types/Context.d.ts`.
 	Im most all scenarios you only need to specify `character.profession` and `gamemode`.
 3. Optionally define config structures. This works much the same way as the context structures:
 	```html
@@ -134,7 +134,7 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 	```
 	These can also just be partially defined.
 	The library assumes that you don't change these during its lifetime (except the ones that can be changed using keybinds) so do it at your discretion and expect things to break.
-	Typings can again be found in `src/Context.d.ts`. The api implementation spec for apiImpl is defined in `src/API.ts`. The `workerPath` option can be used to load a Web Worker script. The provided one is however unstable (missing cache flushing as of now) and is therefore not used by default. **Using the default worker is highly discouraged**.
+	Typings can again be found in `src/@types/Context.d.ts`. The api implementation spec for apiImpl is defined in `src/API.ts`. The `workerPath` option can be used to load a Web Worker script. The provided one is however unstable (missing cache flushing as of now) and is therefore not used by default. **Using the default worker is highly discouraged**.
 3. Include the script and style
 	```html
 	<head>

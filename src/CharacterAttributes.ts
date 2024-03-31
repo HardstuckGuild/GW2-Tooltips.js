@@ -1,15 +1,15 @@
 export function recomputeAttributesFromMods(context : Context, weaponSet : number) : void {
 	//nothing fancy, just base attributes first
-	const attributeOrder : (BaseAttribute | ComputedAttribute)[] = [
+	const attributeOrder : (API.BaseAttribute | API.ComputedAttribute)[] = [
 		'Power', 'Toughness', 'Vitality', 'Precision', 'Ferocity', 'ConditionDamage', 'Expertise', 'Concentration', 'HealingPower', 'AgonyResistance',
 		'Health', 'Armor', 'ConditionDuration', 'BoonDuration', 'CritChance', 'CritDamage',
 	];
 
 	const stats = context.character.statsWithWeapons[weaponSet ?? context.character.selectedWeaponSet];
 
-	const allParts : { [k in BaseAttribute | ComputedAttribute]: { parts : HTMLElement[], sources : StatSource[] } } = { } as any;
-	const stage1Attributes : { [k in BaseAttribute | ComputedAttribute]: number } = { } as any;
-	const stage2Attributes : { [k in BaseAttribute | ComputedAttribute]: number } = { } as any;
+	const allParts : { [k in API.BaseAttribute | API.ComputedAttribute]: { parts : HTMLElement[], sources : StatSource[] } } = { } as any;
+	const stage1Attributes : { [k in API.BaseAttribute | API.ComputedAttribute]: number } = { } as any;
+	const stage2Attributes : { [k in API.BaseAttribute | API.ComputedAttribute]: number } = { } as any;
 	let fakeAttributes = stage1Attributes;
 
 	for(const attribute of attributeOrder) {
@@ -117,8 +117,8 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 }
 
 type AttributeInfo = {
-	baseAttribute?     : BaseAttribute
-	computedAttribute? : ComputedAttribute
+	baseAttribute?     : API.BaseAttribute
+	computedAttribute? : API.ComputedAttribute
 	img?               : number
 	suffix             : string
 	base               : number
@@ -143,9 +143,9 @@ const ATTRIBUTE_INFO_LUT = {
 	BoonDuration     : ['Concentration', undefined          , 156599, '%',    0, 1500,                       2],
 	CritChance       : ['Precision'    , undefined          , 536051, '%', 0.05, 2100, Number.MAX_SAFE_INTEGER],
 	CritDamage       : ['Ferocity'     , undefined          , 784327, '%',  1.5, 1500, Number.MAX_SAFE_INTEGER],
-} as { [k in BaseAttribute | ComputedAttribute]? : [BaseAttribute | undefined, ComputedAttribute | undefined, number, string, number, number, number]};
+} as { [k in API.BaseAttribute | API.ComputedAttribute]? : [API.BaseAttribute | undefined, API.ComputedAttribute | undefined, number, string, number, number, number]};
 
-export function getAttributeInformation<R>(attribute : BaseAttribute | ComputedAttribute | R, character : Character) : AttributeInfo {
+export function getAttributeInformation<R>(attribute : API.BaseAttribute | API.ComputedAttribute | R, character : Character) : AttributeInfo {
 	const _p2 = ATTRIBUTE_INFO_LUT[attribute as Exclude<typeof attribute, R>];
 	let baseAttribute, computedAttribute, img, suffix = '', base = 0, div = 1, cap = Number.MAX_SAFE_INTEGER;
 	if(_p2) [baseAttribute, computedAttribute, img, suffix, base, div, cap] = _p2;
@@ -167,7 +167,7 @@ export function getBaseHealth(character : Character) : number {
 				Revenant     : 5922,
 				Necromancer  : 9212,
 				Warrior      : 9212,
-			} as { [k in ProfessionId] : number })[character.profession];
+			} as { [k in API.Profession['id']] : number })[character.profession];
 }
 
 function calculateConditionDuration(level : number, expertise : number) {
