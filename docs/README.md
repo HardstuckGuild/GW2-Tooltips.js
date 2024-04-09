@@ -103,12 +103,12 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 
 			//    These only run inside calls to `hookDocument`. If you don't call that function for everything,
 			// v- you need to explicitly call the related functions if you want the associated effects.
-			autoCollectRuneCounts           : true,
-			autoCollectStatSources          : true,
-			autoCollectSelectedTraits       : true,
-			autoInferEquipmentUpgrades      : true,
-			autoRecomputeCharacterAttributes: true,
-			autoInferWeaponSetAssociation   : true,
+			autoCollectRuneCounts           : false,
+			autoCollectStatSources          : false,
+			autoCollectSelectedTraits       : false,
+			autoInferEquipmentUpgrades      : false,
+			autoRecomputeCharacterAttributes: false,
+			autoInferWeaponSetAssociation   : false,
 			// ^---------------------------
 
 			// This option 'fixes' stat ids for things like armor or amulets, as different pieces of equipment use different stat ids for the same stats.

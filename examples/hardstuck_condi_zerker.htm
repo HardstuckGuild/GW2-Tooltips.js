@@ -5,6 +5,13 @@
 
 <script>
 	var GW2TooltipsConfig = {
+		autoCollectRuneCounts           : true,
+		autoCollectStatSources          : true,
+		autoCollectSelectedTraits       : true,
+		autoRecomputeCharacterAttributes: true,
+		adjustIncorrectStatIds          : true,
+		autoInferEquipmentUpgrades      : true,
+		autoInferWeaponSetAssociation   : true,
 		apiImpl: (APIs) => new APIs.FakeAPI(),
 	}
 	var GW2TooltipsContext = {
