@@ -357,7 +357,7 @@ export function hideTooltip() {
 
 function showTooltipOn(element : HTMLElement, visibleIndex = 0) {
 	const type = (element.getAttribute('type') || 'skill') as V2ObjectType | LegacyCompat.ObjectType;
-	if(type == 'specialization' || type == 'effect' || type == 'profession') return;
+	if(type == 'effect' || type == 'profession') return;
 
 	let objId  : number | API.BaseAttribute | API.ComputedAttribute;
 	let params : AttributeParams | TooltipParams;
@@ -398,8 +398,9 @@ function showTooltipOn(element : HTMLElement, visibleIndex = 0) {
 	}
 }
 
-type TooltipParams = SkillParams | ItemParams
+type TooltipParams = SkillParams | ItemParams | SpecializationParams
 type AttributeParams = { type : 'attribute' }
+type SpecializationParams = { type : 'specialization' }
 type ItemParams = {
 	type          : 'item' | 'skin',
 	weaponSet?    : number,
@@ -419,13 +420,23 @@ export function showTooltipFor(objId : number, params : TooltipParams, context :
 
 
 export function showTooltipFor(objId : number | API.BaseAttribute | API.ComputedAttribute, params : AttributeParams | TooltipParams, context : Context, visibleIndex = 0) : void {
-	if(params.type == 'attribute') {
+	if(params.type === 'attribute') {
 		//TODO(Rennorb): should we actually reset this every time?
 		cyclePos = visibleIndex;
 		tooltip.replaceChildren(generateAttributeTooltip(objId as API.BaseAttribute | API.ComputedAttribute, context));
 
 		tooltip.style.display = ''; //empty value resets actual value to use stylesheet
-		for(const tt of tooltip.children) tt.classList.add('active');
+		scrollSubTooltipIntoView(cyclePos);
+		return;
+	}
+	else if(params.type === 'specialization') {
+		//TODO(Rennorb): should we actually reset this every time?
+		cyclePos = visibleIndex;
+		const data = APICache.storage.specializations.get(objId as number);
+		if(!data) return;
+		tooltip.replaceChildren(generateSpecializationTooltip(data));
+
+		tooltip.style.display = ''; //empty value resets actual value to use stylesheet
 		scrollSubTooltipIntoView(cyclePos);
 		return;
 	}
@@ -480,8 +491,8 @@ function generateToolTip(apiObject : SupportedTTTypes, slotName : string | undef
 	pushCostAndRestrictionLabels(headerElements, apiObject, currentContextInformation, context);
 
 	const secondHeaderRow = [];
-	if(slotName) secondHeaderRow.push(newElm('tes', `( ${slotName} )`));
-	if(weaponSet !== undefined) secondHeaderRow.push(newElm('tes', `( Weapon Set ${weaponSet + 1} )`));
+	if(slotName) secondHeaderRow.push(newElm('span', `( ${slotName} )`));
+	if(weaponSet !== undefined) secondHeaderRow.push(newElm('span', `( Weapon Set ${weaponSet + 1} )`));
 
 	secondHeaderRow.push(newElm('div.flexbox-fill')); // split, now the right side
 
@@ -587,7 +598,7 @@ function pushGamemodeSplitLabels(destinationArray : Node[], SourceObject : Suppo
 				splits_html.push(text);
 		}
 
-		destinationArray.push(newElm('tes', '( ', fromHTML(splits_html.join(' | ')), ' )'));
+		destinationArray.push(newElm('span', '( ', fromHTML(splits_html.join(' | ')), ' )'));
 	}
 }
 
@@ -699,7 +710,7 @@ function getWeaponStrength({ weapon_type, type : palette_type } : API.Palette) :
 	}
 }
 
-function generateToolTipList<T extends keyof SupportedTTTypeMap>(initialAPIObject : SupportedTTTypeMap[T], params : TooltipParams, context : Context) : [HTMLElement[], number] {
+function generateToolTipList<T extends keyof SupportedTTTypeMap>(initialAPIObject : SupportedTTTypeMap[T], params : SkillParams | ItemParams, context : Context) : [HTMLElement[], number] {
 	let subiconRenderMode = IconRenderMode.SHOW;
 	//NOTE(Rennorb): This is a bit sad, but we have to hide or at least filter icons for skills attached to traits and relics, as those often don't come with actual icons because they never were meant to be seen (they don't show in game).
 	if(params.type === 'trait') subiconRenderMode = IconRenderMode.FILTER_DEV_ICONS;
@@ -1252,6 +1263,13 @@ function generateAttributeTooltip(attribute : API.BaseAttribute | API.ComputedAt
 		}
 	}
 	return newElm('div.tooltip.item.active', ...parts);
+}
+
+function generateSpecializationTooltip(spec : API.Specialization) : HTMLElement {
+	return newElm('div.tooltip.item.active',
+		newElm('h4.title', newImg(spec.icon), newElm('span.title-text', spec.name), newElm('div.flexbox-fill')),
+		newElm('span', fromHTML(GW2Text2HTML(spec.description))),
+	);
 }
 
 /** Does not format inflections if stackSize is < 0. */
