@@ -71,6 +71,8 @@ interface Config {
 
 	validateApiResponses       : boolean
 
+	afterDownload?             : () => PromiseLike<void>
+
 	// for replacing the api source. Usually not relevant except for debugging
 	apiImpl?                   : (apis : any) => APIImplementation
 	// path where the worker script is hosted

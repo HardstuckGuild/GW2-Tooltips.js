@@ -126,6 +126,9 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 			// Debug option to show warnings in case the api does not respond with all requested items.
 			validateApiResponses            : true,
 
+			// User hook to run after data download is complete. Not awaited.
+			afterDownload                   : undefined,
+
 			// Discouraged / Debug options
 			apiImpl                         : undefined,
 			workerPath                      : undefined,

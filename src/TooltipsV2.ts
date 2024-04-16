@@ -342,6 +342,8 @@ export async function hookDOMSubtreeSlim(scope : ScopeElement) : Promise<GW2Obje
 		}
 	}));
 
+	config.afterDownload?.call(globalThis);
+
 	return objectsToGet;	
 }
 
