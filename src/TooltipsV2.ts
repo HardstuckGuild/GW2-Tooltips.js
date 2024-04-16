@@ -153,7 +153,7 @@ export async function hookDocument(scope : ScopeElement, _unused? : any) : Promi
 					objNode.setAttribute('weapon-set', String(i));
 
 					const skill = APICache.storage.skills.get(+String(objNode.getAttribute('objid'))!);
-					const context = contexts[+String(objNode.getAttribute('contextSet')) || 0];
+					const context = contexts[+String(objNode.getAttribute('context-set')) || 0];
 					const adjustTraitedSkillIds = objNode.classList.contains('auto-transform');
 					if(skill) chainIds(skill, context, adjustTraitedSkillIds);
 					else {
@@ -363,7 +363,7 @@ function showTooltipOn(element : HTMLElement, visibleIndex = 0) {
 	let params : AttributeParams | TooltipParams;
 	
 	const objIdRaw = String(element.getAttribute('objId'));
-	let context = contexts[+String(element.getAttribute('contextSet')) || 0];
+	let context = contexts[+String(element.getAttribute('context-set')) || 0];
 	if(type === 'attribute') {
 		objId = objIdRaw as API.BaseAttribute | API.ComputedAttribute;
 		params = { type };

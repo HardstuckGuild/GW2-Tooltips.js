@@ -6,14 +6,14 @@ export function inflateGenericIcon(element : HTMLElement, data : { name : string
 	wikiLink.target = '_blank';
 	if(element.classList.contains('gw2objectembed') && !element.classList.contains('icononly')) {
 		const stackSize = +String(element.getAttribute('count')) || 1;
-		const context = contexts[+String(element.getAttribute('contextSet')) || 0];
+		const context = contexts[+String(element.getAttribute('context-set')) || 0];
 		wikiLink.append(resolveInflections(GW2Text2HTML(data.name), stackSize, context.character));
 	}
 	element.replaceChildren(wikiLink);
 }
 
 export function inflateSkill(gw2Object : HTMLElement, skill : API.Skill) {
-	const contextSet = +String(gw2Object.getAttribute('contextSet')) || 0;
+	const contextSet = +String(gw2Object.getAttribute('context-set')) || 0;
 	const context = specializeContextFromInlineAttribs(contexts[contextSet], gw2Object);
 
 	let force = false;
@@ -34,7 +34,7 @@ export function inflateItem(element : HTMLElement, item : API.Item) {
 	if(element.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
 
 	const stackSize = +String(element.getAttribute('count')) || 1;
-	const context = contexts[+String(element.getAttribute('contextSet')) || 0];
+	const context = contexts[+String(element.getAttribute('context-set')) || 0];
 
 	const skin = getActiveSkin(item as API.Items.Armor, element);
 
@@ -89,7 +89,7 @@ export function inflateSpecialization(element : HTMLElement, spec: API.Specializ
 
 type AdditionalAttributes = 'Profession' | 'MagicFind' // TODO process on api
 export function inflateAttribute(element : HTMLElement, attribute : API.BaseAttribute | API.ComputedAttribute | AdditionalAttributes) {
-	const { character } = contexts[+String(element.getAttribute('contextSet')) || 0];
+	const { character } = contexts[+String(element.getAttribute('context-set')) || 0];
 
 	const value : number | undefined = character.statsWithWeapons[character.selectedWeaponSet].values[attribute as Exclude<typeof attribute, AdditionalAttributes>];
 	const _p  = ({
@@ -173,11 +173,11 @@ export function inferItemUpgrades(wrappers : Iterable<Element>) {
 		const [itemEl, ...upgradeEls] = wrapper.children;
 		if(itemEl.getAttribute('type') !== 'item') continue;
 
-		const itemCtx = +String(itemEl.getAttribute('contextSet')) || 0 ;
+		const itemCtx = +String(itemEl.getAttribute('context-set')) || 0 ;
 
 		const upgradeIds = upgradeEls.filter(u =>
 				u.getAttribute('type') === 'item' && u.getAttribute('objid')
-				&& (+String(itemEl.getAttribute('contextSet')) || 0) === itemCtx
+				&& (+String(itemEl.getAttribute('context-set')) || 0) === itemCtx
 			)
 			.map(u => u.getAttribute('objid'));
 

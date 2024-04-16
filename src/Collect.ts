@@ -1,12 +1,12 @@
 export function allUpgradeCounts(scope : ScopeElement, mode : CollectMode = CollectMode.Append) {
 	const elements = scope.getElementsByTagName('gw2object');
 	for(const pair of contexts.entries()) {
-		const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == pair[0]);
+		const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('context-set')) || 0) == pair[0]);
 		if(elsInCorrectCtx.length)
 			_upgradeCounts(...pair, elsInCorrectCtx, mode);
 	}
 	//TODO(Rennorb): rethink this or at least make it uniform
-	const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) >= contexts.length);
+	const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('context-set')) || 0) >= contexts.length);
 	if(elsWithWrongCtx.length) {
 		console.warn("[gw2-tooltips] [collect] Some targets in scope ", scope, " have the wrong context: ", elsWithWrongCtx);
 	}
@@ -56,11 +56,11 @@ function _upgradeCounts(contextIndex : number, targetContext : Context, elements
 export function allStatSources(scope : ScopeElement, mode : CollectMode = CollectMode.Append) {
 	const elements = scope.getElementsByTagName('gw2object');
 	for(const contextIndex of contexts.keys()) {
-		const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == contextIndex);
+		const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('context-set')) || 0) == contextIndex);
 		if(elsInCorrectCtx.length)
 			_statSources(contextIndex, contexts, elsInCorrectCtx, mode);
 	}
-	const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) >= contexts.length);
+	const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('context-set')) || 0) >= contexts.length);
 	if(elsWithWrongCtx.length) {
 		console.warn("[gw2-tooltips] [collect] Some targets in scope ", scope, " have the wrong context: ", elsWithWrongCtx);
 	}
@@ -319,11 +319,11 @@ function _legacy_getInfusionCount(element : Element) : number | undefined {
 export function allTraits(scope : ScopeElement, mode : CollectMode = CollectMode.Append) {
 	const elements = scope.querySelectorAll('gw2object[type=specialization]:not(.gw2objectembed)');
 	for(const pair of contexts.entries()) {
-		const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) == pair[0]);
+		const elsInCorrectCtx = Array.from(elements).filter(e => (+String(e.getAttribute('context-set')) || 0) == pair[0]);
 		if(elsInCorrectCtx.length)
 			_traits(...pair, elsInCorrectCtx, mode);
 	}
-	const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('contextSet')) || 0) >= contexts.length);
+	const elsWithWrongCtx = Array.from(elements).filter(e => (+String(e.getAttribute('context-set')) || 0) >= contexts.length);
 	if(elsWithWrongCtx.length) {
 		console.warn("[gw2-tooltips] [collect] Some targets in scope ", scope, " have the wrong context: ", elsWithWrongCtx);
 	}
