@@ -43,7 +43,7 @@ export class HSAPI implements APIImplementation {
 	static WORKER_CACHE_INIT = { headers: { [CACHE_WORKER_HEADER.VALUE]: '1' } };
 	baseUrl : string;
 
-	public constructor(baseUrl : string = 'https://api-v0.hardstuck.gg') {
+	public constructor(baseUrl : string = 'https://gw2-api.hardstuck.gg') {
 		this.baseUrl = baseUrl;
 	}
 
