@@ -89,15 +89,15 @@
 	color: var(--gw2-tt-color-text);
 }
 
-.tooltipWrapper > :not(.tooltip.active) {
-	padding-bottom: 1.5em;
+.tooltipWrapper.branded > .tooltip::after {
+	content: 'by Hardstuck';
+	align-self: flex-end;
+	color: var(--gw2-tt-color-tt-detail);
 }
+
 .tooltipWrapper > :not(.tooltip.active)::after {
-	position: absolute;
 	width: 100%;
-	left: 0;
-	bottom: 0;
-	padding: .25em 0;
+	padding: .25em 0 0 0;
 
 	border-top: solid currentcolor 1px;
 	border-image-slice: 1;

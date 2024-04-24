@@ -1455,6 +1455,10 @@ type SupportedTTTypes = SupportedTTTypeMap[keyof SupportedTTTypeMap];
 	}
 
 	tooltip = newElm('div.tooltipWrapper')
+	if(!globalThis.location.hostname.endsWith('hardstuck.gg')) {
+		console.info("GW2 Tooltips.js by Hardstuck");
+		tooltip.classList.add('branded');
+	}
 	tooltip.style.display = 'none';
 	if(document.body)
 		document.body.appendChild(tooltip);
