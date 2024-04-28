@@ -13,7 +13,7 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 	let fakeAttributes = stage1Attributes;
 
 	for(const attribute of attributeOrder) {
-		const { baseAttribute, suffix, base, div } = getAttributeInformation(attribute, context.character);
+		const { baseAttribute, suffix, base, conversionOffset, div } = getAttributeInformation(attribute, context.character);
 		let value = base, text;
 		const displayMul = suffix ? 100 : 1;
 
@@ -28,17 +28,17 @@ export function recomputeAttributesFromMods(context : Context, weaponSet : numbe
 
 			if(baseAttribute) {
 				const baseAttrValue = stage1Attributes[baseAttribute];
-				let attrValue = baseAttrValue;
-				//NOTE(Rennorb): precision is processed really wired, so we just hard code this case
-				//TODO(Rennorb) @scaling
-				if(attribute == 'CritChance') attrValue -= 1000;
+				let attrValue = baseAttrValue - conversionOffset;
 				const statBonus = attrValue / div;
 				value += statBonus;
 
 				if(statBonus) {
-					text = ` +${n3(statBonus * displayMul) + suffix} from ${n3(baseAttrValue)} ${localizeInternalName(baseAttribute)}`
-					if(div != 1) text += ` / ${div / displayMul} (attrib. specific conv. factor)`
-					parts.push(newElm('div.detail', text!));
+					let statSourceText = `${n3(baseAttrValue)} ${localizeInternalName(baseAttribute)}`;
+					if(conversionOffset) statSourceText += ` - ${conversionOffset} (attrib. specific offset)`;
+					text = ` +${n3(statBonus * displayMul) + suffix} from `;
+					if(div != 1) text += (conversionOffset ? `[${statSourceText}]` : statSourceText) + ` / ${div / displayMul} (attrib. specific conv. factor)`;
+					else text += statSourceText;
+					parts.push(newElm('div.detail', text));
 				}
 			}
 		}
@@ -122,35 +122,37 @@ type AttributeInfo = {
 	img?               : number
 	suffix             : string
 	base               : number
+	conversionOffset   : number
 	div                : number
 	cap                : number
 }
 
 const ATTRIBUTE_INFO_LUT = {
-	Power            : [undefined      , undefined          ,  66722, '' , 1000,    1, Number.MAX_SAFE_INTEGER],
-	Toughness        : [undefined      , 'Armor'            , 104162, '' , 1000,    1, Number.MAX_SAFE_INTEGER],
-	Vitality         : [undefined      , 'Health'           , 104163, '' , 1000,    1, Number.MAX_SAFE_INTEGER],
-	Precision        : [undefined      , 'CritChance'       , 156609, '' , 1000,    1, Number.MAX_SAFE_INTEGER],
-	Ferocity         : [undefined      , 'CritDamage'       , 156602, '' ,    0,    1, Number.MAX_SAFE_INTEGER],
-	ConditionDamage  : [undefined      , undefined          , 156600, '' ,    0,    1, Number.MAX_SAFE_INTEGER],
-	Expertise        : [undefined      , 'ConditionDuration', 156601, '' ,    0,    1, Number.MAX_SAFE_INTEGER],
-	Concentration    : [undefined      , 'BoonDuration'     , 156599, '' ,    0,    1, Number.MAX_SAFE_INTEGER],
-	HealingPower     : [undefined      , undefined          , 156606, '' ,    0,    1, Number.MAX_SAFE_INTEGER],
-	AgonyResistance  : [undefined      , undefined          , 536049, '' ,    0,    1, Number.MAX_SAFE_INTEGER],
-	Health           : ['Vitality'     , undefined          , 536052, '' ,    0,  0.1, Number.MAX_SAFE_INTEGER],
-	Armor            : ['Toughness'    , undefined          , 536048, '' ,    0,    1, Number.MAX_SAFE_INTEGER],
-	ConditionDuration: ['Expertise'    , undefined          , 156601, '%',    0, 1500,                       2],
-	BoonDuration     : ['Concentration', undefined          , 156599, '%',    0, 1500,                       2],
-	CritChance       : ['Precision'    , undefined          , 536051, '%', 0.05, 2100, Number.MAX_SAFE_INTEGER],
-	CritDamage       : ['Ferocity'     , undefined          , 784327, '%',  1.5, 1500, Number.MAX_SAFE_INTEGER],
-} as { [k in API.BaseAttribute | API.ComputedAttribute]? : [API.BaseAttribute | undefined, API.ComputedAttribute | undefined, number, string, number, number, number]};
+	//                  baseAttribute  , computedAttribute  ,    img, suffix, base, offset, div,                       cap,
+	Power            : [undefined      , undefined          ,  66722,    '' , 1000,      0,    1, Number.MAX_SAFE_INTEGER],
+	Toughness        : [undefined      , 'Armor'            , 104162,    '' , 1000,      0,    1, Number.MAX_SAFE_INTEGER],
+	Vitality         : [undefined      , 'Health'           , 104163,    '' , 1000,      0,    1, Number.MAX_SAFE_INTEGER],
+	Precision        : [undefined      , 'CritChance'       , 156609,    '' , 1000,      0,    1, Number.MAX_SAFE_INTEGER],
+	Ferocity         : [undefined      , 'CritDamage'       , 156602,    '' ,    0,      0,    1, Number.MAX_SAFE_INTEGER],
+	ConditionDamage  : [undefined      , undefined          , 156600,    '' ,    0,      0,    1, Number.MAX_SAFE_INTEGER],
+	Expertise        : [undefined      , 'ConditionDuration', 156601,    '' ,    0,      0,    1, Number.MAX_SAFE_INTEGER],
+	Concentration    : [undefined      , 'BoonDuration'     , 156599,    '' ,    0,      0,    1, Number.MAX_SAFE_INTEGER],
+	HealingPower     : [undefined      , undefined          , 156606,    '' ,    0,      0,    1, Number.MAX_SAFE_INTEGER],
+	AgonyResistance  : [undefined      , undefined          , 536049,    '' ,    0,      0,    1, Number.MAX_SAFE_INTEGER],
+	Health           : ['Vitality'     , undefined          , 536052,    '' ,    0,      0,  0.1, Number.MAX_SAFE_INTEGER],
+	Armor            : ['Toughness'    , undefined          , 536048,    '' ,    0,      0,    1, Number.MAX_SAFE_INTEGER],
+	ConditionDuration: ['Expertise'    , undefined          , 156601,    '%',    0,      0, 1500,                       2],
+	BoonDuration     : ['Concentration', undefined          , 156599,    '%',    0,      0, 1500,                       2],
+	CritChance       : ['Precision'    , undefined          , 536051,    '%', 0.05,   1000, 2100, Number.MAX_SAFE_INTEGER],
+	CritDamage       : ['Ferocity'     , undefined          , 784327,    '%',  1.5,      0, 1500, Number.MAX_SAFE_INTEGER],
+} as { [k in API.BaseAttribute | API.ComputedAttribute]? : [API.BaseAttribute | undefined, API.ComputedAttribute | undefined, number, string, number, number, number, number]};
 
 export function getAttributeInformation<R>(attribute : API.BaseAttribute | API.ComputedAttribute | R, character : Character) : AttributeInfo {
 	const _p2 = ATTRIBUTE_INFO_LUT[attribute as Exclude<typeof attribute, R>];
-	let baseAttribute, computedAttribute, img, suffix = '', base = 0, div = 1, cap = Number.MAX_SAFE_INTEGER;
-	if(_p2) [baseAttribute, computedAttribute, img, suffix, base, div, cap] = _p2;
+	let baseAttribute, computedAttribute, img, suffix = '', base = 0, conversionOffset = 0, div = 1, cap = Number.MAX_SAFE_INTEGER;
+	if(_p2) [baseAttribute, computedAttribute, img, suffix, base, conversionOffset, div, cap] = _p2;
 	if(attribute == 'Health') base = getBaseHealth(character);
-	return { baseAttribute, computedAttribute, img, suffix, base, div, cap };
+	return { baseAttribute, computedAttribute, img, suffix, base, conversionOffset, div, cap };
 }
 
 export function getBaseHealth(character : Character) : number {
