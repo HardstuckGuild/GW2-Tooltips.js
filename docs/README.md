@@ -43,6 +43,8 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 			- `icononly`: Render the object inline, but only render the icon itself.
 			- `big`: Render a slightly larger icon.
 
+	You may also override the display text for inline embeds by generating the `gw2object` element with text content before it gets inflated by the library.
+
 
 2. Optionally define one or more context(s) in a global-scoped object '`GW2TooltipsContext`'
 	```html

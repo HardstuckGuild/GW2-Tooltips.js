@@ -7,7 +7,7 @@ export function inflateGenericIcon(element : HTMLElement, data : { name : string
 	if(element.classList.contains('gw2objectembed') && !element.classList.contains('icononly')) {
 		const stackSize = +String(element.getAttribute('count')) || 1;
 		const context = contexts[+String(element.getAttribute('context-set')) || 0];
-		wikiLink.append(resolveInflections(GW2Text2HTML(data.name), stackSize, context.character));
+		wikiLink.append(resolveInflections(element.textContent || GW2Text2HTML(data.name), stackSize, context.character));
 	}
 	element.replaceChildren(wikiLink);
 }
