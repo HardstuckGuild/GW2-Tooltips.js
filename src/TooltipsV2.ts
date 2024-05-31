@@ -1370,7 +1370,7 @@ function isTwoHanded(type : API.Items.Weapon['subtype']) {
 		case 'Scepter'     : return false;
 		case 'Focus'       : return false;
 		case 'Sword'       : return false;
-		case 'BowShort'    : return false;
+		case 'Shortbow'    : return false;
 		case 'Torch'       : return false;
 		case 'Shield'      : return false;
 		case 'Warhorn'     : return false;
@@ -1379,7 +1379,7 @@ function isTwoHanded(type : API.Items.Weapon['subtype']) {
 		case 'BundleSmall' : return false;
 
 		case 'Hammer'     : return true;
-		case 'BowLong'    : return true;
+		case 'Longbow'    : return true;
 		case 'Greatsword' : return true;
 		case 'Polearm'    : return true;
 		case 'Rifle'      : return true;

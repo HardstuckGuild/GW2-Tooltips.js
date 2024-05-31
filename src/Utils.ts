@@ -109,8 +109,6 @@ export function localizeInternalName<T_ extends string>(type : API.BaseAttribute
 		case 'ConditionDuration': return 'Condition Duration';
 		case 'ConditionDamage'  : return 'Condition Damage';
 		case 'HealingPower'     : return 'Healing Power';
-		case 'BowLong'          : return 'Longbow';
-		case 'BowShort'         : return 'Shortbow';
 		case 'Projectile20'     : return 'Projectile (20% Chance)';
 		case 'MagicFind'        : return 'Magic Find';
 		case 'CritChance'       : return 'Critical Chance';

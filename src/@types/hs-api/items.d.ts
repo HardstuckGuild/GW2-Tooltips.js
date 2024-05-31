@@ -3,8 +3,8 @@ namespace API {
 
 	type ArmorType      = 'HelmAquatic' | 'Helm' | 'Shoulders' | 'Coat' | 'Gloves' | 'Leggings' | 'Boots';
 	type TrinketType    = 'Amulet' | 'Ring' | 'Accessory' | 'Backpiece';
-	type Weapons1H      = 'Focus' | 'Shield' | 'Torch' | 'Warhorn' | 'BowShort' | 'Axe' | 'Sword' | 'Dagger' | 'Pistol' | 'Scepter' | 'Mace';
-	type Weapons2H      = 'Greatsword' | 'Hammer' | 'Staff' | 'BowLong' | 'Rifle';
+	type Weapons1H      = 'Focus' | 'Shield' | 'Torch' | 'Warhorn' | 'Shortbow' | 'Axe' | 'Sword' | 'Dagger' | 'Pistol' | 'Scepter' | 'Mace';
+	type Weapons2H      = 'Greatsword' | 'Hammer' | 'Staff' | 'Longbow' | 'Rifle';
 	type WeaponsAquatic = 'Spear' | 'Trident' | 'Speargun';
 
 
