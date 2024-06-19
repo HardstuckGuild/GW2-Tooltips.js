@@ -39,7 +39,7 @@ export const GW2Text2HTML = (text? : string, ...formatArgs : string[]) => text
 		.replaceAll('[lbracket]', '[').replaceAll('[rbracket]', ']')
 		.replaceAll('[null]', '')
 		.replaceAll('\n', '<br />')
-		.replaceAll(/%str(\d)%/g, (_, i) => formatArgs[+i - 1] || '')
+		.replaceAll(/%(?:str|num)(\d)%/g, (_, i) => formatArgs[+i - 1] || '')
 		.replaceAll('%%', '%')
 	: '';
 

@@ -195,6 +195,19 @@ test("clamp hard CC < 1s", () => {
 	}
 });
 
+test("'%num1% feet' facts", () => {
+	const fact = {
+		type: "Buff",
+		text: "Explosion Radius",
+		apply_count: 30,
+		buff: SKILL_IDS.num1_feet,
+		icon: 156661,
+		order: 39,
+	};	
+	const { wrapper } = GW2TooltipsV2.generateFact(fact, 1, DEFAULT_CONTEXT, 0);
+	expect(wrapper.textContent).toBe("Explosion Radius: 30 feet");
+});
+
 test('Multiple fact skip layers', () => {
 	const context = GW2TooltipsV2.createCompleteContext({
 		character: {
@@ -262,6 +275,7 @@ const SKILL_IDS = {
 	Entangle         :   727,
 	Bleed            :   736,
 	Cripple          :   721,
+	num1_feet        : 12862,
 };
 const TRAIT_IDS = {
 	LingeringCurse:   801,

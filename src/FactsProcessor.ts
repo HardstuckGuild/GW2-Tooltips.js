@@ -98,7 +98,7 @@ export function generateFact(fact : API.Fact, weaponStrength : number, context :
 	let activeModSources = context.character.statsWithWeapons[weaponSet].sources;
 	let activeStats = context.character.statsWithWeapons[weaponSet].values;
 
-	const generateBuffDescription = (buff : API.Skill, fact : API.Facts.Buff | API.Facts.PrefixedBuff, duration : Milliseconds, valueMod : number  /* TODO(Rennorb): kindof a weird hack for now. maybe merge the two export functions? */) => {
+	const generateBuffDescription = (buff : API.Skill, fact : API.Facts.Buff | API.Facts.PrefixedBuff, duration : Milliseconds, valueMod : number  /* TODO(Rennorb): kindof a weird hack for now. maybe merge the two export functions? */) : [string | undefined, number] => {
 		let modsArray: string[] = []
 		if(buff.modifiers && !buff.description_brief) { // early bail to not have to do the work if we use the description anyways
 			//TODO(Rennorb) @consistency: gamemode splitting for mods (?)
@@ -178,7 +178,14 @@ export function generateFact(fact : API.Fact, weaponStrength : number, context :
 			}
 		}
 
-		return GW2Text2HTML(buff.description_brief || modsArray.join(', ') || buff.description)
+		return [
+			GW2Text2HTML(buff.description_brief || modsArray.join(', ') || buff.description, String(fact.apply_count)),
+			//NOTE(Rennorb): If we want to display this very specific fact we "consume" the apply count for formatting and return 0 stacks instead.
+			// This fixes '%num1% feet' "skill" facts on some old, internal npc skills that cannot be completely fixed server side.
+			// Note that these are even broken in game.
+			// https://github.com/HardstuckGuild/GW2-Tooltips.js/issues/108
+			buff.id === SKILL_IDS.Num1_Feet ? 0 : fact.apply_count
+		];
 	}
 
 	const applyMods = (baseDuration : Milliseconds, buff : API.Skill, detailStack : (string | Node)[]) : [Milliseconds, number] => {
@@ -328,7 +335,8 @@ export function generateFact(fact : API.Fact, weaponStrength : number, context :
 			let valueMod;
 			[buffDuration, valueMod] = applyMods(fact.duration, buff, parts);
 
-			let buffDescription = generateBuffDescription(buff, fact, buffDuration, valueMod);
+			let buffDescription;
+			[buffDescription, buffStackSize] = generateBuffDescription(buff, fact, buffDuration, valueMod);
 			if(buffDescription) {
 				if(itemMode) buffDescription = `:<div style="margin-left: 0.5em;">${buffDescription}</div>`;
 				else buffDescription = `: ${buffDescription}`;
@@ -337,8 +345,6 @@ export function generateFact(fact : API.Fact, weaponStrength : number, context :
 			const seconds = buffDuration > 0 ? ` (${formatDuration(buffDuration, config)})`: '';
 			//NOTE(Rennorb): Relics have buffs with the same name as the relic, that also has the plural [s] so we need to resolve that here
 			parts.unshift(`${GW2Text2HTML(resolveInflections(fact.text || buff.name_brief || buff.name, -1, context.character))}${seconds}${buffDescription}`);
-
-			buffStackSize = fact.apply_count;
 			return parts;
 		},
 		BuffBrief : ({fact, buff}) =>  {
@@ -513,13 +519,13 @@ export function generateFact(fact : API.Fact, weaponStrength : number, context :
 				buff = MISSING_BUFF;
 			}
 
-			let {duration, apply_count, text} = fact;
+			let {duration, text} = fact;
 
 			const parts : (string | Node)[] = [];
 			let valueMod;
 			[buffDuration, valueMod] = applyMods(duration, buff, parts);
 
-			let buffDescription = generateBuffDescription(buff, fact, buffDuration, valueMod);
+			let [buffDescription, apply_count] = generateBuffDescription(buff, fact, buffDuration, valueMod);
 			if(buffDescription) {
 				buffDescription = `: ${buffDescription}`;
 			}
@@ -616,4 +622,4 @@ import { newElm, newImg, formatFraction, GW2Text2HTML, withUpToNDigits, localize
 import APICache from './APICache';
 import { config } from './TooltipsV2';
 import { getAttributeInformation, getBaseHealth } from './CharacterAttributes';
-import { ICONS, MISSING_BUFF } from './Constants';
+import { ICONS, MISSING_BUFF, SKILL_IDS } from './Constants';

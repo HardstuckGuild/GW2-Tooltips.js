@@ -62,6 +62,10 @@ export const enum SPECIALIZATIONS { Soulbeast = 55 };
 
 export const WIKI_SEARCH_URL = 'https://wiki-en.guildwars2.com/wiki/Special:Search/';
 
+export const enum SKILL_IDS {
+	Num1_Feet = 12862,
+};
+
 export const VALID_CHAIN_PALETTES = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard', 'Equipment']; //TODO(Rennorb) @cleanup rename
 
 //
