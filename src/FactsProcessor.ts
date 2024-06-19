@@ -184,7 +184,7 @@ export function generateFact(fact : API.Fact, weaponStrength : number, context :
 			// This fixes '%num1% feet' "skill" facts on some old, internal npc skills that cannot be completely fixed server side.
 			// Note that these are even broken in game.
 			// https://github.com/HardstuckGuild/GW2-Tooltips.js/issues/108
-			buff.id === SKILL_IDS.Num1_Feet ? 0 : fact.apply_count
+			buff.id === SKILL_IDS.Num1_Feet ? 1 : fact.apply_count
 		];
 	}
 
