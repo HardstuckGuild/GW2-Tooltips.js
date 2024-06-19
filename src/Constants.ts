@@ -61,6 +61,10 @@ export const PROFESSIONS : API.Profession['id'][] = ['Guardian', 'Warrior', 'Eng
 export const enum SPECIALIZATIONS { Soulbeast = 55 };
 
 
+export const enum SKILL_IDS {
+	Num1_Feet = 12862,
+};
+
 
 export const VALID_CHAIN_PALETTES = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard', 'Equipment']; //TODO(Rennorb) @cleanup rename
 
