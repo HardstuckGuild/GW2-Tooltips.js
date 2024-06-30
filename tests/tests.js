@@ -172,8 +172,21 @@ test('Multiple fact skip layers', () => {
 	expect(n_cripple).toBe(1);
 });
 
-test('True strike - no duplicate chain', () => {
+test('True Strike - no duplicate chain', () => {
 	const skill = GW2TooltipsV2.APICache.storage.skills.get(SKILL_IDS.TrueStrike);
+	const info = GW2TooltipsV2.resolveTraitsAndOverrides(skill, DEFAULT_CONTEXT);
+	const params = { type: 'skill' };
+	const [innerTooltips, _] = GW2TooltipsV2.generateToolTipList(info, params, DEFAULT_CONTEXT);
+	const counts = {};
+	for(const title of innerTooltips.map(el => el.querySelector('.title-text').textContent))
+		counts[title] = (counts[title] || 0) + 1;
+	for(const [title, count] of Object.entries(counts))
+		if(count != 1)
+			throw new Error(`Found multiple '${title}'`);
+});
+
+test('Path of Gluttony - no duplicate chain', () => {
+	const skill = GW2TooltipsV2.APICache.storage.skills.get(SKILL_IDS.PathOfGluttony);
 	const info = GW2TooltipsV2.resolveTraitsAndOverrides(skill, DEFAULT_CONTEXT);
 	const params = { type: 'skill' };
 	const [innerTooltips, _] = GW2TooltipsV2.generateToolTipList(info, params, DEFAULT_CONTEXT);
@@ -196,6 +209,7 @@ const SKILL_IDS = {
 	VineSurge        : 31700,
 	GraspingDead     : 10532,
 	TrueStrike       :  9109,
+	PathOfGluttony   : 71799,
 
 	Torment          : 21632,
 	Entangle         :   727,
