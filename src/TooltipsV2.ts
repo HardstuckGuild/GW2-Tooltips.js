@@ -720,6 +720,7 @@ function generateToolTipList<T extends keyof SupportedTTTypeMap>(initialAPIObjec
 
 	let initialActiveIndex = 0;
 	const tooltipChain : HTMLElement[] = []
+	const paletteSkills = [];
 	let palette, group, slot : string | undefined = undefined;
 
 	if(params.type === 'skill') {
@@ -769,6 +770,7 @@ function generateToolTipList<T extends keyof SupportedTTTypeMap>(initialAPIObjec
 				skill = MISSING_SKILL;
 			}
 
+			paletteSkills.push(skill.id);
 			tooltipChain.push(generateToolTip(skill, slot, IconRenderMode.SHOW, context, params.weaponSet));
 
 			i = j;
@@ -801,6 +803,10 @@ function generateToolTipList<T extends keyof SupportedTTTypeMap>(initialAPIObjec
 	}
 	if('related_skills' in initialAPIObject) {
 		for(const subSkillId of initialAPIObject.related_skills!) {
+			// prevent duplicates in skillchain
+			//TODO(Rennorb): Should we just exclude palette sourced skills form the related ones?
+			if(paletteSkills.includes(subSkillId)) continue;
+
 			const subSkillInChain = APICache.storage.skills.get(subSkillId);
 			if(subSkillInChain && canBeUsedOnCurrentTerrain(subSkillInChain, context) && ((params.type != 'skill') || subSkillInChain.palettes.some(pid => {
 				const palette = APICache.storage.palettes.get(pid);
@@ -1577,5 +1583,5 @@ import { DEFAULT_CONFIG, DEFAULT_CONTEXT, ICONS, LUT_RARITY, LUT_RARITY_MUL, LUT
 
 
 /*@TEST_ONLY_START*/
-export { DEFAULT_CONTEXT, generateFact, generateItemTooltip, createCompleteContext }
+export { DEFAULT_CONTEXT, generateFact, generateItemTooltip, createCompleteContext, generateToolTipList }
 /*@TEST_ONLY_END*/
