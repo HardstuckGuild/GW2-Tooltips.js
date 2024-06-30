@@ -60,7 +60,7 @@ export const ICONS = {
 export const PROFESSIONS : API.Profession['id'][] = ['Guardian', 'Warrior', 'Engineer', 'Ranger', 'Thief', 'Elementalist', 'Mesmer', 'Necromancer', 'Revenant'];
 export const enum SPECIALIZATIONS { Soulbeast = 55 };
 
-
+export const WIKI_SEARCH_URL = 'https://wiki-en.guildwars2.com/wiki/Special:Search/';
 
 export const VALID_CHAIN_PALETTES = ['Bundle', 'Heal', 'Elite', 'Profession', 'Standard', 'Equipment']; //TODO(Rennorb) @cleanup rename
 
@@ -75,6 +75,7 @@ export const DEFAULT_CONFIG : Config = {
 	autoCollectSelectedTraits       : false,
 	autoRecomputeCharacterAttributes: false,
 	adjustIncorrectStatIds          : false,
+	adjustWikiLinks                 : true,
 	autoInferEquipmentUpgrades      : false,
 	autoInferWeaponSetAssociation   : false,
 	legacyCompatibility             : true,

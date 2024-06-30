@@ -19,15 +19,29 @@ export let config    : Config = null!;
 
 
 function activateSubTooltip(tooltipIndex : number) {
-	const tooltips = tooltip.children as HTMLCollectionOf<HTMLLegendElement>;
+	const tooltips = tooltip.children as HTMLCollectionOf<HTMLElement>;
 
 	for(let index = 0; index < tooltips.length; index++) {
 		tooltips[index].classList.toggle('active', index === tooltipIndex);
 	}
 }
 
+function updateAnchorElement(cyclerGw2object : HTMLElement, tooltipIndex : number) {
+	if(cyclerGw2object.firstElementChild?.nodeName != 'A') return;
+
+	const tooltip_ = (tooltip.children as HTMLCollectionOf<HTMLElement>)[tooltipIndex];
+	if(tooltip_) {
+		//NOTE(Rennorb): All tooltips have a title.
+		const name = tooltip_.querySelector('.title-text')!.textContent;
+		// filter out unresolved and empty names
+		if(name && !name.startsWith('((') && !name.startsWith('<#')) {
+			(cyclerGw2object.firstElementChild as HTMLAnchorElement).href = WIKI_SEARCH_URL + name;
+		}
+	}
+}
+
 function scrollSubTooltipIntoView(tooltipIndex : number, animate = false) {
-	const tooltips = (tooltip.children as HTMLCollectionOf<HTMLLegendElement>)[tooltipIndex];
+	const tooltips = (tooltip.children as HTMLCollectionOf<HTMLElement>)[tooltipIndex];
 	tooltip.style.transition = animate ? 'transform 0.25s' : '';
 	tooltip.style.transform = `translate(0, -${tooltips.offsetTop + tooltips.offsetHeight}px)`;
 }
@@ -397,6 +411,7 @@ function showTooltipOn(element : HTMLElement, visibleIndex = 0) {
 	if(tooltip.childElementCount > 1) {
 		element.classList.add('cycler')
 		element.title = 'Right-click to cycle through tooltips'
+		if(config.adjustWikiLinks) updateAnchorElement(element, cyclePos); // reset the element in case it was modified before
 	}
 }
 
@@ -1492,6 +1507,7 @@ type SupportedTTTypes = SupportedTTTypeMap[keyof SupportedTTTypeMap];
 			event.preventDefault()
 
 			cyclePos = (cyclePos + 1) % tooltip.childElementCount
+			if(config.adjustWikiLinks) updateAnchorElement(node, cyclePos);
 			activateSubTooltip(cyclePos)
 			scrollSubTooltipIntoView(cyclePos, true)
 			positionTooltip(true)
@@ -1577,7 +1593,7 @@ import * as Collect from './Collect';
 import { inferItemUpgrades, inflateAttribute, inflateGenericIcon, inflateItem, inflateProfession, inflateSkill, inflateSpecialization } from './Inflators'
 import { transformEffectToSkillObject as transformEffectToSkillObject } from './EffectsShim'
 import { LUT_DEFENSE, LUT_POWER_MONSTER, LUT_POWER_PLAYER, getAttributeInformation, recomputeAttributesFromMods } from './CharacterAttributes'
-import { DEFAULT_CONFIG, DEFAULT_CONTEXT, ICONS, LUT_RARITY, LUT_RARITY_MUL, LUT_WEAPON_STRENGTH, PROFESSIONS, RARITY, SPECIALIZATIONS, VALID_CHAIN_PALETTES, EMPTY_SKIN, MISSING_SKILL } from './Constants'
+import { DEFAULT_CONFIG, DEFAULT_CONTEXT, ICONS, LUT_RARITY, LUT_RARITY_MUL, LUT_WEAPON_STRENGTH, PROFESSIONS, RARITY, SPECIALIZATIONS, VALID_CHAIN_PALETTES, EMPTY_SKIN, MISSING_SKILL, WIKI_SEARCH_URL } from './Constants'
 
 
 

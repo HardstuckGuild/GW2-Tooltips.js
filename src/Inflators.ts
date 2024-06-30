@@ -2,7 +2,7 @@ export function inflateGenericIcon(element : HTMLElement, data : { name : string
 	if(!force && element.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
 
 	const wikiLink = newElm('a', newImg(data.icon, undefined, data.name));
-	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + resolveInflections(GW2Text2HTML(data.name), 1, { sex: "Male" });
+	wikiLink.href = WIKI_SEARCH_URL + resolveInflections(GW2Text2HTML(data.name), 1, { sex: "Male" });
 	wikiLink.target = '_blank';
 	if(element.classList.contains('gw2objectembed') && !element.classList.contains('icononly')) {
 		const stackSize = +String(element.getAttribute('count')) || 1;
@@ -39,7 +39,7 @@ export function inflateItem(element : HTMLElement, item : API.Item) {
 	const skin = getActiveSkin(item as API.Items.Armor, element);
 
 	const wikiLink = newElm('a', newImg(skin?.icon || item.icon, undefined, item.name));
-	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + GW2Text2HTML(item.name).replaceAll(/\[.*?\]/g, ''); //remove plural forms ([s] and similar)
+	wikiLink.href = WIKI_SEARCH_URL + resolveInflections(GW2Text2HTML(item.name), 1, { sex: "Male" });
 	wikiLink.target = '_blank';
 	if(element.classList.contains('gw2objectembed')) {
 		wikiLink.append(formatItemName(item, context, skin, undefined, undefined, stackSize));
@@ -125,7 +125,7 @@ export function inflateAttribute(element : HTMLElement, attribute : API.BaseAttr
 	}
 
 	const wikiLink = newElm('a', newImg(img));
-	wikiLink.href = `https://wiki-en.guildwars2.com/wiki/Special:Search/${search}`;
+	wikiLink.href = WIKI_SEARCH_URL + search;
 	wikiLink.target = '_blank';
 	if(element.classList.contains('gw2objectembed')) {
 		if(value !== undefined) {
@@ -144,7 +144,7 @@ export function inflateProfession(element : HTMLElement, profession : API.Profes
 	if(element.childElementCount > 0) return; // most scenarios will have the server prefill objects as best as it can.
 
 	const wikiLink = newElm('a', newImg(profession.icon_big, undefined, profession.name));
-	wikiLink.href = 'https://wiki-en.guildwars2.com/wiki/Special:Search/' + profession.name;
+	wikiLink.href = WIKI_SEARCH_URL + profession.name;
 	wikiLink.target = '_blank';
 	if(element.classList.contains('gw2objectembed')) wikiLink.append(profession.name);
 	element.append(wikiLink);
@@ -211,3 +211,4 @@ export function inferItemUpgrades(wrappers : Iterable<Element>) {
 import APICache from "./APICache";
 import { GW2Text2HTML, formatImageUrl, localizeInternalName, newElm, newImg, resolveInflections, withUpToNDigits } from "./Utils";
 import { contexts, findTraitedOverride, formatItemName, getActiveSkin, specializeContextFromInlineAttribs } from "./TooltipsV2";
+import { WIKI_SEARCH_URL } from "./Constants";

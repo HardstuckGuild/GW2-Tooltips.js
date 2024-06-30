@@ -117,6 +117,8 @@ To achieve all of the functionality we use our own proprietary API as opposed to
 			// There are for example multiple ids for 'berserkers' that are used for different equipment pieces.
 			// If this option is turned on the script will automatically detect incorrect stat ids and replace them with the correct ones before any calculations are done.
 			adjustIncorrectStatIds          : true,
+			// This option enables updating the href on the anchor tags within gw2objects on cycling, so the link always points to the currently selected sub-tooltip.
+			adjustWikiLinks                 : true,
 			legacyCompatibility             : true,
 
 			// Toggelable at runtime (key-binds) if `globalKeyBinds` was enabled when initializing.

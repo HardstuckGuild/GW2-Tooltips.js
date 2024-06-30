@@ -64,6 +64,7 @@ interface Config {
 	// ^---------------------------
 
 	adjustIncorrectStatIds     : boolean
+	adjustWikiLinks            : boolean
 	legacyCompatibility        : boolean
 	showPreciseAbilityTimings  : boolean
 	showFactComputationDetail  : boolean
