@@ -1599,5 +1599,6 @@ import { DEFAULT_CONFIG, DEFAULT_CONTEXT, ICONS, LUT_RARITY, LUT_RARITY_MUL, LUT
 
 
 /*@TEST_ONLY_START*/
-export { DEFAULT_CONTEXT, generateFact, generateItemTooltip, createCompleteContext, generateToolTipList }
+import { hoistGeneralSources } from  './Collect'
+export { DEFAULT_CONTEXT, generateFact, generateItemTooltip, createCompleteContext, generateToolTipList, hoistGeneralSources, recomputeAttributesFromMods }
 /*@TEST_ONLY_END*/

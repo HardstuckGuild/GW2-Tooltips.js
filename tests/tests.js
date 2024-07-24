@@ -3,6 +3,25 @@
 globalThis.structuredClone = function(a) { return JSON.parse(JSON.stringify(a)) };
 globalThis.fetch = require('whatwg-fetch').fetch; // next dogshit js-clownworld fix
 
+
+expect.extend({
+  toBeWithMsg(actual, expected, msg) {
+    if (actual === expected) {
+      return {
+        message: () => `Expected: ${expected} not to be\nReceived: ${actual}\n${msg}`,
+        pass: true
+      };
+    } else {
+      return {
+        message: () => `Expected: ${expected}\nReceived: ${actual}\n${msg}`,
+        pass: false
+      };
+    }
+  }
+});
+
+
+
 GW2TooltipsConfig = {
 	autoInitialize                  : false,
 	autoCollectRuneCounts           : false,
@@ -22,6 +41,27 @@ beforeAll(async () => {
 		GW2TooltipsV2.APICache.ensureExistence('items', Object.values(ITEM_IDS)),
 	]);
 }, 30 * 60 * 1000);
+
+
+test('correct attribute modifier evaluation order', () => {
+	const context = GW2TooltipsV2.createCompleteContext({});
+
+	context.character.stats.sources.HealingPower = [
+		{ count: 1, source: "some armor", modifier: { target: "HealingPower", base_amount: 100, formula: "NoScaling", formula_param1: 0, formula_param2: 0, flags: [] } },
+	];	
+	context.character.stats.sources.Concentration = [
+		{ count: 1, source: "some armor", modifier: { target: "Concentration", base_amount: 30, formula: "NoScaling", formula_param1: 0, formula_param2: 0, flags: [] } },
+		{ count: 1, source: "some oil", modifier: { target: "Concentration", base_amount: 15, formula: "NoScaling", formula_param1: 0, formula_param2: 0, flags: ["FormatPercent"], source_attribute: "HealingPower" } },
+	];
+
+	GW2TooltipsV2.hoistGeneralSources(context.character);
+	GW2TooltipsV2.recomputeAttributesFromMods(context, 0);
+
+	const withWeapons = context.character.statsWithWeapons[0];
+	expect(withWeapons.values.Concentration).toBeWithMsg(45, withWeapons.htmlParts.Concentration.map(p => p.textContent).join("\n"));
+	expect(withWeapons.values.BoonDuration).toBeWithMsg(0.03, withWeapons.htmlParts.BoonDuration.map(p => p.textContent).join("\n")); // = Con / 15
+});
+
 
 test('traited overrides', () => {
 	const context = GW2TooltipsV2.createCompleteContext({

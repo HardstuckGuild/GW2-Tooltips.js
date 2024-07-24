@@ -1,118 +1,138 @@
+type Attribute = API.BaseAttribute | API.ComputedAttribute;
+
 export function recomputeAttributesFromMods(context : Context, weaponSet : number) : void {
-	//nothing fancy, just base attributes first
-	const attributeOrder : (API.BaseAttribute | API.ComputedAttribute)[] = [
-		'Power', 'Toughness', 'Vitality', 'Precision', 'Ferocity', 'ConditionDamage', 'Expertise', 'Concentration', 'HealingPower', 'AgonyResistance',
-		'Health', 'Armor', 'ConditionDuration', 'BoonDuration', 'CritChance', 'CritDamage',
-	];
+	//NOTE(Rennorb): The calculation order needs to be as follows:
+	// 1. Base attribs + additive modifiers for base attribs
+	// 2. conversions
+	// 3. computed attribs + additive modifiers for computed attribs
+	// 4. percentage mods for everything
+
+	//TODO(Rennorb) @correctness: might need to rethink this - quote from the wiki:
+	// Utility items convert stats gained from food as well as those from all kinds of equipment,
+	// but do not convert stats gained from temporary trait/skill buffs or boons.
+	// - https://wiki.guildwars2.com/wiki/Utility_item
+	// Right now conversions will apply to any additive modifier no matter the source.
+
+	const baseAttributes : API.BaseAttribute[] = ['Power', 'Toughness', 'Vitality', 'Precision', 'Ferocity', 'ConditionDamage', 'Expertise', 'Concentration', 'HealingPower', 'AgonyResistance'];
+	const computedAttributes : API.ComputedAttribute[] = ['Health', 'Armor', 'ConditionDuration', 'BoonDuration', 'CritChance', 'CritDamage'];
 
 	const stats = context.character.statsWithWeapons[weaponSet ?? context.character.selectedWeaponSet];
 
-	const allParts : { [k in API.BaseAttribute | API.ComputedAttribute]: { parts : HTMLElement[], sources : StatSource[] } } = { } as any;
-	const stage1Attributes : { [k in API.BaseAttribute | API.ComputedAttribute]: number } = { } as any;
-	const stage2Attributes : { [k in API.BaseAttribute | API.ComputedAttribute]: number } = { } as any;
-	let fakeAttributes = stage1Attributes;
+	const allParts : { [k in Attribute]: { parts : HTMLElement[], sources : StatSource[] } } = { } as any;
+	const stage1Attributes : { [k in Attribute]: number } = { } as any;
+	const stage2Attributes : { [k in Attribute]: number } = { } as any;
 
-	for(const attribute of attributeOrder) {
-		const { baseAttribute, suffix, base, conversionOffset, div } = getAttributeInformation(attribute, context.character);
-		let value = base, text;
-		const displayMul = suffix ? 100 : 1;
+	function additiveModifiers(attributeOrder : Attribute[], convertedAttributes : { [k in Attribute]: number }) {
+		for(const attribute of attributeOrder) {
+			const { baseAttribute, suffix, base, conversionOffset, div } = getAttributeInformation(attribute, context.character);
+			let value = base, text;
+			const displayMul = suffix ? 100 : 1;
 
-		const parts : HTMLElement[] = [];
-		const sources = stats.sources[attribute];
-		allParts[attribute] = { parts, sources };
+			const parts : HTMLElement[] = [];
+			const sources = stats.sources[attribute];
+			allParts[attribute] = { parts, sources };
 
-		{
-			text = `${n3(base * displayMul) + suffix} base value`;
-			if(base) { text += ' from lvl 80'; }
-			parts.push(newElm('div.detail', text));
+			{
+				text = `${n3(base * displayMul) + suffix} base value`;
+				if(base) { text += ' from lvl 80'; }
+				parts.push(newElm('div.detail', text));
 
-			if(baseAttribute) {
-				const baseAttrValue = stage1Attributes[baseAttribute];
-				let attrValue = baseAttrValue - conversionOffset;
-				const statBonus = attrValue / div;
-				value += statBonus;
+				if(baseAttribute) {
+					const baseAttrValue = convertedAttributes[baseAttribute];
+					let attrValue = baseAttrValue - conversionOffset;
+					const statBonus = attrValue / div;
+					value += statBonus;
 
-				if(statBonus) {
-					let statSourceText = `${n3(baseAttrValue)} ${localizeInternalName(baseAttribute)}`;
-					if(conversionOffset) statSourceText += ` - ${conversionOffset} (attrib. specific offset)`;
-					text = ` +${n3(statBonus * displayMul) + suffix} from `;
-					if(div != 1) text += (conversionOffset ? `[${statSourceText}]` : statSourceText) + ` / ${div / displayMul} (attrib. specific conv. factor)`;
-					else text += statSourceText;
-					parts.push(newElm('div.detail', text));
+					if(statBonus) {
+						let statSourceText = `${n3(baseAttrValue)} ${localizeInternalName(baseAttribute)}`;
+						if(conversionOffset) statSourceText += ` - ${conversionOffset} (attrib. specific offset)`;
+						text = ` +${n3(statBonus * displayMul) + suffix} from `;
+						if(div != 1) text += (conversionOffset ? `[${statSourceText}]` : statSourceText) + ` / ${div / displayMul} (attrib. specific conv. factor)`;
+						else text += statSourceText;
+						parts.push(newElm('div.detail', text));
+					}
 				}
 			}
-		}
 
-		//additive mods
-		let modValue = 0;
-		for(const source of sources.filter(s => !s.modifier.flags.includes('FormatPercent'))) {
-			const mod = calculateModifier(source.modifier, context.character.level, fakeAttributes) * source.count;
-			modValue += mod;
-		
-			text = ` +${n3(mod)} from `;
-			if(source.count > 1) text += `${source.count} `;
-			text += source.source;
-			parts.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
-		}
-		value += modValue;
-
-		stage1Attributes[attribute] = value;
-	}
-
-	for(const attribute of attributeOrder) {
-		const { parts, sources } = allParts[attribute];
-
-		let modValue = 0;
-		//conversion mods
-		for(const source of sources.filter(s => s.modifier.flags.includes('FormatPercent') && s.modifier.source_attribute)) {
-			const mod = calculateModifier(source.modifier, context.character.level, fakeAttributes) * source.count;
-			modValue += Math.round(mod);
+			//additive mods
+			let modValue = 0;
+			for(const source of sources.filter(s => !s.modifier.flags.includes('FormatPercent'))) {
+				const mod = calculateModifier(source.modifier, context.character.level, stage1Attributes) * source.count;
+				modValue += mod;
 			
-			let text = ` +${n3(mod)} (${n3(source.modifier.base_amount)}% of ${source.modifier.source_attribute}) from `;
-			if(source.count > 1) text += `${source.count} `;
-			text += source.source;
-			parts.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
+				text = ` +${n3(mod)} from `;
+				if(source.count > 1) text += `${source.count} `;
+				text += source.source;
+				parts.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
+			}
+			value += modValue;
+
+			stage1Attributes[attribute] = value;
 		}
-		stage2Attributes[attribute] = stage1Attributes[attribute] + modValue;
 	}
 
-	fakeAttributes = stage2Attributes;
+	function conversionModifiers(attributeOrder : Attribute[]) {
+		for(const attribute of attributeOrder) {
+			const { parts, sources } = allParts[attribute];
 
-	for(const attribute of attributeOrder) {
-		const { suffix, cap } = getAttributeInformation(attribute, context.character);;
+			let modValue = 0;
+			//conversion mods
+			for(const source of sources.filter(s => s.modifier.flags.includes('FormatPercent') && s.modifier.source_attribute)) {
+				const mod = calculateModifier(source.modifier, context.character.level, stage1Attributes) * source.count;
+				modValue += Math.round(mod);
+				
+				let text = ` +${n3(mod)} (${n3(source.modifier.base_amount)}% of ${source.modifier.source_attribute}) from `;
+				if(source.count > 1) text += `${source.count} `;
+				text += source.source;
+				parts.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
+			}
+			stage2Attributes[attribute] = stage1Attributes[attribute] + modValue;
+		}
+	}
 
-		let value = stage2Attributes[attribute], text;
-		
-		//percent mods
-		const { parts, sources } = allParts[attribute];
-		const displayMul = suffix ? 100 : 1;
-		for(const source of sources.filter(s => s.modifier.flags.includes('FormatPercent') && !s.modifier.source_attribute)) {
-			const mod = calculateModifier(source.modifier, context.character.level, fakeAttributes) * source.count / 100; //TODO(Rennorb) @cleanup
-			//NOTE(Rennorb): Having a suffix means the percentage based values should be additive, as this only applies for condition/boon duration, and crit chance/damage.
-			const toAdd = suffix ? mod : value * mod; 
-			value += toAdd;
+	additiveModifiers(baseAttributes, stage1Attributes);
+	conversionModifiers(baseAttributes);
+
+	additiveModifiers(computedAttributes, stage2Attributes);
+	conversionModifiers(computedAttributes); // this would need to write 2 -> 3 if they ever allowed to actually convert to computed attributes
+
+	for(const attributeOrder of [baseAttributes, computedAttributes]) {
+		for(const attribute of attributeOrder) {
+			const { suffix, cap } = getAttributeInformation(attribute, context.character);
+
+			let value = stage2Attributes[attribute], text;
 			
-			text = ` +${n3(toAdd * displayMul)}${suffix}`;
-			if(!suffix) text += ` (${n3(mod * 100)}%)`;
-			text += ' from ';
-			if(source.count > 1) text += `${source.count} `;
-			text += source.source;
-			parts.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
+			//percent mods
+			const { parts, sources } = allParts[attribute];
+			const displayMul = suffix ? 100 : 1;
+			for(const source of sources.filter(s => s.modifier.flags.includes('FormatPercent') && !s.modifier.source_attribute)) {
+				const mod = calculateModifier(source.modifier, context.character.level, stage2Attributes) * source.count / 100; //TODO(Rennorb) @cleanup
+				//NOTE(Rennorb): Having a suffix means the percentage based values should be additive, as this only applies for condition/boon duration, and crit chance/damage.
+				const toAdd = suffix ? mod : value * mod; 
+				value += toAdd;
+				
+				text = ` +${n3(toAdd * displayMul)}${suffix}`;
+				if(!suffix) text += ` (${n3(mod * 100)}%)`;
+				text += ' from ';
+				if(source.count > 1) text += `${source.count} `;
+				text += source.source;
+				parts.push(newElm('div.detail', fromHTML(resolveInflections(text, source.count, context.character))));
+			}
+
+
+			const uncappedValue = value;
+			//NOTE(Rennorb): -1 because the cap is 200% for duration, but the displayed value is the _additional_ duration, so its a max of +100%.
+			stage2Attributes[attribute] = value = Math.min(uncappedValue, cap - 1);
+
+			if(uncappedValue != value)
+				parts.push(newElm('span.detail.capped', `(Capped to ${n3(value * displayMul)}${suffix}! Uncapped value would be ${n3(uncappedValue * displayMul)}${suffix})`));
+			parts.unshift(newElm('h4.title', newElm('span.title-text', ' +' + n3(value * displayMul) + suffix + ' ' + localizeInternalName(attribute))));
 		}
 
-
-		const uncappedValue = value;
-		//NOTE(Rennorb): -1 because the cap is 200% for duration, but the displayed value is the _additional_ duration, so its a max of +100%.
-		stage2Attributes[attribute] = value = Math.min(uncappedValue, cap - 1);
-
-		if(uncappedValue != value)
-			parts.push(newElm('span.detail.capped', `(Capped to ${n3(value * displayMul)}${suffix}! Uncapped value would be ${n3(uncappedValue * displayMul)}${suffix})`));
-		parts.unshift(newElm('h4.title', newElm('span.title-text', ' +' + n3(value * displayMul) + suffix + ' ' + localizeInternalName(attribute))));
-	}
-
-	for(const attribute of attributeOrder) {
-		stats.values[attribute] = stage2Attributes[attribute];
-		stats.htmlParts[attribute] = allParts[attribute].parts;
+		for(const attribute of attributeOrder) {
+			stats.values[attribute] = stage2Attributes[attribute];
+			stats.htmlParts[attribute] = allParts[attribute].parts;
+		}
 	}
 }
 
@@ -145,9 +165,9 @@ const ATTRIBUTE_INFO_LUT = {
 	BoonDuration     : ['Concentration', undefined          , 156599,    '%',    0,      0, 1500,                       2],
 	CritChance       : ['Precision'    , undefined          , 536051,    '%', 0.05,   1000, 2100, Number.MAX_SAFE_INTEGER],
 	CritDamage       : ['Ferocity'     , undefined          , 784327,    '%',  1.5,      0, 1500, Number.MAX_SAFE_INTEGER],
-} as { [k in API.BaseAttribute | API.ComputedAttribute]? : [API.BaseAttribute | undefined, API.ComputedAttribute | undefined, number, string, number, number, number, number]};
+} as { [k in Attribute]? : [API.BaseAttribute | undefined, API.ComputedAttribute | undefined, number, string, number, number, number, number]};
 
-export function getAttributeInformation<R>(attribute : API.BaseAttribute | API.ComputedAttribute | R, character : Character) : AttributeInfo {
+export function getAttributeInformation<R>(attribute : Attribute | R, character : Character) : AttributeInfo {
 	const _p2 = ATTRIBUTE_INFO_LUT[attribute as Exclude<typeof attribute, R>];
 	let baseAttribute, computedAttribute, img, suffix = '', base = 0, conversionOffset = 0, div = 1, cap = Number.MAX_SAFE_INTEGER;
 	if(_p2) [baseAttribute, computedAttribute, img, suffix, base, conversionOffset, div, cap] = _p2;
@@ -196,5 +216,6 @@ export const LUT_POWER_MONSTER = [
 	162, 179, 197, 214, 231, 249, 267, 286, 303, 322, 344, 367, 389, 394, 402, 412, 439, 454, 469, 483, 500, 517, 556, 575, 593, 612, 622, 632, 672, 684, 728, 744, 761, 778, 820, 839, 885, 905, 924, 943, 991, 1016, 1067, 1093, 1119, 1145, 1193, 1220, 1275, 1304, 1337, 1372, 1427, 1461, 1525, 1562, 1599, 1637, 1692, 1731, 1802, 1848, 1891, 1936, 1999, 2045, 2153, 2201, 2249, 2298, 2368, 2424, 2545, 2604, 2662, 2723, 2792, 2854, 2985, 3047, 3191, 3269, 3348, 3427, 3508, 3589, 3671, 3754, 3838, 3922, 4007, 4093, 4180, 4267, 4356, 4445, 4535, 4625, 4717, 4809, 4902,
 ];
 
+import APICache from "./APICache";
 import { calculateModifier } from "./FactsProcessor";
 import { fromHTML, localizeInternalName, n3, newElm, resolveInflections } from "./Utils";
