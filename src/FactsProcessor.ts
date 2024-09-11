@@ -100,7 +100,7 @@ export function generateFact(fact : API.Fact, weaponStrength : number, context :
 
 	const generateBuffDescription = (buff : API.Skill, fact : API.Facts.Buff | API.Facts.PrefixedBuff, duration : Milliseconds, valueMod : number  /* TODO(Rennorb): kindof a weird hack for now. maybe merge the two export functions? */) => {
 		let modsArray: string[] = []
-		if(buff.modifiers && !buff.description_brief && !itemMode) { // early bail to not have to do the work if we use the description anyways
+		if(buff.modifiers && !buff.description_brief) { // early bail to not have to do the work if we use the description anyways
 			//TODO(Rennorb) @consistency: gamemode splitting for mods (?)
 			const relevantModifiers = buff.modifiers.filter(modifier => (
 				   (!modifier.source_trait_req || context.character.traits.has(modifier.source_trait_req))

@@ -238,6 +238,13 @@ test('Path of Gluttony - no duplicate chain', () => {
 			throw new Error(`Found multiple '${title}'`);
 });
 
+test('Thesis on Speed - Buff with description', () => {
+	const item = GW2TooltipsV2.APICache.storage.items.get(ITEM_IDS.ThesisOnBasicSpeed);
+	const params = { type: 'item', element: { getAttribute: (skin) => undefined, } };
+	const [[tooltip], _] = GW2TooltipsV2.generateToolTipList(item, params, DEFAULT_CONTEXT);
+	expect(tooltip.textContent).toContain('):'); // Enhancement (1h): <mods here>
+});
+
 
 // all these will automatically get loaded into the api on startup
 const SKILL_IDS = {
@@ -262,5 +269,6 @@ const TRAIT_IDS = {
 	LingeringCurse:   801,
 };
 const ITEM_IDS = {
-	OgreBanner: 16075,
+	OgreBanner        : 16075,
+	ThesisOnBasicSpeed: 74634,
 };
