@@ -19,7 +19,7 @@ namespace API {
 			id             : number
 			name           : string
 			icon?          : number
-			rarity         : 'Junk' | 'Basic' | 'Common' | 'Uncommon' | 'Rare' | 'Exotic' | 'Ascended' | 'Legendary'
+			rarity         : 'Junk' | 'Basic' | 'Fine' | 'Masterwork' | 'Rare' | 'Exotic' | 'Ascended' | 'Legendary'
 			flags          : ItemFlag[]
 			access_restrictions : RestrictionFlag[]
 			level          : number

@@ -1,4 +1,4 @@
-export enum RARITY { Junk, Basic, Common, Uncommon, Rare, Exotic, Ascended, Legendary };
+export enum RARITY { Junk, Basic, Fine, Masterwork, Rare, Exotic, Ascended, Legendary };
 export const LUT_RARITY = [ 0, 0, 1, 2, 3, 4, 4, 4 ];
 export const LUT_RARITY_MUL = [ 0.5, 0.65, 0.8, 0.85, 0.9, 1.0, 1.05, 1.05 ];
 

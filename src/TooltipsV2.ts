@@ -1035,10 +1035,10 @@ function generateItemTooltip(item : API.Item | API.Skin, context : Context, weap
 			let maxRarity = RARITY.Legendary;
 			if(['PlayerLevelScaleRarity', 'ItemScale4'].includes(item.power.scaling!)) {
 				//NOTE(Rennorb) @hardcoded: these thresholds are apparently from a config
-				     if(context.character.level < 14) maxRarity = RARITY.Common;   // Wu52xQQYEUWiDdyKv+jf2Q==
-				else if(context.character.level < 30) maxRarity = RARITY.Uncommon; // AX9BmdFkNkuyIpWOz58kmA==
-				else if(context.character.level < 60) maxRarity = RARITY.Rare;     // X6vQWpTe2Ui+LPdJTv560g==
-				else if(context.character.level < 80) maxRarity = RARITY.Exotic;   // W2O5W4HAPEy3GJFfaSt4mQ==
+				     if(context.character.level < 14) maxRarity = RARITY.Fine;       // Wu52xQQYEUWiDdyKv+jf2Q==
+				else if(context.character.level < 30) maxRarity = RARITY.Masterwork; // AX9BmdFkNkuyIpWOz58kmA==
+				else if(context.character.level < 60) maxRarity = RARITY.Rare;       // X6vQWpTe2Ui+LPdJTv560g==
+				else if(context.character.level < 80) maxRarity = RARITY.Exotic;     // W2O5W4HAPEy3GJFfaSt4mQ==
 			}
 
 			const rarity = Math.min(RARITY[item.rarity], maxRarity)
