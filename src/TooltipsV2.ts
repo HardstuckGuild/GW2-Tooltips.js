@@ -317,6 +317,14 @@ export async function hookDOMSubtreeSlim(scope : ScopeElement) : Promise<GW2Obje
 					//NOTE(Rennorb): Don't add the element for inflating, just create the key so it gets cached.
 					if(!objectsToGet.skins.has(inlineSkinId)) objectsToGet.skins.set(inlineSkinId, []);
 				}
+				const inlineSlottedUpgradeIds = gw2Object.getAttribute('slotted');
+				if(inlineSlottedUpgradeIds) {
+					for(const idStr of inlineSlottedUpgradeIds.split(',')) {
+						const id = +idStr;
+						//NOTE(Rennorb): Don't add the element for inflating, just create the key so it gets cached.
+						if(id && !isNaN(id) && !objectsToGet.items.has(id)) objectsToGet.items.set(id, []);
+					}
+				}
 			}
 			else {
 				continue;
@@ -394,8 +402,8 @@ function showTooltipOn(element : HTMLElement, visibleIndex = 0) {
 				statSetId   : +String(element.getAttribute('stats')) || undefined,
 				stackSize   : +String(element.getAttribute('count')) || undefined,
 				slottedItems: element.getAttribute('slotted')?.split(',')
-					.map(id => APICache.storage.items.get(+String(id) || 0))
-					.filter(i => i && 'subtype' in i) as API.Items.UpgradeComponent[] | undefined,
+					.map(id => APICache.storage.items.get(+id || 0) || MISSING_ITEM)
+					.filter(i => 'subtype' in i) as API.Items.UpgradeComponent[] | undefined,
 			};
 		}
 		else {
@@ -1082,6 +1090,10 @@ function generateItemTooltip(item : API.Item | API.Skin, context : Context, weap
 					case 'Infusion'  : slottedItemIdx = slottedItems.findIndex(i => i.subtype == 'Infusion'); break;
 					case 'Enrichment': slottedItemIdx = slottedItems.findIndex(i => i.subtype == 'Enrichment'); break;
 				}
+				//NOTE(Rennorb): missing items have id 0 so we also allow those to be slotted for debug purposes
+				if(slottedItemIdx === -1) {
+					slottedItemIdx = slottedItems.findIndex(i => i.id === 0);
+				}
 			}
 
 			if(slottedItemIdx > -1) {
@@ -1593,7 +1605,7 @@ import * as Collect from './Collect';
 import { inferItemUpgrades, inflateAttribute, inflateGenericIcon, inflateItem, inflateProfession, inflateSkill, inflateSpecialization } from './Inflators'
 import { transformEffectToSkillObject as transformEffectToSkillObject } from './EffectsShim'
 import { LUT_DEFENSE, LUT_POWER_MONSTER, LUT_POWER_PLAYER, getAttributeInformation, recomputeAttributesFromMods } from './CharacterAttributes'
-import { DEFAULT_CONFIG, DEFAULT_CONTEXT, ICONS, LUT_RARITY, LUT_RARITY_MUL, LUT_WEAPON_STRENGTH, PROFESSIONS, RARITY, SPECIALIZATIONS, VALID_CHAIN_PALETTES, EMPTY_SKIN, MISSING_SKILL, WIKI_SEARCH_URL } from './Constants'
+import { DEFAULT_CONFIG, DEFAULT_CONTEXT, ICONS, LUT_RARITY, LUT_RARITY_MUL, LUT_WEAPON_STRENGTH, PROFESSIONS, RARITY, SPECIALIZATIONS, VALID_CHAIN_PALETTES, EMPTY_SKIN, MISSING_SKILL, WIKI_SEARCH_URL, MISSING_ITEM } from './Constants'
 
 
 

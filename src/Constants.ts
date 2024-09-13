@@ -197,6 +197,16 @@ export const DEFAULT_CONTEXT : Context = {
 	},
 };
 
+export const MISSING_ITEM : API.Item = {
+	id         : 0,
+	name       : 'Missing Item',
+	description: '<c=@warning>This Item failed to load</c>',
+	rarity     : "Fine",
+	type       : "UpgradeComponent", subtype: "Gem",
+	flags: [], level: 0, required_level: 0, access_restrictions: [], tiers: [{
+		description: '<c=@warning>This Item failed to load</c>',
+	}],
+}
 export const MISSING_BUFF : API.Skill = {
 	id         : 0,
 	name       : 'Missing Buff',
