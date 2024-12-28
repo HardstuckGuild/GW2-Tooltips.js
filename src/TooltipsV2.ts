@@ -1332,7 +1332,8 @@ export function formatItemName(item : API.Item | API.Skin, context : Context, sk
 		}
 	}
 
-	if(!item.flags.includes('HideSuffix')) {
+	//NOTE(Rennorb): The item does not actually decide, but we are likely to run into situations where we don't have the skin data.
+	if((skin.id !== 0 && !skin.flags.includes('HideSuffix')) || (skin.id === 0 && !item.flags.includes('HideSuffix'))) {
 		if(upgradeComponent && upgradeComponent.suffix) {
 			arg4 = upgradeComponent.suffix;
 			arg3 = " ";

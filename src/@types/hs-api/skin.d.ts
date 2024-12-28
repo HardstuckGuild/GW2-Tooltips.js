@@ -9,7 +9,7 @@ namespace API {
 			icon?               : number
 			icon_china?         : number
 			rarity              : ItemBase['rarity']
-			flags               : ('HidePrefix' | 'todo')[]
+			flags               : ('ShowInWardrobe' | 'HideIfLocked' | 'MonsterOnly' | 'NoCost' | 'HidePrefix' | 'HideSuffix' | 'OverrideRarity')[]
 			access_restrictions : RestrictionFlag[]
 		}
 
